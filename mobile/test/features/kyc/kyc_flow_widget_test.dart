@@ -108,8 +108,18 @@ void main() {
       await tester.ensureVisible(find.byKey(const Key('retry-upload')));
       await tester.tap(find.byKey(const Key('retry-upload')));
       await tester.pumpAndSettle();
+      expect(find.byKey(const Key('capture-document')), findsOneWidget);
+      expect(find.byKey(const Key('capture-selfie')), findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('continue-document')));
+      await tester.tap(find.byKey(const Key('continue-document')));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('capture-selfie')));
       await tester.tap(find.byKey(const Key('capture-selfie')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('capture-selfie')), findsOneWidget);
+      expect(find.text('Everything look right?'), findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('continue-selfie')));
+      await tester.tap(find.byKey(const Key('continue-selfie')));
       await tester.pumpAndSettle();
       expect(find.text('Everything look right?'), findsOneWidget);
       expect(

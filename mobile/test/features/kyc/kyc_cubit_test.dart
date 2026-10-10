@@ -56,6 +56,7 @@ void main() {
       expect(cubit.state.pendingCaptures, isEmpty);
       expect(cubit.state.profile!.nextStep, KycStep.selfie);
       expect(repository.deleted, isTrue);
+      expect(cubit.state.reviewMedia[MediaKind.document], captured.bytes);
     },
   );
 

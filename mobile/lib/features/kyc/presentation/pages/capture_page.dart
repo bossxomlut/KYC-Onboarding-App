@@ -57,27 +57,33 @@ class _CapturePageState extends State<_CaptureView>
 
   Future<void> _capture() async {
     final cubit = context.read<KycCubit>();
-    final success = await cubit.capture(
+    await cubit.capture(
       widget.kind,
       documentType: widget.kind == MediaKind.document
           ? context.read<CaptureSettingsCubit>().state
           : null,
     );
-    if (success && mounted) context.go(cubit.state.profile!.nextStep.routePath);
   }
 
   Future<void> _retry() async {
-    final cubit = context.read<KycCubit>();
-    final success = await cubit.retryUpload(widget.kind);
-    if (success && mounted) context.go(cubit.state.profile!.nextStep.routePath);
+    await context.read<KycCubit>().retryUpload(widget.kind);
   }
 
   @override
   Widget build(BuildContext context) => BlocBuilder<KycCubit, KycState>(
     builder: (context, state) {
       final isDocument = widget.kind == MediaKind.document;
+      final profile = state.profile;
       final draft = state.pendingCaptures[widget.kind];
-      final canEdit = state.profile?.canEdit ?? false;
+      final canEdit = profile?.canEdit ?? false;
+      final uploaded = isDocument ? profile?.document : profile?.selfie;
+      final step = isDocument ? KycStep.document : KycStep.selfie;
+      final canContinue =
+          !state.busy &&
+          canEdit &&
+          draft == null &&
+          uploaded != null &&
+          profile!.nextStep.index > step.index;
       return KycScaffold(
         title: isDocument ? 'ID document' : 'Selfie',
         child: Column(
@@ -154,7 +160,19 @@ class _CapturePageState extends State<_CaptureView>
               key: Key('capture-${widget.kind.name}'),
               onPressed: state.busy || !canEdit ? null : _capture,
               icon: const Icon(Icons.camera_alt_outlined),
-              label: Text(draft == null ? 'Open camera' : 'Retake photo'),
+              label: Text(
+                draft != null || uploaded != null
+                    ? 'Retake photo'
+                    : 'Open camera',
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              key: Key('continue-${widget.kind.name}'),
+              onPressed: canContinue
+                  ? () => context.go(profile.nextStep.routePath)
+                  : null,
+              child: const Text('Continue'),
             ),
             const SizedBox(height: 16),
             const Text(

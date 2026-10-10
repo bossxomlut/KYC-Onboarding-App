@@ -221,7 +221,10 @@ class KycCubit extends Cubit<KycState> {
             profile: value,
             busy: false,
             pendingCaptures: Map.unmodifiable(pending),
-            reviewMedia: const {},
+            reviewMedia: Map.unmodifiable({
+              ...state.reviewMedia,
+              kind: capture.bytes,
+            }),
           ),
         );
         return true;

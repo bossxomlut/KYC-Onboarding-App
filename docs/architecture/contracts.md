@@ -19,6 +19,8 @@ Paths use `lib/core`, `lib/features`, `lib/app`. `core/domain/result.dart`: seal
 `core/security/token_store.dart`: TokenStore interface `Future<String?> readRefreshToken()`, `Future<void> saveTokens({required String accessToken,required String refreshToken})`, `Future<void> clear()`, `String? get accessToken`; SecureTokenStore implementation. No persistence of PII in plaintext.
 AuthSessionCubit is app-scoped; KycCubit is authenticated applicant-flow scoped for user/reviewer. Super admins have a separate Home with management/review actions and bypass the applicant KYC provider and profile fetch; `/kyc/*` redirects them home. Root DI/router may compose these roles without feature flow-to-flow imports. Auth repository exposes use cases consumed by auth cubits. KYC repository/use cases consume ApiClient. KYC status colors/icons belong to presentation; the status entity remains pure Dart.
 
+Document/selfie capture uploads automatically but stays on the capture page with an in-memory photo preview. Only the user's Continue action navigates to the server-derived `nextStep`; it requires an editable profile, confirmed uploaded media, no pending replacement for that kind, no operation in progress, and a next step beyond the current page. A successful upload retry also stays on the current page. Retaking remains available before continuing.
+
 ## Access and reviewer APIs
 
 Public registration accepts only email/password and always creates `user`. One operator-only bootstrap creates the initial `super_admin`; management APIs permit only `user`/`reviewer` assignments and protect the owner. See [admin guide](../admin-access.md).

@@ -100,6 +100,28 @@ Future<void> pause(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 2));
 }
 
+Future<void> continueCapture(
+  WidgetTester tester,
+  MediaKind kind, {
+  required Finder nextScreen,
+}) async {
+  final continueKey = Key('continue-${kind.name}');
+  await waitFor(
+    tester,
+    find.byWidgetPredicate(
+      (widget) =>
+          widget is FilledButton &&
+          widget.key == continueKey &&
+          widget.onPressed != null,
+    ),
+  );
+  expect(find.byKey(Key('capture-${kind.name}')), findsOneWidget);
+  expect(nextScreen, findsNothing);
+  await pause(tester);
+  await tap(tester, find.byKey(continueKey));
+  await waitFor(tester, nextScreen);
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   const apiUrl = String.fromEnvironment(
@@ -212,10 +234,18 @@ void main() {
       await waitFor(tester, find.byKey(const Key('retry-upload')));
       await pause(tester);
       await tap(tester, find.byKey(const Key('retry-upload')));
-      await waitFor(tester, find.byKey(const Key('capture-selfie')));
+      await continueCapture(
+        tester,
+        MediaKind.document,
+        nextScreen: find.byKey(const Key('capture-selfie')),
+      );
       await pause(tester);
       await tap(tester, find.byKey(const Key('capture-selfie')));
-      await waitFor(tester, find.byKey(const Key('submit-kyc')));
+      await continueCapture(
+        tester,
+        MediaKind.selfie,
+        nextScreen: find.byKey(const Key('submit-kyc')),
+      );
       expect(find.text('Maya Demo'), findsOneWidget);
       await pause(tester);
       await tap(tester, find.byKey(const Key('submit-kyc')));
@@ -238,7 +268,11 @@ void main() {
       await tap(tester, find.byKey(const Key('resubmit-kyc')));
       await waitFor(tester, find.byKey(const Key('capture-selfie')));
       await tap(tester, find.byKey(const Key('capture-selfie')));
-      await waitFor(tester, find.byKey(const Key('submit-kyc')));
+      await continueCapture(
+        tester,
+        MediaKind.selfie,
+        nextScreen: find.byKey(const Key('submit-kyc')),
+      );
       expect(find.text('Maya Demo'), findsOneWidget);
       await tap(tester, find.byKey(const Key('submit-kyc')));
       await waitFor(tester, find.text('Pending review'));
