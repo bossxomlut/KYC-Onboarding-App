@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/identity_brand.dart';
 import '../bloc/auth_form_state.dart';
 
 class AuthLayout extends StatelessWidget {
@@ -20,42 +22,29 @@ class AuthLayout extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        Icons.verified_user_outlined,
-                        size: 34,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
+                  const IdentityBrand(),
+                  const SizedBox(height: 36),
                   Text(
                     title,
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w700,
+                      height: 1.15,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     subtitle,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                      color: AppTheme.muted,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   ...children,
                 ],
               ),
@@ -81,12 +70,12 @@ class AuthFeedback extends StatelessWidget {
       child: Semantics(
         liveRegion: true,
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: state.error != null
                 ? scheme.errorContainer
                 : scheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.controlRadius),
           ),
           child: Text(
             message,

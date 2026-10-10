@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/navigation/current_route.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../bloc/kyc_cubit.dart';
 import '../widgets/kyc_profile_summary.dart';
 import '../widgets/kyc_scaffold.dart';
@@ -35,6 +36,19 @@ class _ReviewPageState extends State<ReviewPage> {
       final profile = state.profile;
       return KycScaffold(
         title: 'Review & submit',
+        bottomBar: FilledButton(
+          key: const Key('submit-kyc'),
+          onPressed: state.busy || !(profile?.canSubmit ?? false)
+              ? null
+              : () async {
+                  final cubit = context.read<KycCubit>();
+                  final success = await cubit.submit();
+                  if (success && context.mounted && isCurrentRoute(context)) {
+                    context.go('/kyc/status');
+                  }
+                },
+          child: const Text('Submit for verification'),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -50,32 +64,22 @@ class _ReviewPageState extends State<ReviewPage> {
                   ? null
                   : () => context.read<KycCubit>().retryRead(),
             ),
-            if (state.busy) const LinearProgressIndicator(),
-            const SizedBox(height: 16),
+            if (state.busy) ...[
+              const LinearProgressIndicator(),
+              const SizedBox(height: 16),
+            ],
             KycProfileSummary(
               profile: profile,
               media: state.reviewMedia,
               onEdit: (step) => context.go(step.routePath),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'By submitting, you confirm that these details are accurate. You can follow the review result from your home screen.',
-            ),
-            const SizedBox(height: 20),
-            FilledButton(
-              key: const Key('submit-kyc'),
-              onPressed: state.busy || !(profile?.canSubmit ?? false)
-                  ? null
-                  : () async {
-                      final cubit = context.read<KycCubit>();
-                      final success = await cubit.submit();
-                      if (success &&
-                          context.mounted &&
-                          isCurrentRoute(context)) {
-                        context.go('/kyc/status');
-                      }
-                    },
-              child: const Text('Submit for verification'),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.muted,
+                height: 1.5,
+              ),
             ),
           ],
         ),

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/form_field_label.dart';
 import '../../domain/entities/kyc_profile.dart';
 import '../bloc/kyc_cubit.dart';
+import '../widgets/capture_preparation.dart';
 import '../widgets/kyc_scaffold.dart';
 
 class CapturePage extends StatelessWidget {
@@ -57,6 +60,7 @@ class _CapturePageState extends State<_CaptureView> {
       final draft = state.pendingCaptures[widget.kind];
       final canEdit = profile?.canEdit ?? false;
       final uploaded = isDocument ? profile?.document : profile?.selfie;
+      final previewBytes = draft?.bytes ?? state.reviewMedia[widget.kind];
       final step = isDocument ? KycStep.document : KycStep.selfie;
       final canContinue =
           !state.busy &&
@@ -66,6 +70,46 @@ class _CapturePageState extends State<_CaptureView> {
           profile!.nextStep.index > step.index;
       return KycScaffold(
         title: isDocument ? 'ID document' : 'Selfie',
+        bottomBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (draft != null) ...[
+              FilledButton(
+                key: const Key('retry-upload'),
+                onPressed: state.busy || !canEdit ? null : _retry,
+                child: const Text('Retry upload'),
+              ),
+              const SizedBox(height: 12),
+            ],
+            FilledButton.icon(
+              key: Key('capture-${widget.kind.name}'),
+              onPressed: state.busy || !canEdit ? null : _capture,
+              icon: const Icon(Icons.camera_alt_outlined, size: 22),
+              label: Text(
+                draft != null || uploaded != null
+                    ? 'Retake photo'
+                    : 'Open camera',
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              key: Key('continue-${widget.kind.name}'),
+              onPressed: canContinue
+                  ? () => context.go(profile.nextStep.routePath)
+                  : null,
+              child: const Text('Continue'),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'JPEG or PNG · Up to 10 MB',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -75,20 +119,23 @@ class _CapturePageState extends State<_CaptureView> {
                   ? 'Your identity, clearly.'
                   : 'One quick selfie.',
               description: isDocument
-                  ? 'Place the entire document in frame. Keep every edge visible and avoid glare.'
-                  : 'Face the camera in good light. Remove hats and sunglasses, and keep your face fully visible.',
+                  ? 'Keep every edge visible and avoid glare.'
+                  : 'Look straight at the camera in good light.',
               icon: isDocument ? Icons.badge_outlined : Icons.face_outlined,
             ),
             const KycError(),
             if (isDocument)
               BlocBuilder<CaptureSettingsCubit, DocumentType>(
-                builder: (context, type) =>
-                    DropdownButtonFormField<DocumentType>(
+                builder: (context, type) => FormFieldLabel(
+                  label: 'Document type',
+                  child: Semantics(
+                    label: 'Document type',
+                    child: DropdownButtonFormField<DocumentType>(
                       key: const Key('document-type'),
                       initialValue: type,
-                      decoration: const InputDecoration(
-                        labelText: 'Document type',
-                      ),
+                      isExpanded: true,
+                      icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                      decoration: const InputDecoration(),
                       items: DocumentType.values
                           .map(
                             (type) => DropdownMenuItem(
@@ -107,11 +154,43 @@ class _CapturePageState extends State<_CaptureView> {
                               }
                             },
                     ),
+                  ),
+                ),
               ),
-            const SizedBox(height: 20),
+            if (isDocument) const SizedBox(height: 16),
             PrivatePhoto(
-              bytes: draft?.bytes ?? state.reviewMedia[widget.kind],
+              bytes: previewBytes,
               label: isDocument ? 'Document photo' : 'Selfie photo',
+              aspectRatio: isDocument && previewBytes == null ? 16 / 9 : 4 / 3,
+              placeholder: CapturePreparation(
+                isDocument: isDocument,
+                hasUploadedPhoto: uploaded != null,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _CaptureTip(
+                    icon: isDocument ? Icons.crop_free : Icons.face_outlined,
+                    text: isDocument
+                        ? 'Keep all edges visible'
+                        : 'Keep your face visible',
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _CaptureTip(
+                    icon: isDocument
+                        ? Icons.light_mode_outlined
+                        : Icons.visibility_outlined,
+                    text: isDocument
+                        ? 'Use good lighting'
+                        : 'Remove hats and sunglasses',
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             if (state.busy) ...[
@@ -132,39 +211,40 @@ class _CapturePageState extends State<_CaptureView> {
                 'Your photo is kept privately on this device until upload succeeds. Retry when your connection returns.',
               ),
               const SizedBox(height: 16),
-              FilledButton(
-                key: const Key('retry-upload'),
-                onPressed: state.busy || !canEdit ? null : _retry,
-                child: const Text('Retry upload'),
-              ),
-              const SizedBox(height: 8),
             ],
-            FilledButton.icon(
-              key: Key('capture-${widget.kind.name}'),
-              onPressed: state.busy || !canEdit ? null : _capture,
-              icon: const Icon(Icons.camera_alt_outlined),
-              label: Text(
-                draft != null || uploaded != null
-                    ? 'Retake photo'
-                    : 'Open camera',
-              ),
-            ),
-            const SizedBox(height: 12),
-            FilledButton(
-              key: Key('continue-${widget.kind.name}'),
-              onPressed: canContinue
-                  ? () => context.go(profile.nextStep.routePath)
-                  : null,
-              child: const Text('Continue'),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Photos must be JPEG or PNG, up to 10 MB. Camera access is required; enable it in device Settings if permission is denied.',
-              textAlign: TextAlign.center,
+            Text(
+              'Camera access is required. If permission is denied, enable it in device Settings.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
             ),
           ],
         ),
       );
     },
+  );
+}
+
+class _CaptureTip extends StatelessWidget {
+  const _CaptureTip({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, color: AppTheme.primary, size: 26),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text(
+          text,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.ink),
+        ),
+      ),
+    ],
   );
 }

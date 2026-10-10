@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/domain/result.dart';
+import '../../../../core/theme/app_theme.dart';
 
 class AccessScaffold extends StatelessWidget {
   const AccessScaffold({
@@ -39,46 +40,71 @@ class AccessScaffold extends StatelessWidget {
       ],
     ),
     body: SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (busy) const LinearProgressIndicator(),
-            if (revalidating)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  'Checking account access and refreshing information…',
-                ),
-              ),
-            if (error != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      error!.message,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (busy) ...[
+                  const LinearProgressIndicator(),
+                  const SizedBox(height: 16),
+                ],
+                if (revalidating)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      'Checking account access and refreshing information…',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
                     ),
-                    if (onRefresh != null)
-                      TextButton(
-                        onPressed: busy ? null : onRefresh,
-                        child: const Text('Retry'),
-                      ),
-                  ],
-                ),
-              ),
-            if (message != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(message!, key: const Key('access-message')),
-              ),
-            ...children,
-          ],
+                  ),
+                if (error != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(AppTheme.panelRadius),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          error!.message,
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onErrorContainer,
+                          ),
+                        ),
+                        if (onRefresh != null)
+                          TextButton(
+                            onPressed: busy ? null : onRefresh,
+                            child: const Text('Retry'),
+                          ),
+                      ],
+                    ),
+                  ),
+                if (message != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.mint,
+                      border: Border.all(color: AppTheme.border),
+                      borderRadius: BorderRadius.circular(AppTheme.panelRadius),
+                    ),
+                    child: Text(message!, key: const Key('access-message')),
+                  ),
+                ...children,
+              ],
+            ),
+          ),
         ),
       ),
     ),

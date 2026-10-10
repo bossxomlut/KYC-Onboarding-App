@@ -166,3 +166,21 @@ Reviewer detail, private photos and decisions now share an immutable `submission
 Focused tests reproduced the incorrect focus-only reload, missing foreground reads, stale permissions/profile responses, skipped trailing refresh, stale/missing photo cache, wrong read Retry, drifting OTP cooldown, old reset token/completion, clearing a newer login, and duplicate history cards before their fixes. Backend regressions submit a new version after rejection and prove that old-version photos/decisions are rejected without a new audit; the latest version can still be reviewed.
 
 Backend/mobile must be updated together because reviewer photo and decision requests now require `submissionId`; older clients receive validation400. No new database migration is needed. This update does not add durable unsaved form drafts: normal background transitions preserve memory, while process termination restores saved server progress and existing private capture recovery. Real-device camera/permission → Settings transitions, OS force-kill, real-API device integration, iOS builds and the recording were not rerun for this change. The running development API and installed app were not replaced by these automated checks.
+
+## Emerald Focus UI
+
+Verified on 10 October 2026 (Asia/Ho_Chi_Minh). The selected Option 1A Emerald Focus is implemented in the Flutter presentation layer: white surfaces, emerald controls, compact Identity branding, four-step progress, outlined form fields, capture preparation, grouped profile summaries and fixed action footers. Auth and account/reviewer screens use the shared theme. Existing state ownership, use cases, route guards, upload retry and private-image retention/cache eviction are preserved.
+
+| Check | Actual result |
+| --- | --- |
+| Full `flutter test --no-pub --reporter expanded` | 237/237 passed, including architecture boundaries and existing KYC/Back/history/session flows |
+| Focused capture, layout and KYC flow tests | 22/22 passed on final source |
+| `flutter analyze --no-pub` | No issues found |
+| Bundled Dart format check on `lib test integration_test` | 132 files, no changes required |
+| `git diff --check` | Passed |
+| iOS Simulator real-API integration on final UI | Passed; Xcode debug build succeeded, then registration/OTP, saved app/session restoration, failed upload/retry, private review, submit, rejection/resubmission, verified result, historical submission and logout completed |
+| Native visual inspection | Recorded final iPhone 17 Pro simulator flow; inspected form/capture/Home/status layouts |
+
+The new layout cases cover 320px screens with doubled text on Home, personal details, document, selfie and review; form entry after scrolling; full-width submit; the save action above a 300px keyboard inset; and truthful correction progress after rejection. Keyboard footer occlusion and the compact document placeholder overflow were observed failing before their fixes. Document/selfie regressions also reproduced the incorrect “No photo yet” caption when server upload metadata existed without cached preview bytes; the corrected state announces uploaded/preview-unavailable and retains explicit Continue.
+
+The flow widget helper now unfocuses and settles after entering form fields, matching the existing integration helper and allowing Flutter's scheduled caret scrolling to finish before tapping the date picker. The running integration uses the local NestJS API, PostgreSQL and Mailpit with synthetic applicant data and an authorized synthetic reviewer. Only camera capture is substituted with generated JPEG fixtures because iOS Simulator cannot take a photograph. This UI update adds no backend, domain, routing or native-platform changes. Physical-device camera/permission checks and an Android build were not rerun for this presentation update.

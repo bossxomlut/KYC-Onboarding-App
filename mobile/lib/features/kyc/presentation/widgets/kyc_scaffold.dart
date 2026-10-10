@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/identity_brand.dart';
 import '../bloc/kyc_cubit.dart';
 
 class KycScaffold extends StatelessWidget {
@@ -10,14 +12,19 @@ class KycScaffold extends StatelessWidget {
     required this.title,
     required this.child,
     this.actions = const [],
+    this.brandHeader = false,
+    this.bottomBar,
   });
   final String title;
   final Widget child;
   final List<Widget> actions;
+  final bool brandHeader;
+  final Widget? bottomBar;
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(title),
+      title: brandHeader ? const IdentityBrand() : Text(title),
+      titleSpacing: brandHeader ? 24 : 8,
       actions: actions,
       leading: (ModalRoute.of(context)?.canPop ?? false)
           ? null
@@ -30,16 +37,53 @@ class KycScaffold extends StatelessWidget {
                   )),
     ),
     body: SafeArea(
-      child: Center(
+      child: Align(
+        alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
             child: child,
           ),
         ),
       ),
     ),
+    bottomNavigationBar: bottomBar == null
+        ? null
+        : Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                color: AppTheme.background,
+                border: Border(top: BorderSide(color: AppTheme.border)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight:
+                        (MediaQuery.sizeOf(context).height -
+                            MediaQuery.viewInsetsOf(context).bottom) *
+                        .45,
+                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 512),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: bottomBar!,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
   );
 }
 
@@ -97,27 +141,118 @@ class KycIntro extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
-      const SizedBox(height: 20),
-      Text(
-        step.toUpperCase(),
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
+      if (RegExp(r'^Step ([1-4]) of 4$').hasMatch(step)) ...[
+        KycStepProgress(
+          currentStep: int.parse(
+            RegExp(r'^Step ([1-4]) of 4$').firstMatch(step)!.group(1)!,
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
+        const SizedBox(height: 20),
+      ] else ...[
+        Row(
+          children: [
+            Icon(icon, size: 20, color: AppTheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              step.toUpperCase(),
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+      ],
       Text(title, style: Theme.of(context).textTheme.headlineMedium),
-      const SizedBox(height: 12),
-      Text(description, style: Theme.of(context).textTheme.bodyLarge),
-      const SizedBox(height: 28),
+      const SizedBox(height: 8),
+      Text(
+        description,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
+      ),
+      const SizedBox(height: 20),
     ],
   );
 }
 
+class KycStepProgress extends StatelessWidget {
+  const KycStepProgress({required this.currentStep, super.key})
+    : assert(currentStep >= 1 && currentStep <= 4);
+
+  final int currentStep;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Step $currentStep of 4',
+    excludeSemantics: true,
+    child: Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var number = 1; number <= 4; number++) ...[
+              if (number > 1)
+                Container(
+                  width: 24,
+                  height: 1,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  color: number <= currentStep
+                      ? AppTheme.primary
+                      : AppTheme.border,
+                ),
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: number <= currentStep
+                      ? AppTheme.primary
+                      : Colors.white,
+                  border: Border.all(
+                    color: number <= currentStep
+                        ? AppTheme.primary
+                        : AppTheme.border,
+                    width: 1.5,
+                  ),
+                ),
+                child: number < currentStep
+                    ? const Icon(Icons.check, size: 18, color: Colors.white)
+                    : Text(
+                        '$number',
+                        textScaler: TextScaler.noScaling,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: number == currentStep
+                              ? Colors.white
+                              : AppTheme.muted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'STEP $currentStep OF 4',
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
+      ],
+    ),
+  );
+}
+
 class PrivatePhoto extends StatefulWidget {
-  const PrivatePhoto({super.key, required this.bytes, required this.label});
+  const PrivatePhoto({
+    super.key,
+    required this.bytes,
+    required this.label,
+    this.placeholder,
+    this.aspectRatio = 4 / 3,
+  });
   final List<int>? bytes;
   final String label;
+  final Widget? placeholder;
+  final double aspectRatio;
   @override
   State<PrivatePhoto> createState() => _PrivatePhotoState();
 }
@@ -156,18 +291,35 @@ class _PrivatePhotoState extends State<PrivatePhoto> {
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(16),
     child: AspectRatio(
-      aspectRatio: 4 / 3,
+      aspectRatio: widget.aspectRatio,
       child: _image == null
-          ? Container(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.lock_outline, size: 40),
-                  Text(widget.label),
-                ],
-              ),
-            )
+          ? widget.placeholder ??
+                Container(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: Semantics(
+                    label: widget.label,
+                    excludeSemantics: true,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.lock_outline, size: 40),
+                          const SizedBox(height: 8),
+                          Flexible(
+                            child: Text(
+                              widget.label,
+                              textAlign: TextAlign.center,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
           : Image(
               image: _image!,
               fit: BoxFit.contain,

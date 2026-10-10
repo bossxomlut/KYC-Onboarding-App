@@ -88,6 +88,8 @@ void main() {
         await tester.ensureVisible(find.byKey(Key(entry.key)));
         await tester.enterText(find.byKey(Key(entry.key)), entry.value);
       }
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('dateOfBirth')));
       await tester.tap(find.byKey(const Key('dateOfBirth')));
       await tester.pumpAndSettle();

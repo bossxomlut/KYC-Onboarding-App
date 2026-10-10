@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/kyc_profile.dart';
 
 class KycStatusAppearance {
@@ -23,9 +24,9 @@ class KycStatusAppearance {
       icon: Icons.radio_button_unchecked,
     ),
     KycStatus.inProgress => const KycStatusAppearance._(
-      foreground: Color(0xFF1D4ED8),
-      background: Color(0xFFEFF6FF),
-      border: Color(0xFFBFDBFE),
+      foreground: AppTheme.primary,
+      background: AppTheme.mint,
+      border: AppTheme.border,
       icon: Icons.edit_note_outlined,
     ),
     KycStatus.pendingReview => const KycStatusAppearance._(
@@ -55,11 +56,13 @@ class KycStatusBadge extends StatelessWidget {
     required this.status,
     this.labelKey,
     this.prominent = false,
+    this.compact = false,
   });
 
   final KycStatus status;
   final Key? labelKey;
   final bool prominent;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -70,20 +73,26 @@ class KycStatusBadge extends StatelessWidget {
       liveRegion: true,
       child: ExcludeSemantics(
         child: Container(
-          padding: EdgeInsets.all(prominent ? 20 : 12),
-          decoration: BoxDecoration(
-            color: appearance.background,
-            border: Border.all(color: appearance.border),
-            borderRadius: BorderRadius.circular(prominent ? 20 : 12),
-          ),
+          padding: compact
+              ? EdgeInsets.zero
+              : EdgeInsets.all(prominent ? 20 : 12),
+          decoration: compact
+              ? null
+              : BoxDecoration(
+                  color: appearance.background,
+                  border: Border.all(color: appearance.border),
+                  borderRadius: BorderRadius.circular(prominent ? 20 : 12),
+                ),
           child: Row(
             children: [
-              Icon(
-                appearance.icon,
-                color: appearance.foreground,
-                size: prominent ? 32 : 24,
-              ),
-              const SizedBox(width: 12),
+              if (!compact) ...[
+                Icon(
+                  appearance.icon,
+                  color: appearance.foreground,
+                  size: prominent ? 32 : 24,
+                ),
+                const SizedBox(width: 12),
+              ],
               Expanded(
                 child: Text(
                   status.label,

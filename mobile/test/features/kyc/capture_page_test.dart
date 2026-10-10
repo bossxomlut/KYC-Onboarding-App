@@ -14,6 +14,40 @@ import 'kyc_cubit_test.dart' show FakeKycRepository;
 
 void main() {
   for (final kind in MediaKind.values) {
+    testWidgets(
+      '${kind.name} uploaded photo without cached bytes is not reported as missing',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          final repository = CaptureRepository(kind, uploaded: true);
+          final (cubit, router) = await pumpCapture(tester, repository);
+
+          expect(cubit.state.reviewMedia, isEmpty);
+          expect(
+            tester.widget<PrivatePhoto>(find.byType(PrivatePhoto)).bytes,
+            isNull,
+          );
+          expect(find.text('Photo uploaded'), findsOneWidget);
+          expect(find.text('No photo yet'), findsNothing);
+          expect(
+            find.bySemanticsLabel(
+              kind == MediaKind.document
+                  ? 'Document photo uploaded; preview unavailable'
+                  : 'Selfie photo uploaded; preview unavailable',
+            ),
+            findsOneWidget,
+          );
+          expect(continueButton(tester, kind).onPressed, isNotNull);
+          expect(
+            router.routeInformationProvider.value.uri.path,
+            repository.path,
+          );
+        } finally {
+          semantics.dispose();
+        }
+      },
+    );
+
     testWidgets('${kind.name} waits for Continue after successful upload', (
       tester,
     ) async {

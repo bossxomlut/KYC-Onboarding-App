@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/navigation/current_route.dart';
+import '../../../../core/widgets/form_field_label.dart';
+import '../../../../core/widgets/identity_brand.dart';
 import '../bloc/kyc_cubit.dart';
 import '../bloc/personal_details_form_cubit.dart';
 import '../widgets/date_of_birth_field.dart';
@@ -26,14 +28,55 @@ class _PersonalDetailsForm extends StatelessWidget {
         BlocBuilder<PersonalDetailsFormCubit, PersonalDetailsFormState>(
           builder: (context, form) => KycScaffold(
             title: 'Personal details',
+            bottomBar: (flow.profile?.canEdit ?? false)
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const PrivacyNote(
+                        text: 'Your progress is saved when you continue.',
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        key: const Key('save-details'),
+                        onPressed: flow.busy
+                            ? null
+                            : () async {
+                                final formCubit = context
+                                    .read<PersonalDetailsFormCubit>();
+                                if (!formCubit.validate()) return;
+                                final cubit = context.read<KycCubit>();
+                                final success = await cubit.saveDetails(
+                                  formCubit.state.details,
+                                );
+                                if (success &&
+                                    context.mounted &&
+                                    isCurrentRoute(context)) {
+                                  context.go(
+                                    cubit.state.profile!.nextStep.routePath,
+                                  );
+                                }
+                              },
+                        child: flow.busy
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Save and continue'),
+                      ),
+                    ],
+                  )
+                : null,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const KycIntro(
                   step: 'Step 1 of 4',
                   title: 'Let’s get to know you.',
-                  description:
-                      'Use the details exactly as they appear on your identity document.',
+                  description: 'Use the details on your ID.',
                   icon: Icons.person_outline,
                 ),
                 const KycError(),
@@ -55,7 +98,7 @@ class _PersonalDetailsForm extends StatelessWidget {
                     autofillHints: const [AutofillHints.name],
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 18),
+                    padding: const EdgeInsets.only(bottom: 12),
                     child: DateOfBirthField(
                       value: form.details.dateOfBirth,
                       errorText: form.errors['dateOfBirth'],
@@ -90,35 +133,6 @@ class _PersonalDetailsForm extends StatelessWidget {
                     form.details.documentNumber,
                     capitalization: TextCapitalization.characters,
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    key: const Key('save-details'),
-                    onPressed: flow.busy
-                        ? null
-                        : () async {
-                            final formCubit = context
-                                .read<PersonalDetailsFormCubit>();
-                            if (!formCubit.validate()) return;
-                            final cubit = context.read<KycCubit>();
-                            final success = await cubit.saveDetails(
-                              formCubit.state.details,
-                            );
-                            if (success &&
-                                context.mounted &&
-                                isCurrentRoute(context)) {
-                              context.go(
-                                cubit.state.profile!.nextStep.routePath,
-                              );
-                            }
-                          },
-                    child: flow.busy
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Save and continue'),
-                  ),
                 ],
               ],
             ),
@@ -137,22 +151,28 @@ class _PersonalDetailsForm extends StatelessWidget {
     int lines = 1,
     TextCapitalization capitalization = TextCapitalization.words,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 18),
-    child: TextFormField(
-      key: Key(field),
-      initialValue: value,
-      onChanged: (value) =>
-          context.read<PersonalDetailsFormCubit>().update(field, value),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        errorText: form.errors[field],
+    padding: const EdgeInsets.only(bottom: 12),
+    child: FormFieldLabel(
+      label: label,
+      child: Semantics(
+        label: label,
+        child: TextFormField(
+          key: Key(field),
+          initialValue: value,
+          onChanged: (value) =>
+              context.read<PersonalDetailsFormCubit>().update(field, value),
+          decoration: InputDecoration(
+            hintText: hint,
+            errorText: form.errors[field],
+          ),
+          keyboardType: keyboard,
+          autofillHints: autofillHints,
+          maxLines: lines,
+          minLines: 1,
+          textCapitalization: capitalization,
+          enabled: !context.read<KycCubit>().state.busy,
+        ),
       ),
-      keyboardType: keyboard,
-      autofillHints: autofillHints,
-      maxLines: lines,
-      textCapitalization: capitalization,
-      enabled: !context.read<KycCubit>().state.busy,
     ),
   );
 }

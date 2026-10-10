@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/widgets/form_field_label.dart';
 
 /// Keeps picker changes local until confirmed; the form still stores ISO dates.
 class DateOfBirthField extends StatefulWidget {
@@ -143,19 +144,24 @@ class _DateOfBirthFieldState extends State<DateOfBirthField> {
   }
 
   @override
-  Widget build(BuildContext context) => TextFormField(
-    key: const Key('dateOfBirth'),
-    controller: _controller,
-    readOnly: true,
-    showCursor: false,
-    enableInteractiveSelection: false,
-    enabled: widget.enabled,
-    onTap: _selectDate,
-    decoration: InputDecoration(
-      labelText: 'Date of birth',
-      hintText: 'Select a date',
-      errorText: widget.errorText,
-      suffixIcon: const Icon(Icons.calendar_month_outlined),
+  Widget build(BuildContext context) => FormFieldLabel(
+    label: 'Date of birth',
+    child: Semantics(
+      label: 'Date of birth',
+      child: TextFormField(
+        key: const Key('dateOfBirth'),
+        controller: _controller,
+        readOnly: true,
+        showCursor: false,
+        enableInteractiveSelection: false,
+        enabled: widget.enabled,
+        onTap: _selectDate,
+        decoration: InputDecoration(
+          hintText: 'Select a date',
+          errorText: widget.errorText,
+          suffixIcon: const Icon(Icons.calendar_month_outlined),
+        ),
+      ),
     ),
   );
 }
