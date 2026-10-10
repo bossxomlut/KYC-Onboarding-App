@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +6,7 @@ import '../../domain/entities/user.dart';
 import '../bloc/auth_form_state.dart';
 import '../bloc/email_verification_cubit.dart';
 import '../widgets/auth_layout.dart';
+import '../widgets/otp_code_field.dart';
 
 class VerifyEmailPage extends StatefulWidget {
   const VerifyEmailPage({
@@ -58,18 +58,10 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
         AuthFeedback(state: state),
         Form(
           key: _formKey,
-          child: TextFormField(
+          child: OtpCodeField(
             controller: _code,
             enabled: !state.isLoading && !state.isResending,
-            keyboardType: TextInputType.number,
-            autofillHints: const [AutofillHints.oneTimeCode],
-            maxLength: 6,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onFieldSubmitted: (_) => _submit(),
-            validator: (value) => !RegExp(r'^\d{6}$').hasMatch(value ?? '')
-                ? 'Enter the six digit verification code.'
-                : null,
-            decoration: const InputDecoration(labelText: 'Verification code'),
+            onSubmitted: _submit,
           ),
         ),
         const SizedBox(height: 20),

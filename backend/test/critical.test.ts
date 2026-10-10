@@ -290,6 +290,129 @@ test("registration, wrong/expired OTP, verification, and login restrictions", as
   );
 });
 
+test("unverified login automatically sends an OTP after password validation and respects the resend cooldown", async () => {
+  const candidate = "login-verification@example.test";
+  const registered = await json("POST", "/auth/register", {
+    email: candidate,
+    password,
+  });
+  assert.equal(registered.statusCode, 201);
+  const userId = registered.json().user.id;
+  const initialMailCount = mails.length;
+  await pool.query(
+    "UPDATE email_verification_tokens SET created_at=now()-interval '1 minute' WHERE user_id=$1",
+    [userId],
+  );
+  const wrongPassword = await json("POST", "/auth/login", {
+    email: candidate,
+    password: "WrongPassword123!",
+  });
+  assert.equal(wrongPassword.json().error.code, "INVALID_CREDENTIALS");
+  assert.equal(mails.length, initialMailCount);
+  const login = await json("POST", "/auth/login", {
+    email: candidate,
+    password,
+  });
+  assert.equal(login.statusCode, 403);
+  assert.equal(login.json().error.code, "EMAIL_NOT_VERIFIED");
+  assert.equal(mails.length, initialMailCount + 1);
+  assert.equal(mails.at(-1)!.to, candidate);
+  const code = mails.at(-1)!.text.match(/\b\d{6}\b/)![0];
+  const tokens = await pool.query(
+    "SELECT consumed_at FROM email_verification_tokens WHERE user_id=$1 ORDER BY created_at",
+    [userId],
+  );
+  assert.equal(tokens.rowCount, 2);
+  assert.notEqual(tokens.rows[0].consumed_at, null);
+  assert.equal(tokens.rows[1].consumed_at, null);
+  const sessions = await pool.query(
+    "SELECT 1 FROM auth_sessions WHERE user_id=$1",
+    [userId],
+  );
+  assert.equal(sessions.rowCount, 0);
+  const retry = await json("POST", "/auth/login", {
+    email: candidate,
+    password,
+  });
+  assert.equal(retry.json().error.code, "EMAIL_NOT_VERIFIED");
+  assert.equal(mails.length, initialMailCount + 1);
+  const verify = await json("POST", "/auth/email/verify", {
+    email: candidate,
+    code,
+  });
+  assert.equal(verify.statusCode, 200);
+  assert.equal(
+    (await json("POST", "/auth/login", { email: candidate, password }))
+      .statusCode,
+    200,
+  );
+  assert.equal(mails.length, initialMailCount + 1);
+  await pool.query("UPDATE users SET status='disabled' WHERE id=$1", [userId]);
+  assert.equal(
+    (await json("POST", "/auth/login", { email: candidate, password })).json()
+      .error.code,
+    "INVALID_CREDENTIALS",
+  );
+  assert.equal(mails.length, initialMailCount + 1);
+});
+
+test("unverified login keeps its OTP queued for retry during an SMTP outage", async () => {
+  const candidate = "login-mail-outage@example.test";
+  const registered = await json("POST", "/auth/register", {
+    email: candidate,
+    password,
+  });
+  const userId = registered.json().user.id;
+  await pool.query(
+    "UPDATE email_verification_tokens SET created_at=now()-interval '1 minute' WHERE user_id=$1",
+    [userId],
+  );
+  let smtpCalls = 0;
+  const failing = await buildApp(config, pool, {
+    send: async () => {
+      smtpCalls++;
+      throw new Error("SMTP unavailable");
+    },
+  });
+  try {
+    const login = await http(failing, {
+      method: "POST",
+      url: "/api/v1/auth/login",
+      payload: { email: candidate, password },
+    });
+    assert.equal(login.statusCode, 403);
+    assert.equal(login.json().error.code, "EMAIL_NOT_VERIFIED");
+    assert.equal(smtpCalls, 1);
+    const outbox = await pool.query(
+      "SELECT id,attempt_count FROM email_outbox WHERE user_id=$1 AND kind='verification'",
+      [userId],
+    );
+    assert.equal(outbox.rowCount, 1);
+    assert.equal(outbox.rows[0].attempt_count, 1);
+    await pool.query(
+      "UPDATE email_outbox SET next_attempt_at=now() WHERE id=$1",
+      [outbox.rows[0].id],
+    );
+    assert.equal(
+      await deliverQueued(
+        pool,
+        config,
+        { send: async (mail) => void mails.push(mail) },
+        outbox.rows[0].id,
+      ),
+      true,
+    );
+    const code = mails.at(-1)!.text.match(/\b\d{6}\b/)![0];
+    assert.equal(
+      (await json("POST", "/auth/email/verify", { email: candidate, code }))
+        .statusCode,
+      200,
+    );
+  } finally {
+    await failing.close();
+  }
+});
+
 test("refresh rotates atomically; replay revokes the family; logout revokes access and refresh", async () => {
   const old = session.refreshToken;
   const refresh = await json("POST", "/auth/refresh", { refreshToken: old });

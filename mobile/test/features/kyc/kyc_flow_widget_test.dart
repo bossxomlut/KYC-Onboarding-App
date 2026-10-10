@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,7 +76,6 @@ void main() {
       await tester.pumpAndSettle();
       for (final entry in {
         'fullName': 'Demo User',
-        'dateOfBirth': '1995-04-15',
         'nationality': 'Vietnamese',
         'address': '1 Demo Street',
         'documentNumber': 'DEMO1234',
@@ -83,6 +83,14 @@ void main() {
         await tester.ensureVisible(find.byKey(Key(entry.key)));
         await tester.enterText(find.byKey(Key(entry.key)), entry.value);
       }
+      await tester.ensureVisible(find.byKey(const Key('dateOfBirth')));
+      await tester.tap(find.byKey(const Key('dateOfBirth')));
+      await tester.pumpAndSettle();
+      tester
+          .widget<CupertinoDatePicker>(find.byType(CupertinoDatePicker))
+          .onDateTimeChanged(DateTime(1995, 4, 15));
+      await tester.tap(find.byKey(const Key('confirm-date-of-birth')));
+      await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('save-details')));
       await tester.tap(find.byKey(const Key('save-details')));
       await tester.pumpAndSettle();

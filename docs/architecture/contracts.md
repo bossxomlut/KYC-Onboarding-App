@@ -3,6 +3,8 @@
 ## HTTP
 Base `/api/v1`. JSON camelCase. Errors `{error:{code,message,requestId}}`. Bearer access tokens. Auth routes: register `{email,password}` -> `{user,nextStep:"VERIFY_EMAIL"}`; email/verify `{email,code}` and login `{email,password}` and refresh `{refreshToken}` -> `{user,accessToken,refreshToken,expiresIn:900}`. me -> `{user}`. email/resend and password/forgot -> `{message}`. password/reset `{token,newPassword}`. logout `{refreshToken}`.
 
+Login with valid credentials for an unverified email creates and attempts delivery of a verification OTP before returning `403 EMAIL_NOT_VERIFIED`; the client opens email verification without a manual resend. Login and resend share the 30-second OTP creation cooldown. Failed mail delivery remains in the encrypted outbox for retry. Invalid credentials, disabled users, and verified users do not trigger verification mail.
+
 ## KYC
 GET `/kyc` -> `{profile: {...}}`; PUT `/kyc/personal-details` body `{fullName,dateOfBirth,nationality,address,documentNumber}`; POST `/kyc/media/:kind` multipart field `file`, optional `captureId` (16–128 URL-safe characters) to correlate/retry interrupted captures; document also `documentType` (`passport`,`national_id`,`driving_licence`), kinds `document`, `selfie`; GET `/kyc/media/:kind` authenticated bytes. POST `/kyc/submit`, POST `/kyc/resubmit` -> `{profile}`.
 

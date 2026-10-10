@@ -31,3 +31,17 @@ The local database runner was also smoke-tested: actual PostgreSQL 18.1 started 
 ## Remaining manual checks
 
 Physical iOS/Android camera quality, denied permission → Settings → retry, OS force-kill while a native camera is open, real-device LAN/firewall behavior and store signing require appropriate hardware/accounts. Production infrastructure, retention, KMS rotation and identity-provider verification remain documented future work. Docker Compose is supplied; Docker was unavailable on this host, so the running demo and tests used real embedded PostgreSQL plus local Mailpit.
+
+## Form and OTP improvements
+
+Verified on 10 October 2026 after the migration evidence above. Auth password and confirmation fields now have independent show/hide controls. Date of birth uses a wheel picker with confirmation/cancel, friendly display, ISO persistence and the existing 18–120 age range. Verification renders six individual cells with native keyboard editing, autofill, full-code paste and correction. A valid login for an unverified account creates and attempts OTP delivery automatically, retaining the 30-second cooldown and encrypted mail retry.
+
+| Check | Actual result |
+|---|---|
+| Backend `npm run check` | Passed |
+| Backend `npm test` | 16/16 real HTTP/PostgreSQL tests passed |
+| Flutter `flutter analyze --no-pub` | No issues found |
+| Flutter `flutter test --no-pub --reporter expanded` | 57/57 passed, including architecture boundaries |
+| Flutter bundled Dart format check | 72 files checked, no changes required |
+
+Focused behavior tests were observed failing before their fixes. New cases cover password masking/toggles, confirmation validation, disabled loading controls, date selection/prefill/cancel/validation and age bounds, OTP leading zeroes, filtering, backspace, rapid cell selection, replacement paste, keyboard submission, validation and narrow screens with large text. The backend regressions cover OTP delivery on unverified login, wrong-password/disabled-account restrictions, cooldown, successful verification/login and SMTP outage recovery. The real-API integration source was updated for the new input controls; platform builds, the recorded demo and device integration were not rerun for this update.

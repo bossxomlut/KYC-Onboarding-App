@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../bloc/kyc_cubit.dart';
 import '../bloc/personal_details_form_cubit.dart';
+import '../widgets/date_of_birth_field.dart';
 import '../widgets/kyc_scaffold.dart';
 
 class PersonalDetailsPage extends StatelessWidget {
@@ -52,14 +53,16 @@ class _PersonalDetailsForm extends StatelessWidget {
                     form.details.fullName,
                     autofillHints: const [AutofillHints.name],
                   ),
-                  _field(
-                    context,
-                    form,
-                    'dateOfBirth',
-                    'Date of birth (YYYY-MM-DD)',
-                    form.details.dateOfBirth,
-                    keyboard: TextInputType.datetime,
-                    hint: '1995-04-15',
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: DateOfBirthField(
+                      value: form.details.dateOfBirth,
+                      errorText: form.errors['dateOfBirth'],
+                      enabled: !flow.busy,
+                      onChanged: (date) => context
+                          .read<PersonalDetailsFormCubit>()
+                          .update('dateOfBirth', date),
+                    ),
                   ),
                   _field(
                     context,

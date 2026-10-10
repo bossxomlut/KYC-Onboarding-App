@@ -6,6 +6,7 @@ import '../../domain/entities/user.dart';
 import '../bloc/auth_form_state.dart';
 import '../bloc/login_cubit.dart';
 import '../widgets/auth_layout.dart';
+import '../widgets/auth_password_field.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({
@@ -73,10 +74,9 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                AuthPasswordField(
                   controller: _password,
                   enabled: !state.isLoading,
-                  obscureText: true,
                   autofillHints: const [AutofillHints.password],
                   onFieldSubmitted: (_) => _submit(),
                   validator: (value) => value == null || value.isEmpty

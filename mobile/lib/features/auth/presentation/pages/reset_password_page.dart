@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../bloc/auth_form_state.dart';
 import '../bloc/password_reset_cubit.dart';
 import '../widgets/auth_layout.dart';
+import '../widgets/auth_password_field.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key, this.token = ''});
@@ -63,10 +64,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   decoration: const InputDecoration(labelText: 'Reset token'),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                AuthPasswordField(
                   controller: _password,
                   enabled: !state.isLoading,
-                  obscureText: true,
                   textInputAction: TextInputAction.next,
                   validator: validateNewPassword,
                   autofillHints: const [AutofillHints.newPassword],
@@ -77,10 +77,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                AuthPasswordField(
                   controller: _confirm,
                   enabled: !state.isLoading,
-                  obscureText: true,
                   onFieldSubmitted: (_) => _submit(),
                   validator: (value) =>
                       value != _password.text ? 'Passwords must match.' : null,

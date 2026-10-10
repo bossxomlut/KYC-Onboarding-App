@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -165,14 +166,15 @@ void main() {
         isNotNull,
         reason: 'Read OTP from the local Mailpit catcher.',
       );
-      await field(tester, 'Verification code', code!);
+      await tester.enterText(find.byKey(const Key('otp-input')), code!);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
       await tap(tester, find.text('Verify email'));
       await waitFor(tester, find.byKey(const Key('kyc-next')));
       await pause(tester);
       await tap(tester, find.byKey(const Key('kyc-next')));
       for (final entry in {
         'fullName': 'Maya Demo',
-        'dateOfBirth': '1995-06-15',
         'nationality': 'Vietnamese',
         'address': '123 Demo Street, Demo City',
         'documentNumber': 'DEMO000123',
@@ -182,6 +184,11 @@ void main() {
         FocusManager.instance.primaryFocus?.unfocus();
         await tester.pumpAndSettle();
       }
+      await tap(tester, find.byKey(const Key('dateOfBirth')));
+      tester
+          .widget<CupertinoDatePicker>(find.byType(CupertinoDatePicker))
+          .onDateTimeChanged(DateTime(1995, 6, 15));
+      await tap(tester, find.byKey(const Key('confirm-date-of-birth')));
       await tap(tester, find.byKey(const Key('save-details')));
       await waitFor(tester, find.byKey(const Key('capture-document')));
       // Recreate the whole app/container. The secure refresh credential and

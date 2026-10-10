@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../bloc/auth_form_state.dart';
 import '../bloc/register_cubit.dart';
 import '../widgets/auth_layout.dart';
+import '../widgets/auth_password_field.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key, required this.onVerificationRequired});
@@ -65,10 +66,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: const InputDecoration(labelText: 'Email'),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                AuthPasswordField(
                   controller: _password,
                   enabled: !state.isLoading,
-                  obscureText: true,
                   autofillHints: const [AutofillHints.newPassword],
                   textInputAction: TextInputAction.next,
                   validator: validateNewPassword,
@@ -79,10 +79,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                AuthPasswordField(
                   controller: _confirm,
                   enabled: !state.isLoading,
-                  obscureText: true,
                   onFieldSubmitted: (_) => _submit(),
                   validator: (value) =>
                       value != _password.text ? 'Passwords must match.' : null,

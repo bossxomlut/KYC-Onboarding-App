@@ -202,9 +202,9 @@ export class AuthService implements OnModuleInit {
   }
 
   async login(dto: LoginDto) {
-    const { pool, config } = this;
+    const { pool, config, mailer } = this;
     const { email, password } = dto;
-    return transaction(pool, async (client) => {
+    const result = await transaction(pool, async (client) => {
       const users = await client.query(
         "SELECT * FROM users WHERE email_normalized=$1 FOR UPDATE",
         [email],
@@ -220,14 +220,33 @@ export class AuthService implements OnModuleInit {
           "INVALID_CREDENTIALS",
           "Unable to sign in with the provided credentials.",
         );
-      if (!user.email_verified_at)
-        throw new ApiError(
-          403,
-          "EMAIL_NOT_VERIFIED",
-          "Please verify your email before signing in.",
+      if (!user.email_verified_at) {
+        const recent = await client.query(
+          "SELECT 1 FROM email_verification_tokens WHERE user_id=$1 AND created_at>now()-interval '30 seconds'",
+          [user.id],
         );
-      return sessionResponse(await issueSession(client, user, config));
+        return {
+          verificationMail: recent.rowCount
+            ? null
+            : await createOtp(client, user, config),
+        };
+      }
+      return {
+        session: sessionResponse(await issueSession(client, user, config)),
+      };
     });
+    if ("verificationMail" in result) {
+      // Commit the OTP before returning the verification error, and retain
+      // queued delivery for retry if SMTP is temporarily unavailable.
+      if (result.verificationMail)
+        await deliverQueued(pool, config, mailer, result.verificationMail.id);
+      throw new ApiError(
+        403,
+        "EMAIL_NOT_VERIFIED",
+        "Please verify your email before signing in.",
+      );
+    }
+    return result.session;
   }
 
   async refresh(dto: RefreshDto) {
