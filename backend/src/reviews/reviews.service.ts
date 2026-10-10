@@ -28,27 +28,45 @@ export class ReviewsService {
   async queue(actorId: string, pagination: ReviewPagination) {
     return transaction(this.pool, async (client) => {
       await requireRole(client, actorId, reviewerRoles, true);
+      const statuses =
+        pagination.status === "all"
+          ? ["pending_review", "verified", "rejected"]
+          : [pagination.status];
+      const search = pagination.search
+        ? `%${pagination.search.replace(/[\\%_]/g, "\\$&")}%`
+        : null;
       const rows = await client.query<{
-        user_id: string;
-        email_normalized: string;
-        status: "pending_review";
-        submitted_at: Date;
+        user_id: string | null;
+        email_normalized: string | null;
+        status: "pending_review" | "verified" | "rejected" | null;
+        submitted_at: Date | null;
+        total: string;
       }>(
-        "SELECT p.user_id,u.email_normalized,p.status,p.submitted_at FROM kyc_profiles p JOIN users u ON u.id=p.user_id WHERE p.status='pending_review' AND p.user_id<>$1 ORDER BY p.submitted_at ASC,p.user_id ASC LIMIT $2 OFFSET $3",
-        [actorId, pagination.limit, pagination.offset],
-      );
-      const count = await client.query<{ total: string }>(
-        "SELECT count(*) AS total FROM kyc_profiles WHERE status='pending_review' AND user_id<>$1",
-        [actorId],
+        `WITH filtered AS MATERIALIZED (
+          SELECT p.user_id,u.email_normalized,p.status,p.submitted_at
+          FROM kyc_profiles p JOIN users u ON u.id=p.user_id
+          WHERE p.user_id<>$1 AND p.status=ANY($2::text[])
+            AND ($3::text IS NULL OR u.email_normalized ILIKE $3 ESCAPE '\\')
+        )
+        SELECT page.*,counts.total
+        FROM (SELECT count(*) AS total FROM filtered) counts
+        LEFT JOIN LATERAL (
+          SELECT * FROM filtered
+          ORDER BY submitted_at ASC,user_id ASC LIMIT $4 OFFSET $5
+        ) page ON true
+        ORDER BY page.submitted_at ASC,page.user_id ASC`,
+        [actorId, statuses, search, pagination.limit, pagination.offset],
       );
       return {
-        profiles: rows.rows.map((row) => ({
-          userId: row.user_id,
-          email: row.email_normalized,
-          status: row.status,
-          submittedAt: row.submitted_at?.toISOString() ?? null,
-        })),
-        total: Number(count.rows[0]!.total),
+        profiles: rows.rows
+          .filter((row) => row.user_id !== null)
+          .map((row) => ({
+            userId: row.user_id!,
+            email: row.email_normalized!,
+            status: row.status!,
+            submittedAt: row.submitted_at?.toISOString() ?? null,
+          })),
+        total: Number(rows.rows[0]!.total),
       };
     });
   }

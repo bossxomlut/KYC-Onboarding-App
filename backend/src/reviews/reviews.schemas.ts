@@ -8,6 +8,10 @@ export const reviewMediaQuerySchema = z.strictObject({
 export const reviewPaginationSchema = z.strictObject({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
+  status: z
+    .enum(["pending_review", "verified", "rejected", "all"])
+    .default("pending_review"),
+  search: z.string().trim().max(254).optional(),
 });
 
 export const reviewDecisionSchema = z
