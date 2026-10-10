@@ -1,17 +1,7 @@
-# kyc_onboarding
+# Flutter client
 
-A new Flutter project.
+Use the repository root README for API/database/email setup and device-specific run commands.
 
-## Getting Started
+Feature boundaries: `lib/features/auth` and `lib/features/kyc` each contain pure domain, IO/mapping data, and use-case-driven presentation layers. `lib/app` composes DI and navigation. `lib/core` contains network, secure token storage and Material 3 design tokens.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Run `flutter pub get`, `flutter analyze`, and `flutter test` from this directory. The running app always uses the real backend; only automated tests substitute platform camera/media capture with synthetic fixtures.
