@@ -203,3 +203,17 @@ Home's new next-step card uses the same server-selected destination and resubmis
 The reusable renderer uses the actual production pages, theme, Cubit and use cases with a synthetic saved profile and the existing fake repository. Its PNGs use bundled Roboto/Material fonts and safe-area spacing, without operating-system status-bar chrome. The side-by-side artifact is `output/ui-revamp/emerald-signature/runtime/signature-comparison.png`; the final native recording is `output/ui-revamp/emerald-signature/runtime/real-api-flow.mov`. These generated artifacts are local and untracked.
 
 Native integration used a dedicated iPhone 17 Pro simulator with the local NestJS API, PostgreSQL, Mailpit and an authorized synthetic reviewer. Only camera capture was substituted with generated JPEGs. No backend, domain or provider-lifetime changes were made. Physical-device camera/permission checks and an Android build were not rerun for this correction.
+
+## Admin review API restart
+
+Verified on 10 October 2026 (Asia/Ho_Chi_Minh). The running compiled API still used the older review contract even though the files in `dist` had been rebuilt. Before the correction, all three local pending review detail requests returned HTTP200 with only `user` and `profile`, omitting the `submissionId` required by the current Flutter parser. This reproduces the generic error on Review identity. Rebuilt the backend, stopped the old API process and started the current compiled API with the existing local configuration.
+
+| Check | Actual result |
+| --- | --- |
+| Backend `npm run check`, `npm run build` | Passed |
+| Backend `tsx --test test/reviews.test.ts` | 8/8 passed, including decisions, permission revocation and stale submission IDs |
+| Flutter focused access data/Cubit/page tests | 24/24 passed; mobile source unchanged |
+| Flutter `flutter test --no-pub test/architecture` | 1/1 passed |
+| Authenticated local API smoke after restart | Health200, live super_admin role, queue200; all three pending profiles returned a valid stable submissionId, and all six document/selfie reads returned JPEG200 with no-store |
+
+The local smoke used a temporary diagnostic session that was removed afterward, printed only status/contract checks, and made no review decisions. Existing account credentials and applicant data were preserved. The installed app was not rebuilt and native screen interaction was not rerun; the current app can retry against the corrected API. The local setup guide now explains that rebuilding `dist` does not update an already running process.

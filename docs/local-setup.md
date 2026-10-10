@@ -281,6 +281,8 @@ Dừng Flutter bằng `q` trong terminal `flutter run`. Dừng NestJS, Mailpit v
 
 Khi mở lại dự án, chạy lại các terminal theo thứ tự: **PostgreSQL → Mailpit → NestJS → Flutter**. Không cần cài lại công cụ hoặc tạo lại `.env`. `npm run db:local` mở dữ liệu cũ và tự áp dụng migration còn thiếu. Chỉ chạy lại `npm ci`/`flutter pub get` khi dependency thay đổi hoặc chưa được cài.
 
+Nếu API chạy bằng `npm start` hoặc `node dist/server.js`, sau khi cập nhật backend phải dừng tiến trình API cũ, chạy `npm run build` trong `backend`, rồi `npm start`. Build chỉ cập nhật file trên ổ đĩa; tiến trình đang chạy vẫn dùng code đã nạp trước đó. Backend và app cần cùng contract review có `submissionId`; sau khi khởi động lại API, chọn **Retry** hoặc mở lại hồ sơ trong app. `/health` trả OK chỉ xác nhận kết nối database, không xác nhận phiên bản API.
+
 ### Cách B
 
 Dừng Flutter/NestJS tại terminal của chúng, rồi từ repo chạy:
@@ -325,6 +327,7 @@ DBeaver là công cụ xem database tùy chọn; cài từ [trang chính thức]
 | `Cannot connect to the Docker daemon`                  | Mở Docker Desktop, chờ Engine hoạt động rồi thử lại                                                                                                                                      |
 | API lỗi kết nối database                               | Chờ database ready/healthy; đối chiếu host, port và database trong cấu hình local                                                                                                        |
 | App báo không kết nối được API                         | Kiểm tra đúng URL theo iOS/Android/điện thoại thật, đúng `/api/v1`, và firewall                                                                                                          |
+| Admin mở Review identity gặp lỗi chung sau cập nhật app | Kiểm tra API đang chạy là bản mới: chi tiết review phải có `submissionId`. Dừng API cũ, build và khởi động lại theo mục 7, rồi chọn Retry trong app                                      |
 | Không có OTP trong Gmail                               | Email thử nghiệm nằm trong Mailpit; mở port `8025`, kiểm tra đúng người nhận                                                                                                             |
 | Đăng ký lại cùng email bị từ chối                      | Tài khoản đã được tạo, kể cả chưa xác thực; dùng đăng nhập hoặc gửi lại OTP                                                                                                              |
 | Build iOS/Android thiếu SDK hoặc license               | Chạy `flutter doctor -v`, hoàn thành mục tương ứng; Android dùng `flutter doctor --android-licenses`                                                                                     |
