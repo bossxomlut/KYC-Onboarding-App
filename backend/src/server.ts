@@ -6,9 +6,10 @@ const config = loadConfig();
 const pool = createPool(config.databaseUrl);
 const app = await buildApp(config, pool);
 try {
-  await app.listen({ host: config.host, port: config.port });
+  await app.listen(config.port, config.host);
   console.log(`KYC API listening on ${config.host}:${config.port}`);
 } catch {
+  await app.close();
   await pool.end();
   console.error(
     "API could not start. Check port, configuration and database availability.",

@@ -8,7 +8,9 @@
     "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": "src",
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["src/**/*.ts"]
 }

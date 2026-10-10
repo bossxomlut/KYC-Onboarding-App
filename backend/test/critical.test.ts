@@ -3,16 +3,24 @@ import { after, before, test } from "node:test";
 import { mkdtemp, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import EmbeddedPostgres from "embedded-postgres";
 import { Pool } from "pg";
 import sharp from "sharp";
+import request from "supertest";
 import { buildApp } from "../src/app.js";
 import { migrate } from "../src/database.js";
-import { reviewProfile } from "../src/kyc.js";
+import { reviewProfile } from "../src/kyc/kyc.repository.js";
 import type { Config } from "../src/config.js";
 import type { Mail } from "../src/mail.js";
 import { deliverQueued } from "../src/mail.js";
+import { AuthService } from "../src/auth/auth.service.js";
+import { KycService } from "../src/kyc/kyc.service.js";
+import {
+  APP_CONFIG,
+  DATABASE_POOL,
+  MAILER,
+} from "../src/infrastructure/tokens.js";
 
 let directory: string;
 let postgres: EmbeddedPostgres;
@@ -90,11 +98,75 @@ async function json(
   body?: unknown,
   token?: string,
 ) {
-  return app.inject({
+  return http(app, {
     method,
     url: `/api/v1${path}`,
     headers: token ? { authorization: `Bearer ${token}` } : {},
     payload: body as any,
+  });
+}
+
+// Exercise Nest's HTTP server, middleware, guards, interceptors and exception
+// filter through real HTTP rather than invoking handlers or mocking services.
+async function http(
+  application: { getHttpServer(): Parameters<typeof request>[0] },
+  options: {
+    method: "POST" | "GET" | "PUT";
+    url: string;
+    headers?: Record<string, string>;
+    payload?: unknown;
+  },
+) {
+  const server = request(application.getHttpServer());
+  let call = server[options.method.toLowerCase() as "post" | "get" | "put"](
+    options.url,
+  );
+  for (const [name, value] of Object.entries(options.headers ?? {})) {
+    call = call.set(name, value);
+  }
+  if (options.payload !== undefined) {
+    call = call.send(options.payload as string | object);
+  }
+  const response = await call;
+  return {
+    statusCode: response.status,
+    headers: response.headers,
+    body: response.text ?? "",
+    json: () => response.body,
+  };
+}
+
+type MultipartPart = {
+  name: string;
+  value: Buffer | string;
+  filename?: string;
+  contentType?: string;
+};
+
+function multipart(
+  application: Parameters<typeof http>[0],
+  parts: MultipartPart[],
+  token?: string,
+) {
+  const boundary = "strict-nest-upload-boundary";
+  const payload = Buffer.concat([
+    ...parts.flatMap((part) => [
+      Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="${part.name}"${part.filename ? `; filename="${part.filename}"` : ""}\r\n${part.contentType ? `Content-Type: ${part.contentType}\r\n` : ""}\r\n`,
+      ),
+      Buffer.isBuffer(part.value) ? part.value : Buffer.from(part.value),
+      Buffer.from("\r\n"),
+    ]),
+    Buffer.from(`--${boundary}--\r\n`),
+  ]);
+  return http(application, {
+    method: "POST",
+    url: "/api/v1/kyc/media/document",
+    headers: {
+      "content-type": `multipart/form-data; boundary=${boundary}`,
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    payload,
   });
 }
 async function upload(
@@ -116,7 +188,7 @@ async function upload(
     bytes,
     Buffer.from(`\r\n--${boundary}--\r\n`),
   ]);
-  return app.inject({
+  return http(app, {
     method: "POST",
     url: `/api/v1/kyc/media/${kind}`,
     headers: {
@@ -126,6 +198,52 @@ async function upload(
     payload: content,
   });
 }
+
+test("Nest modules resolve shared infrastructure and real Auth/KYC services", () => {
+  assert.equal(app.get(APP_CONFIG), config);
+  assert.equal(app.get(DATABASE_POOL), pool);
+  assert.equal(typeof app.get(MAILER).send, "function");
+  assert.ok(app.get(AuthService) instanceof AuthService);
+  assert.ok(app.get(KycService) instanceof KycService);
+});
+
+test("Nest exception filter keeps invalid JSON, validation and unknown routes in the API error contract", async () => {
+  const malformed = await http(app, {
+    method: "POST",
+    url: "/api/v1/auth/register",
+    headers: { "content-type": "application/json" },
+    payload: '{"email":',
+  });
+  assert.equal(malformed.statusCode, 400);
+  assert.equal(malformed.json().error.code, "INVALID_REQUEST");
+  const oversized = await json("POST", "/auth/register", {
+    email,
+    password,
+    padding: "x".repeat(16384),
+  });
+  assert.equal(oversized.statusCode, 413);
+  assert.equal(oversized.json().error.code, "REQUEST_TOO_LARGE");
+  const invalid = await json("POST", "/auth/register", {
+    email: "not-an-email",
+    password,
+  });
+  assert.equal(invalid.statusCode, 400);
+  assert.equal(invalid.json().error.code, "VALIDATION_ERROR");
+  const missing = await json("GET", "/missing");
+  assert.equal(missing.statusCode, 404);
+  assert.equal(missing.json().error.code, "NOT_FOUND");
+  const options = await request(app.getHttpServer()).options("/missing");
+  assert.equal(options.status, 404);
+  assert.equal(options.body.error.code, "NOT_FOUND");
+  for (const response of [malformed, oversized, invalid, missing]) {
+    assert.equal(response.headers["cache-control"], "no-store");
+    assert.equal(response.headers["x-content-type-options"], "nosniff");
+    assert.equal(response.headers["referrer-policy"], "no-referrer");
+    assert.equal(typeof response.json().error.requestId, "string");
+    assert.ok(response.json().error.requestId.length > 0);
+    assert.equal(response.body.includes("stack"), false);
+  }
+});
 
 test("registration, wrong/expired OTP, verification, and login restrictions", async () => {
   const register = await json("POST", "/auth/register", { email, password });
@@ -433,6 +551,121 @@ test("KYC validates details and media, keeps private encrypted storage, and resu
   assert.notDeepEqual(disk.subarray(0, 3), Buffer.from([255, 216, 255]));
 });
 
+test("Nest upload guard runs before multipart parsing and resource limits reject unsafe bodies", async () => {
+  const limited = await buildApp({ ...config, maxUploadBytes: 128 }, pool, {
+    send: async (mail) => {
+      mails.push(mail);
+    },
+  });
+  const file: MultipartPart = {
+    name: "file",
+    value: image,
+    filename: "synthetic.jpg",
+    contentType: "image/jpeg",
+  };
+  const documentType: MultipartPart = {
+    name: "documentType",
+    value: "passport",
+  };
+  try {
+    const unauthorized = await multipart(limited, [file, documentType]);
+    assert.equal(unauthorized.statusCode, 401);
+    assert.equal(unauthorized.json().error.code, "SESSION_EXPIRED");
+    const malformedUnauthorized = await http(limited, {
+      method: "POST",
+      url: "/api/v1/kyc/media/document",
+      headers: { "content-type": "multipart/form-data" },
+      payload: Buffer.alloc(1024),
+    });
+    assert.equal(malformedUnauthorized.statusCode, 401);
+    const oversized = await multipart(
+      limited,
+      [file, documentType],
+      session.accessToken,
+    );
+    assert.equal(oversized.statusCode, 413);
+    assert.equal(oversized.json().error.code, "UPLOAD_TOO_LARGE");
+    const malformed = await http(app, {
+      method: "POST",
+      url: "/api/v1/kyc/media/document",
+      headers: {
+        authorization: `Bearer ${session.accessToken}`,
+        "content-type": "multipart/form-data",
+      },
+      payload: Buffer.from("missing boundary"),
+    });
+    assert.equal(malformed.statusCode, 400);
+    assert.equal(malformed.json().error.code, "INVALID_UPLOAD");
+    const unexpectedFile = await multipart(
+      app,
+      [{ ...file, name: "otherFile" }, documentType],
+      session.accessToken,
+    );
+    assert.equal(unexpectedFile.statusCode, 400);
+    assert.equal(unexpectedFile.json().error.code, "INVALID_UPLOAD");
+    const unexpectedField = await multipart(
+      app,
+      [file, { name: "unexpectedField", value: "must not be accepted" }],
+      session.accessToken,
+    );
+    assert.equal(unexpectedField.statusCode, 400);
+    assert.equal(unexpectedField.json().error.code, "INVALID_UPLOAD");
+    const multipleFiles = await multipart(
+      app,
+      [file, file],
+      session.accessToken,
+    );
+    assert.equal(multipleFiles.statusCode, 413);
+    assert.equal(multipleFiles.json().error.code, "UPLOAD_TOO_LARGE");
+    const tooManyFields = await multipart(
+      app,
+      [
+        documentType,
+        { name: "captureId", value: randomBytes(16).toString("hex") },
+        { name: "extraField", value: "exceeds configured field count" },
+      ],
+      session.accessToken,
+    );
+    assert.equal(tooManyFields.statusCode, 413);
+    assert.equal(tooManyFields.json().error.code, "UPLOAD_TOO_LARGE");
+  } finally {
+    await limited.close();
+  }
+});
+
+test("Nest exception filter hides filesystem failures on authenticated private media", async () => {
+  const asset = await pool.query(
+    "SELECT id, storage_key FROM kyc_media WHERE user_id=$1 AND kind='document'",
+    [session.user.id],
+  );
+  const record = asset.rows[0];
+  const missingStorageKey = randomUUID();
+  await pool.query("UPDATE kyc_media SET storage_key=$2 WHERE id=$1", [
+    record.id,
+    missingStorageKey,
+  ]);
+  try {
+    const failure = await json(
+      "GET",
+      "/kyc/media/document",
+      undefined,
+      session.accessToken,
+    );
+    assert.equal(failure.statusCode, 500);
+    assert.equal(failure.json().error.code, "INTERNAL_ERROR");
+    assert.equal(failure.headers["cache-control"], "no-store");
+    assert.ok(failure.json().error.requestId);
+    assert.equal(failure.body.includes(config.mediaDir), false);
+    assert.equal(failure.body.includes("ENOENT"), false);
+    assert.equal(failure.body.includes(missingStorageKey), false);
+  } finally {
+    await pool.query("UPDATE kyc_media SET storage_key=$2 WHERE id=$1", [
+      record.id,
+      record.storage_key,
+    ]);
+  }
+});
+
 test("cross-user access is isolated; submit/reject/resubmit only clears rejected assets and verified locks data", async () => {
   const second = "bob@example.test";
   await json("POST", "/auth/register", { email: second, password });
@@ -491,6 +724,17 @@ test("cross-user access is isolated; submit/reject/resubmit only clears rejected
     (await json("POST", "/kyc/resubmit", {}, session.accessToken)).statusCode,
     409,
   );
+  const lockedMalformedUpload = await http(app, {
+    method: "POST",
+    url: "/api/v1/kyc/media/document",
+    headers: {
+      authorization: `Bearer ${session.accessToken}`,
+      "content-type": "multipart/form-data",
+    },
+    payload: Buffer.from("no boundary must not reach multipart parsing"),
+  });
+  assert.equal(lockedMalformedUpload.statusCode, 409);
+  assert.equal(lockedMalformedUpload.json().error.code, "KYC_LOCKED");
 });
 
 test("auth route rate limits and SMTP failures return safe recoverable errors", async () => {
@@ -500,7 +744,7 @@ test("auth route rate limits and SMTP failures return safe recoverable errors", 
     },
   });
   const request = () =>
-    limited.inject({
+    http(limited, {
       method: "POST",
       url: "/api/v1/auth/register",
       payload: { email: "mailfail@example.test", password },
@@ -514,6 +758,14 @@ test("auth route rate limits and SMTP failures return safe recoverable errors", 
   assert.equal(exhausted.statusCode, 429);
   assert.equal(exhausted.json().error.code, "RATE_LIMITED");
   assert.ok(exhausted.json().error.requestId);
+  // Express accepts case-insensitive route aliases; they must share the limit.
+  const alias = await http(limited, {
+    method: "POST",
+    url: "/API/V1/AUTH/register",
+    payload: { email: "mailfail@example.test", password },
+  });
+  assert.equal(alias.statusCode, 429);
+  assert.equal(alias.json().error.code, "RATE_LIMITED");
   await limited.close();
 });
 
@@ -524,7 +776,7 @@ test("forgot/resend stay generic during SMTP outage and encrypted outbox retries
     },
   });
   const post = (path: string, payload: unknown) =>
-    failing.inject({
+    http(failing, {
       method: "POST",
       url: `/api/v1/auth${path}`,
       payload: payload as any,
@@ -594,7 +846,7 @@ test("forgot and resend return after enqueueing without invoking or awaiting SMT
     },
   });
   const post = (path: string, payload: unknown) =>
-    queued.inject({
+    http(queued, {
       method: "POST",
       url: `/api/v1/auth${path}`,
       payload: payload as any,

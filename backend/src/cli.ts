@@ -3,8 +3,8 @@ import { parseArgs } from "node:util";
 import { z } from "zod";
 import { loadConfig } from "./config.js";
 import { createPool, migrate, transaction } from "./database.js";
-import { passwordHash } from "./auth.js";
-import { reviewProfile } from "./kyc.js";
+import { passwordHash } from "./auth/password.js";
+import { reviewProfile } from "./kyc/kyc.repository.js";
 
 const config = loadConfig();
 const pool = createPool(config.databaseUrl);

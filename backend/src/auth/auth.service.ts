@@ -1,49 +1,24 @@
 import { randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import argon2 from "argon2";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Pool, PoolClient } from "pg";
-import type { FastifyInstance, FastifyRequest } from "fastify";
-import { z } from "zod";
-import type { Config } from "./config.js";
-import type { Mailer, Mail } from "./mail.js";
-import { queueMail, deliverQueued } from "./mail.js";
-import { ApiError } from "./errors.js";
-import { transaction } from "./database.js";
-import {
-  accessToken,
-  opaqueToken,
-  tokenHash,
-  verifyAccess,
-} from "./security.js";
+import type { Config } from "../config.js";
+import type { Mailer, Mail } from "../mail.js";
+import { queueMail, deliverQueued } from "../mail.js";
+import { ApiError } from "../errors.js";
+import { transaction } from "../database.js";
+import { accessToken, opaqueToken, tokenHash } from "../security.js";
+import { APP_CONFIG, DATABASE_POOL, MAILER } from "../infrastructure/tokens.js";
+import type {
+  RegisterDto,
+  LoginDto,
+  EmailDto,
+  VerifyEmailDto,
+  RefreshDto,
+  ResetPasswordDto,
+} from "./auth.dto.js";
+import { passwordHash } from "./password.js";
 
-declare module "fastify" {
-  interface FastifyRequest {
-    userId: string;
-  }
-}
-const emailSchema = z.string().trim().toLowerCase().max(254).email();
-const passwordSchema = z
-  .string()
-  .min(12)
-  .max(128)
-  .refine(
-    (value) => /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value),
-    {
-      message:
-        "Use at least 12 characters with upper-case, lower-case and a number.",
-    },
-  );
-const credentials = z.strictObject({
-  email: emailSchema,
-  password: passwordSchema,
-});
-const loginBody = z.strictObject({
-  email: emailSchema,
-  password: z.string().min(1).max(128),
-});
-const emailBody = z.strictObject({ email: emailSchema });
-const refreshBody = z.strictObject({
-  refreshToken: z.string().min(1).max(256),
-});
 const genericMessage = {
   message:
     "If this email is registered, instructions will arrive shortly. Check your inbox and retry later if no email arrives.",
@@ -53,13 +28,6 @@ const publicUser = (row: any) => ({
   email: row.email_normalized,
   emailVerified: row.email_verified_at !== null,
 });
-export const passwordHash = (password: string) =>
-  argon2.hash(password, {
-    type: argon2.argon2id,
-    memoryCost: 19456,
-    timeCost: 2,
-    parallelism: 1,
-  });
 
 async function issueSession(
   client: PoolClient,
@@ -105,47 +73,24 @@ async function createOtp(client: PoolClient, user: any, config: Config) {
     text: `Your verification code is ${code}. It expires in 10 minutes. If you did not request this, ignore this email.`,
   });
 }
-export function authentication(pool: Pool, config: Config) {
-  return async (request: FastifyRequest) => {
-    const header = request.headers.authorization;
-    if (!header?.startsWith("Bearer "))
-      throw new ApiError(401, "SESSION_EXPIRED", "Please sign in to continue.");
-    let claims: { userId: string; sessionId: string };
-    try {
-      claims = await verifyAccess(header.substring(7), config);
-    } catch {
-      throw new ApiError(
-        401,
-        "SESSION_EXPIRED",
-        "Your session has expired. Please sign in again.",
-      );
-    }
-    const active = await pool.query(
-      "SELECT 1 FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.id=$1 AND s.user_id=$2 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='active'",
-      [claims.sessionId, claims.userId],
-    );
-    if (!active.rowCount)
-      throw new ApiError(
-        401,
-        "SESSION_EXPIRED",
-        "Your session has expired. Please sign in again.",
-      );
-    request.userId = claims.userId;
-  };
-}
+@Injectable()
+export class AuthService implements OnModuleInit {
+  private dummyPasswordHash!: string;
 
-export async function registerAuth(
-  app: FastifyInstance,
-  pool: Pool,
-  config: Config,
-  mailer: Mailer,
-) {
-  const dummyPasswordHash = await passwordHash(opaqueToken());
-  const rate = {
-    config: { rateLimit: { max: config.rateLimitMax, timeWindow: "1 minute" } },
-  };
-  app.post("/api/v1/auth/register", rate, async (request, reply) => {
-    const { email, password } = credentials.parse(request.body);
+  constructor(
+    @Inject(DATABASE_POOL) private readonly pool: Pool,
+    @Inject(APP_CONFIG) private readonly config: Config,
+    @Inject(MAILER) private readonly mailer: Mailer,
+  ) {}
+
+  async onModuleInit() {
+    // Compute once before serving requests, including the unknown-account password path.
+    this.dummyPasswordHash = await passwordHash(opaqueToken());
+  }
+
+  async register(dto: RegisterDto) {
+    const { pool, config, mailer } = this;
+    const { email, password } = dto;
     const hash = await passwordHash(password);
     let result: { user: any; mail: Mail };
     try {
@@ -182,12 +127,12 @@ export async function registerAuth(
         "EMAIL_DELIVERY_FAILED",
         "Email delivery is temporarily unavailable. Your account was saved and the email is queued. Retry verification shortly.",
       );
-    return reply
-      .code(201)
-      .send({ user: publicUser(result.user), nextStep: "VERIFY_EMAIL" });
-  });
-  app.post("/api/v1/auth/email/resend", rate, async (request) => {
-    const { email } = emailBody.parse(request.body);
+    return { user: publicUser(result.user), nextStep: "VERIFY_EMAIL" };
+  }
+
+  async resendVerification(dto: EmailDto) {
+    const { pool, config } = this;
+    const { email } = dto;
     await transaction(pool, async (client) => {
       const result = await client.query(
         "SELECT * FROM users WHERE email_normalized=$1 FOR UPDATE",
@@ -205,11 +150,11 @@ export async function registerAuth(
     });
     // Deliver through the worker so SMTP latency cannot distinguish account existence.
     return genericMessage;
-  });
-  app.post("/api/v1/auth/email/verify", rate, async (request) => {
-    const { email, code } = z
-      .strictObject({ email: emailSchema, code: z.string().regex(/^\d{6}$/) })
-      .parse(request.body);
+  }
+
+  async verifyEmail(dto: VerifyEmailDto) {
+    const { pool, config } = this;
+    const { email, code } = dto;
     const result = await transaction(pool, async (client) => {
       const users = await client.query(
         "SELECT * FROM users WHERE email_normalized=$1 FOR UPDATE",
@@ -254,9 +199,11 @@ export async function registerAuth(
           : "Invalid verification code. Check the code or request a new one.",
       );
     return sessionResponse(result.session);
-  });
-  app.post("/api/v1/auth/login", rate, async (request) => {
-    const { email, password } = loginBody.parse(request.body);
+  }
+
+  async login(dto: LoginDto) {
+    const { pool, config } = this;
+    const { email, password } = dto;
     return transaction(pool, async (client) => {
       const users = await client.query(
         "SELECT * FROM users WHERE email_normalized=$1 FOR UPDATE",
@@ -264,7 +211,7 @@ export async function registerAuth(
       );
       const user = users.rows[0];
       const passwordMatches = await argon2.verify(
-        user?.password_hash ?? dummyPasswordHash,
+        user?.password_hash ?? this.dummyPasswordHash,
         password,
       );
       if (!user || user.status === "disabled" || !passwordMatches)
@@ -281,9 +228,11 @@ export async function registerAuth(
         );
       return sessionResponse(await issueSession(client, user, config));
     });
-  });
-  app.post("/api/v1/auth/refresh", rate, async (request) => {
-    const { refreshToken } = refreshBody.parse(request.body);
+  }
+
+  async refresh(dto: RefreshDto) {
+    const { pool, config } = this;
+    const { refreshToken } = dto;
     const result = await transaction(pool, async (client) => {
       const ownership = await client.query(
         "SELECT user_id,family_id FROM auth_sessions WHERE refresh_token_hash=$1",
@@ -336,9 +285,11 @@ export async function registerAuth(
         "Your session has expired. Please sign in again.",
       );
     return result;
-  });
-  app.post("/api/v1/auth/logout", async (request) => {
-    const { refreshToken } = refreshBody.parse(request.body);
+  }
+
+  async logout(dto: RefreshDto) {
+    const { pool, config } = this;
+    const { refreshToken } = dto;
     await transaction(pool, async (client) => {
       const records = await client.query(
         "SELECT family_id FROM auth_sessions WHERE refresh_token_hash=$1",
@@ -356,19 +307,18 @@ export async function registerAuth(
       );
     });
     return { success: true };
-  });
-  app.get(
-    "/api/v1/auth/me",
-    { preHandler: authentication(pool, config) },
-    async (request) => {
-      const user = await pool.query("SELECT * FROM users WHERE id=$1", [
-        request.userId,
-      ]);
-      return { user: publicUser(user.rows[0]) };
-    },
-  );
-  app.post("/api/v1/auth/password/forgot", rate, async (request) => {
-    const { email } = emailBody.parse(request.body);
+  }
+
+  async currentUser(userId: string) {
+    const user = await this.pool.query("SELECT * FROM users WHERE id=$1", [
+      userId,
+    ]);
+    return { user: publicUser(user.rows[0]) };
+  }
+
+  async forgotPassword(dto: EmailDto) {
+    const { pool, config } = this;
+    const { email } = dto;
     await transaction(pool, async (client) => {
       const users = await client.query(
         "SELECT * FROM users WHERE email_normalized=$1 AND status<>'disabled' FOR UPDATE",
@@ -394,14 +344,11 @@ export async function registerAuth(
     });
     // Keep the response generic and independent of SMTP availability/latency.
     return genericMessage;
-  });
-  app.post("/api/v1/auth/password/reset", rate, async (request) => {
-    const { token, newPassword } = z
-      .strictObject({
-        token: z.string().min(1).max(256),
-        newPassword: passwordSchema,
-      })
-      .parse(request.body);
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const { pool, config } = this;
+    const { token, newPassword } = dto;
     const hash = await passwordHash(newPassword);
     const success = await transaction(pool, async (client) => {
       const ownership = await client.query(
@@ -447,5 +394,5 @@ export async function registerAuth(
         "The reset link is invalid or expired. Please request a new link.",
       );
     return { success: true };
-  });
+  }
 }

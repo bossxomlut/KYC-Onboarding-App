@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20.17"
+    "node": ">=22.12"
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -16,26 +16,36 @@
     "review": "tsx src/cli.ts review",
     "demo": "tsx src/cli.ts demo",
     "db:local": "tsx src/local-db.ts",
-    "format": "prettier --write src test package.json tsconfig.json"
+    "format": "prettier --write src test package.json tsconfig.json",
+    "prebuild": "node -e \"require('node:fs').rmSync('dist', {recursive:true, force:true})\""
   },
   "dependencies": {
-    "@fastify/multipart": "^9.2.1",
-    "@fastify/rate-limit": "^10.3.0",
+    "@nestjs/common": "^12.1.2",
+    "@nestjs/core": "^12.1.2",
+    "@nestjs/platform-express": "^12.1.2",
     "argon2": "^0.44.0",
     "dotenv": "^17.2.3",
-    "fastify": "^5.6.1",
+    "express": "^5.3.0",
     "jose": "^6.1.0",
+    "multer": "^2.4.0",
     "nodemailer": "^10.0.16",
     "pg": "^8.16.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
     "sharp": "^0.35.5",
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@nestjs/testing": "^12.1.2",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
     "@types/node": "^22.18.10",
     "@types/nodemailer": "^7.0.2",
     "@types/pg": "^8.15.5",
+    "@types/supertest": "^7.2.1",
     "embedded-postgres": "^18.1.0-beta.15",
     "prettier": "^3.6.2",
+    "supertest": "^7.3.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }

@@ -1,7 +1,7 @@
 /** Test-only privileged coordinator. The mobile app never calls this script. */
 import { loadConfig } from '../backend/src/config.js';
 import { createPool } from '../backend/src/database.js';
-import { reviewProfile } from '../backend/src/kyc.js';
+import { reviewProfile } from '../backend/src/kyc/kyc.repository.js';
 const email = process.argv[2];
 const config = loadConfig();
 if (!email?.endsWith('@kyc.example') || config.nodeEnv === 'production') {
