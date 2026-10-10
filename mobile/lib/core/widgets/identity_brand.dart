@@ -3,13 +3,15 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class IdentityBrand extends StatelessWidget {
-  const IdentityBrand({super.key});
+  const IdentityBrand({super.key, this.color});
+
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      const Icon(Icons.verified_user, color: AppTheme.primary, size: 25),
+      Icon(Icons.verified_user, color: color ?? AppTheme.primary, size: 25),
       const SizedBox(width: 8),
       Flexible(
         child: Text(
@@ -17,7 +19,7 @@ class IdentityBrand extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.ink,
+            color: color ?? AppTheme.ink,
             fontWeight: FontWeight.w700,
           ),
         ),

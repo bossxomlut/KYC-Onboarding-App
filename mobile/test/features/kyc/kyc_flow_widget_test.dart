@@ -73,8 +73,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        tester.widget<KycStatusBadge>(find.byType(KycStatusBadge)).status,
-        KycStatus.notStarted,
+        tester.widget<Text>(find.byKey(const Key('kyc-status'))).data,
+        KycStatus.notStarted.label,
       );
       await tester.ensureVisible(find.byKey(const Key('kyc-next')));
       await tester.tap(find.byKey(const Key('kyc-next')));

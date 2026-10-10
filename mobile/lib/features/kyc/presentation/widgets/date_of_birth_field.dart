@@ -150,6 +150,7 @@ class _DateOfBirthFieldState extends State<DateOfBirthField> {
       label: 'Date of birth',
       child: TextFormField(
         key: const Key('dateOfBirth'),
+        style: Theme.of(context).textTheme.bodyMedium,
         controller: _controller,
         readOnly: true,
         showCursor: false,

@@ -70,6 +70,13 @@ class _CapturePageState extends State<_CaptureView> {
           profile!.nextStep.index > step.index;
       return KycScaffold(
         title: isDocument ? 'ID document' : 'Selfie',
+        signatureHeader: KycSignatureIntro(
+          currentStep: isDocument ? 2 : 3,
+          title: isDocument ? 'Your identity, clearly.' : 'One quick selfie.',
+          description: isDocument
+              ? 'Keep every edge visible and avoid glare.'
+              : 'Look straight at the camera in good light.',
+        ),
         bottomBar: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,7 +99,7 @@ class _CapturePageState extends State<_CaptureView> {
                     : 'Open camera',
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             FilledButton(
               key: Key('continue-${widget.kind.name}'),
               onPressed: canContinue
@@ -100,29 +107,20 @@ class _CapturePageState extends State<_CaptureView> {
                   : null,
               child: const Text('Continue'),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
               'JPEG or PNG · Up to 10 MB',
               textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.muted,
+                fontSize: 11,
+              ),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            KycIntro(
-              step: isDocument ? 'Step 2 of 4' : 'Step 3 of 4',
-              title: isDocument
-                  ? 'Your identity, clearly.'
-                  : 'One quick selfie.',
-              description: isDocument
-                  ? 'Keep every edge visible and avoid glare.'
-                  : 'Look straight at the camera in good light.',
-              icon: isDocument ? Icons.badge_outlined : Icons.face_outlined,
-            ),
             const KycError(),
             if (isDocument)
               BlocBuilder<CaptureSettingsCubit, DocumentType>(
@@ -133,6 +131,7 @@ class _CapturePageState extends State<_CaptureView> {
                     child: DropdownButtonFormField<DocumentType>(
                       key: const Key('document-type'),
                       initialValue: type,
+                      style: Theme.of(context).textTheme.bodyMedium,
                       isExpanded: true,
                       icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       decoration: const InputDecoration(),
@@ -157,17 +156,17 @@ class _CapturePageState extends State<_CaptureView> {
                   ),
                 ),
               ),
-            if (isDocument) const SizedBox(height: 16),
+            if (isDocument) const SizedBox(height: 14),
             PrivatePhoto(
               bytes: previewBytes,
               label: isDocument ? 'Document photo' : 'Selfie photo',
-              aspectRatio: isDocument && previewBytes == null ? 16 / 9 : 4 / 3,
+              aspectRatio: isDocument && previewBytes == null ? 1.6 : 4 / 3,
               placeholder: CapturePreparation(
                 isDocument: isDocument,
                 hasUploadedPhoto: uploaded != null,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -179,6 +178,8 @@ class _CapturePageState extends State<_CaptureView> {
                         : 'Keep your face visible',
                   ),
                 ),
+                const SizedBox(width: 16),
+                Container(width: 1, height: 26, color: AppTheme.border),
                 const SizedBox(width: 16),
                 Expanded(
                   child: _CaptureTip(
@@ -192,7 +193,7 @@ class _CapturePageState extends State<_CaptureView> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             if (state.busy) ...[
               LinearProgressIndicator(value: state.uploadProgress),
               const SizedBox(height: 12),
@@ -212,12 +213,6 @@ class _CapturePageState extends State<_CaptureView> {
               ),
               const SizedBox(height: 16),
             ],
-            Text(
-              'Camera access is required. If permission is denied, enable it in device Settings.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-            ),
           ],
         ),
       );
@@ -235,14 +230,14 @@ class _CaptureTip extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Icon(icon, color: AppTheme.primary, size: 26),
-      const SizedBox(width: 10),
+      Icon(icon, color: AppTheme.primary, size: 24),
+      const SizedBox(width: 8),
       Expanded(
         child: Text(
           text,
           style: Theme.of(
             context,
-          ).textTheme.bodySmall?.copyWith(color: AppTheme.ink),
+          ).textTheme.bodySmall?.copyWith(color: AppTheme.ink, fontSize: 11),
         ),
       ),
     ],

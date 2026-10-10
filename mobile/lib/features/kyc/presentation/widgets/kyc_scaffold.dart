@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -14,68 +14,115 @@ class KycScaffold extends StatelessWidget {
     this.actions = const [],
     this.brandHeader = false,
     this.bottomBar,
+    this.signatureHeader,
+    this.overlapHeader = false,
   });
   final String title;
   final Widget child;
   final List<Widget> actions;
   final bool brandHeader;
   final Widget? bottomBar;
+  final Widget? signatureHeader;
+  final bool overlapHeader;
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: brandHeader ? const IdentityBrand() : Text(title),
-      titleSpacing: brandHeader ? 24 : 8,
-      actions: actions,
-      leading: (ModalRoute.of(context)?.canPop ?? false)
-          ? null
-          : (GoRouterState.of(context).uri.path == '/'
-                ? null
-                : IconButton(
-                    tooltip: 'Home',
-                    onPressed: () => context.go('/'),
-                    icon: const Icon(Icons.arrow_back),
-                  )),
-    ),
-    body: SafeArea(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-            child: child,
-          ),
-        ),
-      ),
-    ),
-    bottomNavigationBar: bottomBar == null
-        ? null
-        : Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                color: AppTheme.background,
-                border: Border(top: BorderSide(color: AppTheme.border)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight:
-                        (MediaQuery.sizeOf(context).height -
-                            MediaQuery.viewInsetsOf(context).bottom) *
-                        .45,
+  Widget build(BuildContext context) {
+    final signature = signatureHeader != null;
+    final scaffold = Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        backgroundColor: signature ? AppTheme.primary : null,
+        flexibleSpace: signature
+            ? const SizedBox.expand(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.signatureGradient,
                   ),
+                ),
+              )
+            : null,
+        foregroundColor: signature ? Colors.white : null,
+        titleTextStyle: signature
+            ? Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              )
+            : null,
+        systemOverlayStyle: signature ? SystemUiOverlayStyle.light : null,
+        toolbarHeight: signature ? 50 : null,
+        centerTitle: signature && !brandHeader,
+        title: brandHeader
+            ? IdentityBrand(color: signature ? Colors.white : null)
+            : Text(title),
+        titleSpacing: brandHeader ? 22 : 8,
+        actions: actions,
+        leading: (ModalRoute.of(context)?.canPop ?? false)
+            ? null
+            : (GoRouterState.of(context).uri.path == '/'
+                  ? null
+                  : IconButton(
+                      tooltip: 'Home',
+                      onPressed: () => context.go('/'),
+                      icon: const Icon(Icons.arrow_back),
+                    )),
+      ),
+      body: signature
+          ? _SignatureBody(
+              header: signatureHeader!,
+              overlapHeader: overlapHeader,
+              bottomInset: bottomBar == null
+                  ? MediaQuery.paddingOf(context).bottom
+                  : 0,
+              child: child,
+            )
+          : SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 512),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: bottomBar!,
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                    child: child,
+                  ),
+                ),
+              ),
+            ),
+      bottomNavigationBar: bottomBar == null
+          ? null
+          : Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppTheme.background,
+                  border: signature
+                      ? null
+                      : const Border(top: BorderSide(color: AppTheme.border)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight:
+                          (MediaQuery.sizeOf(context).height -
+                              MediaQuery.viewInsetsOf(context).bottom) *
+                          .45,
+                    ),
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        signature ? 22 : 24,
+                        signature ? 12 : 16,
+                        signature ? 22 : 24,
+                        signature ? 12 : 16,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 512),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: bottomBar!,
+                          ),
                         ),
                       ),
                     ),
@@ -83,7 +130,130 @@ class KycScaffold extends StatelessWidget {
                 ),
               ),
             ),
+    );
+    return scaffold;
+  }
+}
+
+class _SignatureBody extends StatelessWidget {
+  const _SignatureBody({
+    required this.header,
+    required this.overlapHeader,
+    required this.bottomInset,
+    required this.child,
+  });
+  final Widget header;
+  final bool overlapHeader;
+  final double bottomInset;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Padding(
+          padding: overlapHeader
+              ? EdgeInsets.fromLTRB(16, 0, 16, 20 + bottomInset)
+              : EdgeInsets.fromLTRB(22, 16, 22, 12 + bottomInset),
+          child: child,
+        ),
+      ),
+    );
+    final sheet = overlapHeader
+        ? Stack(
+            children: [
+              const Positioned.fill(
+                top: 40,
+                child: ColoredBox(color: AppTheme.background),
+              ),
+              content,
+            ],
+          )
+        : DecoratedBox(
+            decoration: const BoxDecoration(
+              color: AppTheme.background,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: content,
+          );
+    return SingleChildScrollView(
+      child: DecoratedBox(
+        decoration: const BoxDecoration(gradient: AppTheme.signatureGradient),
+        child: Column(children: [header, sheet]),
+      ),
+    );
+  }
+}
+
+class KycSignatureIntro extends StatelessWidget {
+  const KycSignatureIntro({
+    super.key,
+    required this.title,
+    required this.description,
+    this.currentStep,
+  });
+  final String title;
+  final String description;
+  final int? currentStep;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: [
+      Positioned(
+        right: 8,
+        top: currentStep == null ? -2 : 4,
+        child: ExcludeSemantics(
+          child: Icon(
+            Icons.shield_outlined,
+            size: 104,
+            color: Colors.white.withValues(alpha: .12),
           ),
+        ),
+      ),
+      Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              22,
+              currentStep == null ? 12 : 10,
+              22,
+              currentStep == null ? 28 : 19,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (currentStep != null) ...[
+                  KycStepProgress(currentStep: currentStep!, inverse: true),
+                  const SizedBox(height: 20),
+                ],
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontSize: currentStep == null ? 30 : 28,
+                    height: 1.17,
+                    letterSpacing: -.6,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white,
+                    fontSize: 15,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
   );
 }
 
@@ -175,10 +345,14 @@ class KycIntro extends StatelessWidget {
 }
 
 class KycStepProgress extends StatelessWidget {
-  const KycStepProgress({required this.currentStep, super.key})
-    : assert(currentStep >= 1 && currentStep <= 4);
+  const KycStepProgress({
+    required this.currentStep,
+    this.inverse = false,
+    super.key,
+  }) : assert(currentStep >= 1 && currentStep <= 4);
 
   final int currentStep;
+  final bool inverse;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -192,36 +366,56 @@ class KycStepProgress extends StatelessWidget {
             for (var number = 1; number <= 4; number++) ...[
               if (number > 1)
                 Container(
-                  width: 24,
+                  width: inverse ? 20 : 24,
                   height: 1,
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  color: number <= currentStep
+                  margin: EdgeInsets.symmetric(horizontal: inverse ? 6 : 8),
+                  color: inverse
+                      ? Colors.white.withValues(alpha: .55)
+                      : number <= currentStep
                       ? AppTheme.primary
                       : AppTheme.border,
                 ),
               Container(
-                width: 30,
-                height: 30,
+                width: inverse ? 26 : 30,
+                height: inverse ? 26 : 30,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: number <= currentStep
+                  color: inverse
+                      ? (number < currentStep
+                            ? Colors.white
+                            : number == currentStep
+                            ? Colors.transparent
+                            : Colors.white.withValues(alpha: .66))
+                      : number <= currentStep
                       ? AppTheme.primary
                       : Colors.white,
                   border: Border.all(
-                    color: number <= currentStep
+                    color: inverse
+                        ? (number <= currentStep
+                              ? Colors.white
+                              : Colors.transparent)
+                        : number <= currentStep
                         ? AppTheme.primary
                         : AppTheme.border,
-                    width: 1.5,
+                    width: inverse ? 2 : 1.5,
                   ),
                 ),
                 child: number < currentStep
-                    ? const Icon(Icons.check, size: 18, color: Colors.white)
+                    ? Icon(
+                        Icons.check,
+                        size: 18,
+                        color: inverse ? AppTheme.primary : Colors.white,
+                      )
                     : Text(
                         '$number',
                         textScaler: TextScaler.noScaling,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: number == currentStep
+                          color: inverse
+                              ? (number == currentStep
+                                    ? Colors.white
+                                    : AppTheme.primary)
+                              : number == currentStep
                               ? Colors.white
                               : AppTheme.muted,
                           fontWeight: FontWeight.w700,
@@ -231,10 +425,13 @@ class KycStepProgress extends StatelessWidget {
             ],
           ],
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: inverse ? 7 : 10),
         Text(
           'STEP $currentStep OF 4',
-          style: Theme.of(context).textTheme.labelMedium,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: inverse ? Colors.white : AppTheme.muted,
+            fontSize: inverse ? 11 : 12,
+          ),
         ),
       ],
     ),

@@ -184,3 +184,22 @@ Verified on 10 October 2026 (Asia/Ho_Chi_Minh). The selected Option 1A Emerald F
 The new layout cases cover 320px screens with doubled text on Home, personal details, document, selfie and review; form entry after scrolling; full-width submit; the save action above a 300px keyboard inset; and truthful correction progress after rejection. Keyboard footer occlusion and the compact document placeholder overflow were observed failing before their fixes. Document/selfie regressions also reproduced the incorrect “No photo yet” caption when server upload metadata existed without cached preview bytes; the corrected state announces uploaded/preview-unavailable and retains explicit Continue.
 
 The flow widget helper now unfocuses and settles after entering form fields, matching the existing integration helper and allowing Flutter's scheduled caret scrolling to finish before tapping the date picker. The running integration uses the local NestJS API, PostgreSQL and Mailpit with synthetic applicant data and an authorized synthetic reviewer. Only camera capture is substituted with generated JPEG fixtures because iOS Simulator cannot take a photograph. This UI update adds no backend, domain, routing or native-platform changes. Physical-device camera/permission checks and an Android build were not rerun for this presentation update.
+
+## Emerald Signature reference correction
+
+Verified on 10 October 2026. The supplied Option 1C Emerald Signature reference is now reflected in the production Flutter presentation: a continuous emerald header with a faint shield, white navigation and step indicators, rounded white form sheets, an overlapping Home status card with circular progress and connected task rows, compact outlined fields and a mint document capture frame. Review, selfie and verification status share the same visual treatment. Nationality retains the existing editable text field; the reference depicts a selector.
+
+| Check | Actual result |
+| --- | --- |
+| Full `flutter test --no-pub --reporter expanded` | 242/242 passed, including architecture, navigation, session, history and KYC regressions |
+| Focused Home, safe-area, layout, capture, details, review, verification, KYC flow and architecture tests | 46/46 passed on final source |
+| `flutter analyze --no-pub` | No issues found |
+| Bundled Dart format check on `lib test integration_test tool`; `git diff --check` | 135 Dart files, no changes required; diff check passed |
+| `flutter test --no-pub tool/render_signature_test.dart --reporter expanded` | 3/3 passed; inspected Home, personal details and National ID capture at 390×844 |
+| Final iOS Simulator real-API integration | Passed; Xcode debug build succeeded, then the 56-second registration/OTP, restored session/progress, upload failure/retry, private review, submit, rejection/resubmission, verified result, historical submission and logout flow completed |
+
+Home's new next-step card uses the same server-selected destination and resubmission operation as its main action. A gated regression first reproduced resubmission replacing an Account access route before Home was disposed; the existing current-route guard now prevents that navigation. A separate regression first reproduced the final verification action entering the iOS home-indicator area at doubled text size; the scrolling sheet now includes the bottom safe-area inset. Document type selection retains its Home navigation control without invoking camera capture or upload.
+
+The reusable renderer uses the actual production pages, theme, Cubit and use cases with a synthetic saved profile and the existing fake repository. Its PNGs use bundled Roboto/Material fonts and safe-area spacing, without operating-system status-bar chrome. The side-by-side artifact is `output/ui-revamp/emerald-signature/runtime/signature-comparison.png`; the final native recording is `output/ui-revamp/emerald-signature/runtime/real-api-flow.mov`. These generated artifacts are local and untracked.
+
+Native integration used a dedicated iPhone 17 Pro simulator with the local NestJS API, PostgreSQL, Mailpit and an authorized synthetic reviewer. Only camera capture was substituted with generated JPEGs. No backend, domain or provider-lifetime changes were made. Physical-device camera/permission checks and an Android build were not rerun for this correction.

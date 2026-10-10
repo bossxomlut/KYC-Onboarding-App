@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/navigation/current_route.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/identity_brand.dart';
 import '../../domain/entities/kyc_profile.dart';
@@ -26,13 +27,29 @@ class HomePage extends StatelessWidget {
     builder: (context, state) {
       final profile = state.profile;
       final textTheme = Theme.of(context).textTheme;
+      final VoidCallback? onNext = state.busy || profile == null
+          ? null
+          : () async {
+              final cubit = context.read<KycCubit>();
+              if (profile.status == KycStatus.rejected &&
+                  !await cubit.resubmit()) {
+                return;
+              }
+              if (!context.mounted || !isCurrentRoute(context)) return;
+              context.go(cubit.state.profile!.nextStep.routePath);
+            };
       return KycScaffold(
         title: 'Identity',
         brandHeader: true,
+        signatureHeader: const KycSignatureIntro(
+          title: 'A secure start.',
+          description: 'Your saved progress is ready.',
+        ),
+        overlapHeader: true,
         actions: [
           IconButton(
             key: const Key('account-access'),
-            tooltip: 'Account access',
+            tooltip: 'Account access\n$email',
             onPressed: () => context.go('/access'),
             icon: const Icon(Icons.person_outline_rounded),
           ),
@@ -46,18 +63,6 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('A secure start.', style: textTheme.headlineMedium),
-            const SizedBox(height: 4),
-            Text(
-              'Your saved progress is ready.',
-              style: textTheme.bodyLarge?.copyWith(color: AppTheme.muted),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              email,
-              style: textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-            ),
-            const SizedBox(height: 24),
             if (canReview) ...[
               OutlinedButton.icon(
                 key: const Key('review-profiles'),
@@ -74,8 +79,8 @@ class HomePage extends StatelessWidget {
                 child: Center(child: CircularProgressIndicator()),
               ),
             if (profile != null) ...[
-              _VerificationProgress(profile: profile),
-              const SizedBox(height: 16),
+              _VerificationProgress(profile: profile, onNext: onNext),
+              const SizedBox(height: 12),
               for (final step in _verificationTasks)
                 _VerificationTask(
                   step: step,
@@ -86,9 +91,10 @@ class HomePage extends StatelessWidget {
                   awaitingResubmission:
                       profile.status == KycStatus.rejected &&
                       step == KycStep.review,
+                  first: step == KycStep.personalDetails,
                   last: step == KycStep.review,
                 ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               if (profile.status == KycStatus.rejected) ...[
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -120,17 +126,7 @@ class HomePage extends StatelessWidget {
               ],
               FilledButton(
                 key: const Key('kyc-next'),
-                onPressed: state.busy
-                    ? null
-                    : () async {
-                        final cubit = context.read<KycCubit>();
-                        if (profile.status == KycStatus.rejected &&
-                            !await cubit.resubmit()) {
-                          return;
-                        }
-                        if (!context.mounted) return;
-                        context.go(cubit.state.profile!.nextStep.routePath);
-                      },
+                onPressed: onNext,
                 child: Text(switch (profile.status) {
                   KycStatus.notStarted => 'Start verification',
                   KycStatus.inProgress => 'Continue verification',
@@ -139,7 +135,7 @@ class HomePage extends StatelessWidget {
                 }),
               ),
             ],
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             TextButton(
               key: const Key('view-kyc-history'),
               onPressed: () => context.go('/kyc/history'),
@@ -148,11 +144,8 @@ class HomePage extends StatelessWidget {
                 style: TextStyle(decoration: TextDecoration.underline),
               ),
             ),
-            const SizedBox(height: 12),
-            const PrivacyNote(
-              text:
-                  'Photos are stored privately. Only you and authorized reviewers can view them after signing in.',
-            ),
+            const SizedBox(height: 4),
+            const PrivacyNote(text: 'Photos are stored privately.'),
           ],
         ),
       );
@@ -198,9 +191,10 @@ _TaskState _taskState(KycProfile profile, KycStep step) {
 }
 
 class _VerificationProgress extends StatelessWidget {
-  const _VerificationProgress({required this.profile});
+  const _VerificationProgress({required this.profile, required this.onNext});
 
   final KycProfile profile;
+  final VoidCallback? onNext;
 
   @override
   Widget build(BuildContext context) {
@@ -213,73 +207,135 @@ class _VerificationProgress extends StatelessWidget {
     final showResult =
         profile.status == KycStatus.pendingReview ||
         profile.status == KycStatus.verified;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.border),
-        borderRadius: BorderRadius.circular(AppTheme.panelRadius),
-      ),
+    return Material(
+      color: Colors.white,
+      elevation: 3,
+      shadowColor: AppTheme.ink.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(AppTheme.panelRadius),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: KycStatusBadge(
-                  status: profile.status,
-                  labelKey: const Key('kyc-status'),
-                  compact: true,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '$completed / ${_verificationTasks.length}',
-                style: textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          LinearProgressIndicator(
-            color: appearance.foreground,
-            backgroundColor: AppTheme.border,
-            borderRadius: BorderRadius.circular(8),
-            minHeight: 7,
-            value: completed / _verificationTasks.length,
-            semanticsLabel: 'Verification tasks completed',
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Icon(
-                showResult ? appearance.icon : _stepIcon(activeStep),
-                size: 26,
-                color: appearance.foreground,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      showResult
-                          ? 'Verification status'
-                          : profile.status == KycStatus.rejected
-                          ? 'Update needed'
-                          : 'Next step',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: AppTheme.muted,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 24, 18, 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'VERIFICATION STATUS',
+                        style: textTheme.labelMedium?.copyWith(
+                          color: AppTheme.muted,
+                          fontSize: 11,
+                        ),
                       ),
-                    ),
-                    Text(
-                      showResult ? KycStep.result.label : activeStep.label,
-                      style: textTheme.titleSmall,
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Semantics(
+                        label: 'Verification status: ${profile.status.label}',
+                        liveRegion: true,
+                        excludeSemantics: true,
+                        child: Text(
+                          profile.status.label,
+                          key: const Key('kyc-status'),
+                          style: textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '$completed of ${_verificationTasks.length} completed',
+                        style: textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
+                SizedBox.square(
+                  dimension: 80,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        color: AppTheme.primary,
+                        backgroundColor: AppTheme.mint,
+                        strokeWidth: 7,
+                        strokeCap: StrokeCap.round,
+                        value: completed / _verificationTasks.length,
+                        semanticsLabel: 'Verification tasks completed',
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Center(
+                          child: ExcludeSemantics(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '$completed/${_verificationTasks.length}',
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 18),
+            child: Divider(),
+          ),
+          InkWell(
+            key: const Key('kyc-next-step'),
+            onTap: onNext,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
+              child: Row(
+                children: [
+                  Icon(
+                    showResult ? appearance.icon : _stepIcon(activeStep),
+                    size: 27,
+                    color: appearance.foreground,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          showResult
+                              ? 'Verification status'
+                              : profile.status == KycStatus.rejected
+                              ? 'Update needed'
+                              : 'Next step',
+                          style: textTheme.bodySmall,
+                        ),
+                        Text(
+                          showResult ? KycStep.result.label : activeStep.label,
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 24,
+                    color: AppTheme.primary,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -288,8 +344,8 @@ class _VerificationProgress extends StatelessWidget {
 }
 
 IconData _stepIcon(KycStep step) => switch (step) {
-  KycStep.personalDetails => Icons.person_outline_rounded,
-  KycStep.document => Icons.description_outlined,
+  KycStep.personalDetails => Icons.person_rounded,
+  KycStep.document => Icons.description_rounded,
   KycStep.selfie => Icons.face_outlined,
   KycStep.review => Icons.fact_check_outlined,
   KycStep.result => Icons.verified_user_outlined,
@@ -301,6 +357,7 @@ class _VerificationTask extends StatelessWidget {
     required this.state,
     required this.correctionRequired,
     required this.awaitingResubmission,
+    required this.first,
     required this.last,
   });
 
@@ -308,6 +365,7 @@ class _VerificationTask extends StatelessWidget {
   final _TaskState state;
   final bool correctionRequired;
   final bool awaitingResubmission;
+  final bool first;
   final bool last;
 
   @override
@@ -315,7 +373,6 @@ class _VerificationTask extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final completed = state == _TaskState.completed;
     final active = state == _TaskState.active;
-    final markerSize = MediaQuery.textScalerOf(context).scale(18) + 18;
     final subtitle = correctionRequired
         ? 'Update required'
         : awaitingResubmission
@@ -329,68 +386,86 @@ class _VerificationTask extends StatelessWidget {
       label: '${step.label}: $subtitle',
       child: ExcludeSemantics(
         child: Container(
-          margin: const EdgeInsets.only(bottom: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          constraints: const BoxConstraints(minHeight: 64),
           decoration: BoxDecoration(
             color: active ? AppTheme.mint : null,
             borderRadius: BorderRadius.circular(AppTheme.controlRadius),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: markerSize,
-                height: markerSize,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: completed || active
-                      ? AppTheme.primary
-                      : AppTheme.border,
-                  shape: BoxShape.circle,
-                ),
-                child: completed
-                    ? const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      )
-                    : Text(
-                        '${step.index + 1}',
-                        style: textTheme.titleMedium?.copyWith(
-                          color: active ? Colors.white : AppTheme.ink,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  decoration: BoxDecoration(
-                    border: !active && !last
-                        ? const Border(
-                            bottom: BorderSide(color: AppTheme.border),
+          child: CustomPaint(
+            painter: _TimelineConnector(first: first, last: last),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: completed || active
+                          ? AppTheme.primary
+                          : AppTheme.disabledSurface,
+                      shape: BoxShape.circle,
+                    ),
+                    child: completed
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 18,
                           )
-                        : null,
+                        : Text(
+                            '${step.index + 1}',
+                            textScaler: TextScaler.noScaling,
+                            style: textTheme.labelLarge?.copyWith(
+                              color: active ? Colors.white : AppTheme.ink,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(step.label, style: textTheme.titleSmall),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: AppTheme.muted,
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step.label,
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 1),
+                        Text(subtitle, style: textTheme.bodySmall),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+class _TimelineConnector extends CustomPainter {
+  const _TimelineConnector({required this.first, required this.last});
+
+  final bool first;
+  final bool last;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawLine(
+      Offset(26, first ? size.height / 2 : 0),
+      Offset(26, last ? size.height / 2 : size.height),
+      Paint()
+        ..color = AppTheme.border
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_TimelineConnector oldDelegate) =>
+      first != oldDelegate.first || last != oldDelegate.last;
 }

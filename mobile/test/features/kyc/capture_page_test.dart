@@ -13,6 +13,28 @@ import 'package:kyc_onboarding/features/kyc/presentation/widgets/kyc_scaffold.da
 import 'kyc_cubit_test.dart' show FakeKycRepository;
 
 void main() {
+  testWidgets('document type selection preserves the Home navigation control', (
+    tester,
+  ) async {
+    final repository = CaptureRepository(MediaKind.document);
+    final (_, router) = await pumpCapture(tester, repository);
+    expect(find.byTooltip('Home'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('document-type')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('National ID').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('National ID'), findsOneWidget);
+    expect(find.byTooltip('Home'), findsOneWidget);
+    await tester.tap(find.byTooltip('Home'));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(find.text('Home destination'), findsOneWidget);
+    expect(repository.captureCount, 0);
+    expect(repository.uploadCount, 0);
+  });
+
   for (final kind in MediaKind.values) {
     testWidgets(
       '${kind.name} uploaded photo without cached bytes is not reported as missing',
@@ -233,6 +255,10 @@ Future<(KycCubit, GoRouter)> pumpCapture(
   final router = GoRouter(
     initialLocation: repository.path,
     routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, _) => const Scaffold(body: Text('Home destination')),
+      ),
       for (final kind in MediaKind.values)
         GoRoute(
           path: kind == MediaKind.document ? '/kyc/document' : '/kyc/selfie',

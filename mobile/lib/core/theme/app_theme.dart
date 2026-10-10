@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppTheme {
-  static const primary = Color(0xFF026220);
+  static const primary = Color(0xFF006334);
+  static const signatureDark = Color(0xFF00562D);
+  static const signatureLight = Color(0xFF086D3E);
+  static const signatureGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [signatureLight, primary, signatureDark],
+  );
   static const background = Colors.white;
   static const ink = Color(0xFF172D24);
   static const muted = Color(0xFF617169);
   static const border = Color(0xFFD8E2DC);
   static const mint = Color(0xFFE8F3EA);
   static const disabledSurface = Color(0xFFE9EEEB);
-  static const controlRadius = 14.0;
+  static const controlRadius = 8.0;
   static const panelRadius = 16.0;
 
   static ThemeData get light {
@@ -112,14 +119,15 @@ abstract final class AppTheme {
         ),
         labelStyle: const TextStyle(color: muted),
         hintStyle: const TextStyle(color: muted, fontWeight: FontWeight.w400),
+        isDense: true,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 15,
+          horizontal: 12,
+          vertical: 12,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(0, 52),
+          minimumSize: const Size(0, 50),
           backgroundColor: primary,
           foregroundColor: Colors.white,
           disabledBackgroundColor: disabledSurface,

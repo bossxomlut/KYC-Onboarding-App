@@ -22,14 +22,17 @@ class CapturePreparation extends StatelessWidget {
     child: ExcludeSemantics(
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.mint,
-          border: Border.all(color: AppTheme.primary.withValues(alpha: .14)),
-          borderRadius: BorderRadius.circular(AppTheme.panelRadius),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppTheme.mint, Color(0xFFF0F8F3)],
+          ),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: CustomPaint(
           painter: const _CaptureFramePainter(),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(22),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: Column(
@@ -60,12 +63,13 @@ class CapturePreparation extends StatelessWidget {
                             size: 76,
                           ),
                         ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Text(
                     hasUploadedPhoto ? 'Photo uploaded' : 'No photo yet',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: AppTheme.primary),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.primary,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -82,41 +86,65 @@ class _DocumentIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 188,
-    height: 110,
-    padding: const EdgeInsets.all(14),
+    width: 170,
+    height: 96,
+    padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
       color: Colors.white.withValues(alpha: .68),
       border: Border.all(
         color: AppTheme.primary.withValues(alpha: .6),
-        width: 1.5,
+        width: 1,
       ),
-      borderRadius: BorderRadius.circular(AppTheme.controlRadius),
+      borderRadius: BorderRadius.circular(8),
     ),
     child: Row(
       children: [
         Container(
-          width: 60,
+          width: 54,
+          height: 58,
           decoration: BoxDecoration(
             color: AppTheme.primary.withValues(alpha: .08),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.person_rounded,
-            color: AppTheme.primary,
+            color: AppTheme.primary.withValues(alpha: .58),
             size: 52,
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: .08),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: const Text(
+                    'DEMO',
+                    textScaler: TextScaler.noScaling,
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
               _line(1),
-              const SizedBox(height: 10),
+              const SizedBox(height: 7),
               _line(.8),
-              const SizedBox(height: 10),
+              const SizedBox(height: 7),
               _line(.58),
             ],
           ),
@@ -128,7 +156,7 @@ class _DocumentIllustration extends StatelessWidget {
   Widget _line(double width) => FractionallySizedBox(
     widthFactor: width,
     child: Container(
-      height: 7,
+      height: 6,
       decoration: BoxDecoration(
         color: AppTheme.primary.withValues(alpha: .15),
         borderRadius: BorderRadius.circular(4),
@@ -142,12 +170,12 @@ class _CaptureFramePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const inset = 15.0;
-    const length = 16.0;
+    const inset = 14.0;
+    const length = 14.0;
     final paint = Paint()
       ..color = AppTheme.primary
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
+      ..strokeWidth = 1.6
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final path = Path()

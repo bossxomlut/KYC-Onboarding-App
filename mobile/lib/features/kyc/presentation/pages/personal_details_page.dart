@@ -28,6 +28,11 @@ class _PersonalDetailsForm extends StatelessWidget {
         BlocBuilder<PersonalDetailsFormCubit, PersonalDetailsFormState>(
           builder: (context, form) => KycScaffold(
             title: 'Personal details',
+            signatureHeader: const KycSignatureIntro(
+              currentStep: 1,
+              title: 'Let’s get to know you.',
+              description: 'Use the details on your ID.',
+            ),
             bottomBar: (flow.profile?.canEdit ?? false)
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
@@ -36,7 +41,7 @@ class _PersonalDetailsForm extends StatelessWidget {
                       const PrivacyNote(
                         text: 'Your progress is saved when you continue.',
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
                       FilledButton(
                         key: const Key('save-details'),
                         onPressed: flow.busy
@@ -73,12 +78,6 @@ class _PersonalDetailsForm extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const KycIntro(
-                  step: 'Step 1 of 4',
-                  title: 'Let’s get to know you.',
-                  description: 'Use the details on your ID.',
-                  icon: Icons.person_outline,
-                ),
                 const KycError(),
                 if (!(flow.profile?.canEdit ?? false)) ...[
                   const Text(
@@ -98,7 +97,7 @@ class _PersonalDetailsForm extends StatelessWidget {
                     autofillHints: const [AutofillHints.name],
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: 18),
                     child: DateOfBirthField(
                       value: form.details.dateOfBirth,
                       errorText: form.errors['dateOfBirth'],
@@ -151,13 +150,14 @@ class _PersonalDetailsForm extends StatelessWidget {
     int lines = 1,
     TextCapitalization capitalization = TextCapitalization.words,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.only(bottom: 18),
     child: FormFieldLabel(
       label: label,
       child: Semantics(
         label: label,
         child: TextFormField(
           key: Key(field),
+          style: Theme.of(context).textTheme.bodyMedium,
           initialValue: value,
           onChanged: (value) =>
               context.read<PersonalDetailsFormCubit>().update(field, value),

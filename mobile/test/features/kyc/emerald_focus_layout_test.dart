@@ -29,6 +29,39 @@ const _profile = KycProfile(
 );
 
 void main() {
+  testWidgets('Signature next-step card opens the server-selected step', (
+    tester,
+  ) async {
+    await _pumpPage(tester, '/');
+    await tester.tap(find.byKey(const Key('kyc-next-step')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('capture-document')), findsOneWidget);
+    expect(find.byKey(const Key('save-details')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Signature next-step card reopens only requested corrections', (
+    tester,
+  ) async {
+    await _pumpPage(
+      tester,
+      '/',
+      profile: const KycProfile(
+        id: 'visual-profile',
+        status: KycStatus.rejected,
+        nextStep: KycStep.result,
+        personalDetails: _details,
+        requiredSteps: [KycStep.selfie],
+        rejectionReason: 'Please provide a clearer selfie.',
+      ),
+    );
+    await tester.tap(find.byKey(const Key('kyc-next-step')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('capture-selfie')), findsOneWidget);
+    expect(find.byKey(const Key('capture-document')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('save action remains reachable above an open keyboard', (
     tester,
   ) async {
@@ -48,7 +81,7 @@ void main() {
       await _pumpPage(tester, '/kyc/review');
       expect(
         tester.getSize(find.byKey(const Key('submit-kyc'))).width,
-        closeTo(390 - 48, .1),
+        closeTo(390 - 44, .1),
       );
       expect(tester.takeException(), isNull);
     },
@@ -83,7 +116,8 @@ void main() {
       find.bySemanticsLabel('Review & submit: Submit after updates'),
       findsOneWidget,
     );
-    expect(find.text('1 / 4'), findsOneWidget);
+    expect(find.text('1/4'), findsOneWidget);
+    expect(find.text('1 of 4 completed'), findsOneWidget);
     expect(tester.takeException(), isNull);
     semantics.dispose();
   });

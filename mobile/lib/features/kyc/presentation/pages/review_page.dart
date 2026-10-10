@@ -36,6 +36,12 @@ class _ReviewPageState extends State<ReviewPage> {
       final profile = state.profile;
       return KycScaffold(
         title: 'Review & submit',
+        signatureHeader: const KycSignatureIntro(
+          currentStep: 4,
+          title: 'Everything look right?',
+          description:
+              'Check your details and photos before sending your profile for verification.',
+        ),
         bottomBar: FilledButton(
           key: const Key('submit-kyc'),
           onPressed: state.busy || !(profile?.canSubmit ?? false)
@@ -52,13 +58,6 @@ class _ReviewPageState extends State<ReviewPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const KycIntro(
-              step: 'Step 4 of 4',
-              title: 'Everything look right?',
-              description:
-                  'Check your details and photos before sending your profile for verification.',
-              icon: Icons.fact_check_outlined,
-            ),
             KycError(
               onRetry: state.errorSource == KycErrorSource.operation
                   ? null

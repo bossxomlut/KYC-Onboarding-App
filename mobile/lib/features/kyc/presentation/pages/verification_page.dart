@@ -47,6 +47,10 @@ class _VerificationPageState extends State<VerificationPage> {
           : KycStatusAppearance.forStatus(status);
       return KycScaffold(
         title: 'Verification status',
+        signatureHeader: const KycSignatureIntro(
+          title: 'Your verification.',
+          description: 'Follow your profile’s latest status.',
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
