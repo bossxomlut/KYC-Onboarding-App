@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../domain/entities/kyc_profile.dart';
 import 'kyc_scaffold.dart';
+import 'kyc_status_badge.dart';
 
 class KycProfileSummary extends StatelessWidget {
   const KycProfileSummary({
@@ -24,6 +25,15 @@ class KycProfileSummary extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (profile != null) ...[
+          Text(
+            'Verification status',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 8),
+          KycStatusBadge(status: profile!.status),
+          const SizedBox(height: 24),
+        ],
         _heading(context, 'Personal details', KycStep.personalDetails),
         const SizedBox(height: 8),
         if (details == null)

@@ -34,7 +34,7 @@ try {
       const email =
         values.email ??
         process.env.BOOTSTRAP_ADMIN_EMAIL ??
-        (production ? undefined : "superadmin@kyc.example");
+        (production ? undefined : "admin@kyc.com");
       if (!email || (production && !process.env.BOOTSTRAP_ADMIN_PASSWORD))
         throw new Error(
           "Production bootstrap requires BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD supplied securely by the operator.",

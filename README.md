@@ -68,6 +68,7 @@ Sign in as a reviewer or super admin and open **Review profiles**. The backend c
 ```sh
 cd backend
 npm run admin:bootstrap
+# Default local email: admin@kyc.com.
 # Local credentials: backend/.local/super-admin.json (private, Git-ignored).
 # Sign in → Manage accounts to create accounts or grant reviewer permission.
 ```

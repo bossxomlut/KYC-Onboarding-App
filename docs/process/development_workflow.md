@@ -4,6 +4,6 @@ This assignment is a new feature across domain, data, presentation, core, DI, ro
 
 Before changing behavior, specify its contract and write a focused failing test. Tests prioritize session restore, network failure recovery, refresh rotation, authorization, upload validation, KYC transitions and resubmission. Generated scaffold and purely visual styling do not require test-first changes.
 
-Domain is pure Dart. Data maps infrastructure exceptions to typed results. Presentation calls use cases only. App-scoped auth is owned at the app root; KYC state is owned at the authenticated flow shell; page forms use page providers. Factories create Cubits. DI is the composition root.
+Domain is pure Dart. Data maps infrastructure exceptions to typed results. Presentation calls use cases only. App-scoped auth is owned at the app root; KYC state is owned at the authenticated applicant flow shell for user/reviewer. Super admin Home bypasses that provider and uses app-scoped session state through the composition root. Page forms use page providers. Factories create Cubits. DI is the composition root.
 
 Done means formatting/analyzer and focused tests pass, runtime checks are actually performed, setup and limitations are documented, no secrets/real PII are committed, and changes have meaningful commits. Device-only checks are recorded separately from automated evidence.

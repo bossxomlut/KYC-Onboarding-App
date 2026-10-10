@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/kyc_profile.dart';
 import '../bloc/kyc_cubit.dart';
 import '../widgets/kyc_scaffold.dart';
+import '../widgets/kyc_status_badge.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({
@@ -11,16 +12,17 @@ class HomePage extends StatelessWidget {
     required this.email,
     required this.onLogout,
     this.canReview = false,
-    this.canManageUsers = false,
   });
   final String email;
   final Future<void> Function() onLogout;
   final bool canReview;
-  final bool canManageUsers;
   @override
   Widget build(BuildContext context) => BlocBuilder<KycCubit, KycState>(
     builder: (context, state) {
       final profile = state.profile;
+      final appearance = profile == null
+          ? null
+          : KycStatusAppearance.forStatus(profile.status);
       return KycScaffold(
         title: 'Your verification',
         actions: [
@@ -49,13 +51,6 @@ class HomePage extends StatelessWidget {
             ),
             Text(email, style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 12),
-            if (canManageUsers)
-              OutlinedButton.icon(
-                key: const Key('manage-accounts'),
-                onPressed: () => context.go('/admin'),
-                icon: const Icon(Icons.manage_accounts_outlined),
-                label: const Text('Manage accounts'),
-              ),
             if (canReview)
               OutlinedButton.icon(
                 key: const Key('review-profiles'),
@@ -79,13 +74,16 @@ class HomePage extends StatelessWidget {
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 10),
-                      Text(
-                        profile.status.label,
-                        key: const Key('kyc-status'),
-                        style: Theme.of(context).textTheme.headlineSmall,
+                      KycStatusBadge(
+                        status: profile.status,
+                        labelKey: const Key('kyc-status'),
                       ),
                       const SizedBox(height: 16),
                       LinearProgressIndicator(
+                        color: appearance!.foreground,
+                        backgroundColor: appearance.background,
+                        borderRadius: BorderRadius.circular(8),
+                        minHeight: 6,
                         value: profile.status == KycStatus.verified
                             ? 1
                             : profile.nextStep.index / 4,

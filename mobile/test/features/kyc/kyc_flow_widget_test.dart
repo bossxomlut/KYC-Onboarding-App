@@ -14,6 +14,7 @@ import 'package:kyc_onboarding/features/kyc/presentation/pages/home_page.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/pages/personal_details_page.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/pages/review_page.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/pages/verification_page.dart';
+import 'package:kyc_onboarding/features/kyc/presentation/widgets/kyc_status_badge.dart';
 import 'kyc_cubit_test.dart' show FakeKycRepository;
 
 void main() {
@@ -71,6 +72,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(
+        tester.widget<KycStatusBadge>(find.byType(KycStatusBadge)).status,
+        KycStatus.notStarted,
+      );
       await tester.ensureVisible(find.byKey(const Key('kyc-next')));
       await tester.tap(find.byKey(const Key('kyc-next')));
       await tester.pumpAndSettle();
@@ -107,11 +112,19 @@ void main() {
       await tester.tap(find.byKey(const Key('capture-selfie')));
       await tester.pumpAndSettle();
       expect(find.text('Everything look right?'), findsOneWidget);
+      expect(
+        tester.widget<KycStatusBadge>(find.byType(KycStatusBadge)).status,
+        KycStatus.inProgress,
+      );
       expect(find.text('Demo User'), findsOneWidget);
       await tester.ensureVisible(find.byKey(const Key('submit-kyc')));
       await tester.tap(find.byKey(const Key('submit-kyc')));
       await tester.pumpAndSettle();
       expect(find.text('Pending review'), findsOneWidget);
+      expect(
+        tester.widget<KycStatusBadge>(find.byType(KycStatusBadge)).status,
+        KycStatus.pendingReview,
+      );
       expect(cubit.state.pendingCaptures, isEmpty);
       expect(repository.captureCount, 2);
     },

@@ -43,7 +43,7 @@ Keep that terminal running. Its default connection matches `.env.example`: `post
 
 `npm run demo` creates a verified synthetic email account with an empty KYC profile. It is disabled when `NODE_ENV=production` and does not reset existing data. Its demo-only credentials are `demo@kyc.example` / `DemoOnlyPass123!`. Use registration in the recording if email verification is part of the flow.
 
-Create the initial super admin with `npm run admin:bootstrap`. Development defaults to `superadmin@kyc.example` and writes a randomly generated password to ignored `.local/super-admin.json` with mode 600. It never prints the password or resets an existing owner. See the [admin and reviewer guide](admin-access.md) for setup and production bootstrap requirements.
+Create the initial super admin with `npm run admin:bootstrap`. Development defaults to `admin@kyc.com` and writes a randomly generated password to ignored `.local/super-admin.json` with mode 600. It never prints the password or resets an existing owner. See the [admin and reviewer guide](admin-access.md) for setup and production bootstrap requirements.
 
 Sign in as the super admin to create user/reviewer accounts and approve access requests. Managed accounts verify email through the existing OTP flow. Reviewers and the super admin can open pending profiles of other users and record approval/rejection in the app. The old `npm run review` command no longer changes the database.
 

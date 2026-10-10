@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/kyc_profile.dart';
 import '../bloc/kyc_cubit.dart';
 import '../widgets/kyc_scaffold.dart';
+import '../widgets/kyc_status_badge.dart';
 import '../widgets/submitted_profile_sheet.dart';
 
 class VerificationPage extends StatefulWidget {
@@ -54,31 +55,47 @@ class _VerificationPageState extends State<VerificationPage>
       final status = profile?.status;
       final rejected = status == KycStatus.rejected;
       final verified = status == KycStatus.verified;
+      final appearance = status == null
+          ? null
+          : KycStatusAppearance.forStatus(status);
       return KycScaffold(
         title: 'Verification status',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            KycIntro(
-              step: 'Verification result',
-              title: profile?.status.label ?? 'Loading your status…',
-              description: verified
+            Text(
+              'VERIFICATION RESULT',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 12),
+            if (status != null)
+              KycStatusBadge(status: status, prominent: true)
+            else
+              Text(
+                'Loading your status…',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            const SizedBox(height: 16),
+            Text(
+              verified
                   ? 'Your identity has been verified. You’re all set.'
                   : rejected
                   ? 'A few updates are needed before we can verify your identity.'
                   : status == KycStatus.pendingReview
                   ? 'Your profile has been submitted. Refresh here to see the latest review result.'
                   : 'Continue your verification to complete the remaining steps.',
-              icon: verified
-                  ? Icons.verified_outlined
-                  : rejected
-                  ? Icons.error_outline
-                  : Icons.hourglass_top_outlined,
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
+            const SizedBox(height: 28),
             KycError(onRetry: () => context.read<KycCubit>().load()),
             if (state.busy) const LinearProgressIndicator(),
             if (rejected) ...[
               Card(
+                color: appearance!.background,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: appearance.border),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -86,7 +103,8 @@ class _VerificationPageState extends State<VerificationPage>
                     children: [
                       Text(
                         'Why it needs an update',
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(color: appearance.foreground),
                       ),
                       const SizedBox(height: 10),
                       Text(

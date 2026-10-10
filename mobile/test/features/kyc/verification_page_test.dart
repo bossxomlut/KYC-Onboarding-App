@@ -12,6 +12,7 @@ import 'package:kyc_onboarding/features/kyc/domain/usecases/kyc_usecases.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/bloc/kyc_cubit.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/pages/verification_page.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/widgets/kyc_scaffold.dart';
+import 'package:kyc_onboarding/features/kyc/presentation/widgets/kyc_status_badge.dart';
 
 import 'kyc_cubit_test.dart' show FakeKycRepository;
 
@@ -29,6 +30,10 @@ void main() {
         final cubit = await mountVerification(tester, repository);
 
         expect(find.text(status.label), findsOneWidget);
+        expect(
+          tester.widget<KycStatusBadge>(find.byType(KycStatusBadge)).status,
+          status,
+        );
         expect(find.text('View submitted profile'), findsOneWidget);
         expect(repository.privateMediaCalls, isEmpty);
         expect(
@@ -41,6 +46,12 @@ void main() {
         final sheet = find.byType(BottomSheet);
         expect(sheet, findsOneWidget);
         expect(inSheet(find.text('Submitted profile')), findsOneWidget);
+        expect(
+          tester
+              .widget<KycStatusBadge>(inSheet(find.byType(KycStatusBadge)))
+              .status,
+          status,
+        );
         for (final value in [
           'Demo User',
           '15 April 1995',
@@ -95,6 +106,10 @@ void main() {
       final repository = SubmittedProfileRepository(status);
       await mountVerification(tester, repository);
 
+      expect(
+        tester.widget<KycStatusBadge>(find.byType(KycStatusBadge)).status,
+        status,
+      );
       expect(find.byKey(const Key('view-submitted-profile')), findsNothing);
       expect(repository.privateMediaCalls, isEmpty);
     });

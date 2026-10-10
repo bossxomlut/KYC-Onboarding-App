@@ -20,6 +20,7 @@ import '../features/auth/domain/entities/user.dart';
 import '../features/access/presentation/bloc/access_cubit.dart';
 import '../features/access/presentation/pages/access_page.dart';
 import '../features/access/presentation/pages/admin_page.dart';
+import '../features/access/presentation/pages/admin_home_page.dart';
 import '../features/access/presentation/pages/reviewer_queue_page.dart';
 import '../features/access/presentation/pages/reviewer_detail_page.dart';
 import '../features/kyc/domain/entities/kyc_profile.dart';
@@ -181,6 +182,7 @@ class _KycAppState extends State<KycApp> {
           builder: (context, state, child) {
             final auth = _session.state;
             if (auth is! AuthAuthenticated) return const _SessionPage();
+            if (auth.user.canManageUsers) return child;
             return BlocProvider(
               key: ValueKey(auth.user.id),
               create: (_) => di<KycCubit>()..load(),
@@ -192,10 +194,26 @@ class _KycAppState extends State<KycApp> {
               path: '/',
               builder: (context, state) {
                 final user = (_session.state as AuthAuthenticated).user;
+                if (user.canManageUsers) {
+                  return BlocBuilder<AuthSessionCubit, AuthSessionState>(
+                    builder: (context, auth) {
+                      if (auth is! AuthAuthenticated) {
+                        return const _SessionPage();
+                      }
+                      return AdminHomePage(
+                        user: auth.user,
+                        isSigningOut: auth.isSigningOut,
+                        error: auth.error,
+                        onLogout: () async {
+                          await _session.signOut();
+                        },
+                      );
+                    },
+                  );
+                }
                 return HomePage(
                   email: user.email,
                   canReview: user.canReview,
-                  canManageUsers: user.canManageUsers,
                   onLogout: () async {
                     final flow = context.read<KycCubit>();
                     await _session.signOut();

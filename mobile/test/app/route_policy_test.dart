@@ -1,7 +1,36 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kyc_onboarding/app/router/route_policy.dart';
+import 'package:kyc_onboarding/features/auth/domain/entities/user.dart';
 
 void main() {
+  test('super admin returns home instead of entering applicant KYC routes', () {
+    for (final location in [
+      '/kyc/status',
+      '/kyc/details',
+      '/kyc/document',
+      '/kyc/selfie',
+      '/kyc/review',
+    ]) {
+      expect(
+        RoutePolicy.redirect(
+          access: SessionAccess.authenticated,
+          location: location,
+          role: UserRole.superAdmin,
+        ),
+        '/',
+      );
+      for (final role in [UserRole.user, UserRole.reviewer]) {
+        expect(
+          RoutePolicy.redirect(
+            access: SessionAccess.authenticated,
+            location: location,
+            role: role,
+          ),
+          isNull,
+        );
+      }
+    }
+  });
   test('startup preserves password reset deep links', () {
     expect(
       RoutePolicy.redirect(

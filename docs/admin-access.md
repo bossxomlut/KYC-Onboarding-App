@@ -20,7 +20,9 @@ npm run migrate
 npm run admin:bootstrap
 ```
 
-Email local mặc định là `superadmin@kyc.example`. Lệnh sinh mật khẩu ngẫu nhiên mạnh, lưu email/mật khẩu vào **`backend/.local/super-admin.json`**, với quyền file `600` và được Git ignore. Mật khẩu không in ra terminal và không nằm trong source code. Mở file này trên máy để lấy thông tin đăng nhập; giữ riêng và không đưa vào commit/screenshot. Admin khởi tạo đã xác minh email và có thể đăng nhập ngay.
+Email local mặc định là `admin@kyc.com`. Lệnh sinh mật khẩu ngẫu nhiên mạnh, lưu email/mật khẩu vào **`backend/.local/super-admin.json`**, với quyền file `600` và được Git ignore. Mật khẩu không in ra terminal và không nằm trong source code. Mở file này trên máy để lấy thông tin đăng nhập; giữ riêng và không đưa vào commit/screenshot. Admin khởi tạo đã xác minh email và có thể đăng nhập ngay.
+
+Tài khoản admin trong database local hiện tại đã được đổi email thành `admin@kyc.com` và giữ mật khẩu riêng theo yêu cầu để kiểm thử; thông tin hiện tại được cập nhật trong file credentials trên. Phiên đăng nhập admin trước khi đổi email đã được thu hồi: đăng nhập lại bằng email mới. Lệnh bootstrap cho database mới vẫn sinh mật khẩu mạnh, và chạy lại không đặt lại mật khẩu của admin đã có.
 
 Có thể chọn email khi khởi tạo lần đầu:
 
@@ -33,6 +35,8 @@ Chạy lại với cùng email giữ nguyên admin và mật khẩu. Nếu email
 Trong production, operator phải cung cấp `BOOTSTRAP_ADMIN_EMAIL` và `BOOTSTRAP_ADMIN_PASSWORD` qua secrets của môi trường, dùng email nhận thư thực tế. Lệnh không dùng thông tin local mặc định và không ghi file credentials production. Bootstrap là thao tác vận hành có quyền database, không phải endpoint công khai.
 
 ## Tạo tài khoản và cấp quyền trong app
+
+Home của `super_admin` chỉ hiển thị thông tin tài khoản, **Manage accounts**, **Review profiles** và đăng xuất. Admin không có phần verification status hoặc các bước nộp hồ sơ cá nhân; đường dẫn `/kyc/*` chuyển về Home admin. Home của user/reviewer vẫn hiển thị luồng KYC của chính mình.
 
 1. Đăng nhập admin, từ Home mở **Manage accounts**.
 2. Tạo tài khoản bằng email, mật khẩu ban đầu và quyền `user` hoặc `reviewer`. Người dùng đăng nhập rồi xác minh OTP; local đọc thư trong [Mailpit](http://127.0.0.1:8025). Mật khẩu tối thiểu 12 ký tự, có chữ hoa, chữ thường và số.
@@ -48,6 +52,8 @@ Các danh sách có phân trang. Quyền được đọc từ database ở mỗi
 Đăng nhập reviewer/admin, mở **Review profiles** từ Home. Chọn hồ sơ chờ, xem chi tiết, ảnh giấy tờ và selfie, rồi duyệt hoặc từ chối. Từ chối cần lý do 3–1000 ký tự và ít nhất một bước làm lại: thông tin cá nhân, giấy tờ hoặc selfie. Chỉ hồ sơ `pending_review` được duyệt; quyết định đồng thời chỉ lưu một kết quả.
 
 Người nộp hồ sơ mở màn hình kết quả và **Refresh status**. Nếu bị từ chối, **Update and resubmit** mở lại bước được yêu cầu, giữ phần đã chấp nhận. Ảnh vẫn yêu cầu xác thực, không có URL media công khai.
+
+Trạng thái KYC có màu nhất quán trên Home, màn hình kết quả và phần xem hồ sơ: **Not started** xám, **In progress** xanh dương, **Pending review** vàng nâu, **Verified** xanh lá, **Rejected** đỏ. Mỗi trạng thái có nhãn và biểu tượng, nền nhạt và viền; màu chữ đạt tương phản ít nhất 4.5:1.
 
 `npm run review` cũ đã ngừng ghi trực tiếp database và hướng dẫn dùng app. Duyệt là thủ công; chưa có OCR, so khớp khuôn mặt hoặc liveness.
 

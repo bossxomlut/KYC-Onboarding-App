@@ -17,7 +17,7 @@ Profile: `{id,status,nextStep,personalDetails,document,selfie,rejectionReason,re
 Paths use `lib/core`, `lib/features`, `lib/app`. `core/domain/result.dart`: sealed `Result<T>` with `Success<T>(value)`, `Failure<T>(AppFailure error)`; `AppFailure` fields code/message and getter isNetwork. Pure Dart.
 `core/network/api_client.dart`: ApiClient(Dio dio), methods get/post/put returning decoded `Map<String,dynamic>`, upload(path,filePath,{fields}), bytes(path), and public Dio get dio. Shared network/auth data layers implement token storage and retry.
 `core/security/token_store.dart`: TokenStore interface `Future<String?> readRefreshToken()`, `Future<void> saveTokens({required String accessToken,required String refreshToken})`, `Future<void> clear()`, `String? get accessToken`; SecureTokenStore implementation. No persistence of PII in plaintext.
-AuthSessionCubit is app-scoped; KycCubit is authenticated-flow scoped. Root DI/router may compose both without feature flow-to-flow imports. Auth repository exposes use cases consumed by auth cubits. KYC repository/use cases consume ApiClient.
+AuthSessionCubit is app-scoped; KycCubit is authenticated applicant-flow scoped for user/reviewer. Super admins have a separate Home with management/review actions and bypass the applicant KYC provider and profile fetch; `/kyc/*` redirects them home. Root DI/router may compose these roles without feature flow-to-flow imports. Auth repository exposes use cases consumed by auth cubits. KYC repository/use cases consume ApiClient. KYC status colors/icons belong to presentation; the status entity remains pure Dart.
 
 ## Access and reviewer APIs
 

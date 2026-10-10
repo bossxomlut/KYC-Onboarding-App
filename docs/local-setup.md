@@ -271,7 +271,7 @@ iOS Simulator không có camera thật. Để thử chụp ảnh, dùng Android 
 
 ### Admin và quyền duyệt hồ sơ
 
-Sau khi database chạy, thực hiện `npm run migrate` và `npm run admin:bootstrap` trong `backend`. Email local mặc định `superadmin@kyc.example`; mật khẩu ngẫu nhiên lưu riêng trong `backend/.local/super-admin.json`, không in ra terminal. Chạy lại không reset tài khoản. Đăng nhập admin → **Manage accounts** để tạo tài khoản/cấp reviewer/xử lý yêu cầu; người dùng → **Account access** để xin quyền; reviewer → **Review profiles** để duyệt. Xem [hướng dẫn đầy đủ](admin-access.md).
+Sau khi database chạy, thực hiện `npm run migrate` và `npm run admin:bootstrap` trong `backend`. Email local mặc định `admin@kyc.com`; mật khẩu ngẫu nhiên lưu riêng trong `backend/.local/super-admin.json`, không in ra terminal. Chạy lại không reset tài khoản. Đăng nhập admin → **Manage accounts** để tạo tài khoản/cấp reviewer/xử lý yêu cầu; người dùng → **Account access** để xin quyền; reviewer → **Review profiles** để duyệt. Xem [hướng dẫn đầy đủ](admin-access.md).
 
 ## 7. Dừng và khởi động lại
 
