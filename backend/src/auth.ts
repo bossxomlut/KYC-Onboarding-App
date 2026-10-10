@@ -188,7 +188,7 @@ export async function registerAuth(
   });
   app.post("/api/v1/auth/email/resend", rate, async (request) => {
     const { email } = emailBody.parse(request.body);
-    const mail = await transaction(pool, async (client) => {
+    await transaction(pool, async (client) => {
       const result = await client.query(
         "SELECT * FROM users WHERE email_normalized=$1 FOR UPDATE",
         [email],
@@ -203,7 +203,7 @@ export async function registerAuth(
       if (recent.rowCount) return null;
       return createOtp(client, user, config);
     });
-    if (mail) await deliverQueued(pool, config, mailer, mail.id);
+    // Deliver through the worker so SMTP latency cannot distinguish account existence.
     return genericMessage;
   });
   app.post("/api/v1/auth/email/verify", rate, async (request) => {
@@ -369,7 +369,7 @@ export async function registerAuth(
   );
   app.post("/api/v1/auth/password/forgot", rate, async (request) => {
     const { email } = emailBody.parse(request.body);
-    const mail = await transaction(pool, async (client) => {
+    await transaction(pool, async (client) => {
       const users = await client.query(
         "SELECT * FROM users WHERE email_normalized=$1 AND status<>'disabled' FOR UPDATE",
         [email],
@@ -392,7 +392,7 @@ export async function registerAuth(
         text: `Reset your password: ${config.resetLink}${separator}token=${token}\nThis link expires in 30 minutes and can be used once. If you did not request this, ignore this email.`,
       });
     });
-    if (mail) await deliverQueued(pool, config, mailer, mail.id);
+    // Keep the response generic and independent of SMTP availability/latency.
     return genericMessage;
   });
   app.post("/api/v1/auth/password/reset", rate, async (request) => {

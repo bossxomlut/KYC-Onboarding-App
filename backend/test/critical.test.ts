@@ -269,6 +269,14 @@ test("reset is generic, expiring and single-use; resets revoke all sessions", as
   });
   const known = await json("POST", "/auth/password/forgot", { email });
   assert.deepEqual(unknown.json(), known.json());
+  assert.equal(
+    await deliverQueued(pool, config, {
+      send: async (mail) => {
+        mails.push(mail);
+      },
+    }),
+    true,
+  );
   const token = mails.at(-1)!.text.match(/token=([^\s]+)/)![1]!;
   assert.equal(
     (
@@ -549,6 +557,16 @@ test("forgot/resend stay generic during SMTP outage and encrypted outbox retries
     queue.rows.some((row) => row.encrypted_payload.includes("example.test")),
     false,
   );
+  assert.equal(
+    await deliverQueued(pool, config, {
+      send: async () => {
+        throw new Error("SMTP unavailable");
+      },
+    }),
+    false,
+  );
+  const retried = await pool.query("SELECT attempt_count FROM email_outbox");
+  assert.ok(retried.rows.some((row) => row.attempt_count > 0));
   await pool.query("UPDATE email_outbox SET next_attempt_at=now()");
   const delivered: Mail[] = [];
   assert.equal(
@@ -561,4 +579,62 @@ test("forgot/resend stay generic during SMTP outage and encrypted outbox retries
   );
   assert.equal(delivered.length, 1);
   await failing.close();
+});
+
+test("forgot and resend return after enqueueing without invoking or awaiting SMTP", async () => {
+  let smtpCalls = 0;
+  let releaseSmtp!: () => void;
+  const deferred = new Promise<void>((resolve) => {
+    releaseSmtp = resolve;
+  });
+  const queued = await buildApp(config, pool, {
+    send: async () => {
+      smtpCalls++;
+      await deferred;
+    },
+  });
+  const post = (path: string, payload: unknown) =>
+    queued.inject({
+      method: "POST",
+      url: `/api/v1/auth${path}`,
+      payload: payload as any,
+    });
+  let pending: Promise<unknown> | undefined;
+  try {
+    const registered = await pool.query(
+      "SELECT id FROM users WHERE email_normalized='mailfail@example.test'",
+    );
+    await pool.query(
+      "UPDATE email_verification_tokens SET created_at=now()-interval '1 minute' WHERE user_id=$1",
+      [registered.rows[0].id],
+    );
+    const requests = [
+      post("/password/forgot", { email }),
+      post("/email/resend", { email: "mailfail@example.test" }),
+    ];
+    pending = Promise.all(requests);
+    const responses = (await Promise.race([
+      pending,
+      new Promise<undefined>((resolve) =>
+        setTimeout(() => resolve(undefined), 1000),
+      ),
+    ])) as Awaited<ReturnType<typeof post>>[] | undefined;
+    assert.ok(
+      responses,
+      "Generic auth endpoints must not wait for SMTP completion.",
+    );
+    assert.equal(
+      smtpCalls,
+      0,
+      "SMTP must run only through the background outbox worker.",
+    );
+    assert.ok(responses.every((response) => response.statusCode === 200));
+    const outbox = await pool.query("SELECT kind FROM email_outbox");
+    assert.ok(outbox.rows.some((row) => row.kind === "reset"));
+    assert.ok(outbox.rows.some((row) => row.kind === "verification"));
+  } finally {
+    releaseSmtp();
+    await pending;
+    await queued.close();
+  }
 });
