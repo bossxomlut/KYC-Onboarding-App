@@ -146,6 +146,13 @@ class HomePage extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 16),
+            OutlinedButton.icon(
+              key: const Key('view-kyc-history'),
+              onPressed: () => context.go('/kyc/history'),
+              icon: const Icon(Icons.history),
+              label: const Text('Submission history'),
+            ),
+            const SizedBox(height: 16),
             const Text(
               'Your photos are stored privately. You and authorized reviewers can view them after signing in.',
               textAlign: TextAlign.center,

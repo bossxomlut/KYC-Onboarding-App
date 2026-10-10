@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Res,
   UploadedFile,
   UseGuards,
@@ -27,6 +28,11 @@ import {
 import { KycService } from "./kyc.service.js";
 import { KycUploadGuard } from "./kyc-upload.guard.js";
 import { KycUploadFieldsPipe } from "./kyc-upload-fields.pipe.js";
+import {
+  historyPaginationSchema,
+  submissionIdSchema,
+  type HistoryPagination,
+} from "./kyc-history.schemas.js";
 
 @Controller("api/v1/kyc")
 @UseGuards(AuthenticationGuard)
@@ -36,6 +42,31 @@ export class KycController {
   @Get()
   profile(@CurrentUser() userId: string) {
     return this.kyc.profile(userId);
+  }
+
+  @Get("history")
+  history(
+    @CurrentUser() userId: string,
+    @Query(new ZodValidationPipe(historyPaginationSchema))
+    query: HistoryPagination,
+  ) {
+    return this.kyc.history(userId, query);
+  }
+
+  @Get("history/:submissionId/media/:kind")
+  async historyMedia(
+    @CurrentUser() userId: string,
+    @Param("submissionId", new ZodValidationPipe(submissionIdSchema))
+    submissionId: string,
+    @Param("kind", new ZodValidationPipe(mediaKindSchema)) kind: MediaKind,
+    @Res() response: Response,
+  ) {
+    const media = await this.kyc.historyMedia(userId, submissionId, kind);
+    response
+      .set("cache-control", "no-store")
+      .set("content-disposition", "inline")
+      .type(media.mimeType)
+      .send(media.data);
   }
 
   @Put("personal-details")

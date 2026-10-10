@@ -148,6 +148,13 @@ class _VerificationPageState extends State<VerificationPage>
               const SizedBox(height: 12),
             ],
             OutlinedButton.icon(
+              key: const Key('view-kyc-history'),
+              onPressed: () => context.go('/kyc/history'),
+              icon: const Icon(Icons.history),
+              label: const Text('Submission history'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
               key: const Key('refresh-status'),
               onPressed: state.busy
                   ? null

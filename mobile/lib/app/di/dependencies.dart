@@ -35,6 +35,11 @@ import '../../features/kyc/data/repositories/kyc_repository_impl.dart';
 import '../../features/kyc/domain/repositories/kyc_repository.dart';
 import '../../features/kyc/domain/usecases/kyc_usecases.dart';
 import '../../features/kyc/presentation/bloc/kyc_cubit.dart';
+import '../../features/kyc_history/data/datasources/kyc_history_remote_datasource.dart';
+import '../../features/kyc_history/data/repositories/kyc_history_repository_impl.dart';
+import '../../features/kyc_history/domain/repositories/kyc_history_repository.dart';
+import '../../features/kyc_history/domain/usecases/kyc_history_usecases.dart';
+import '../../features/kyc_history/presentation/bloc/kyc_history_cubit.dart';
 
 /// Composition root; a fresh container lets tests replace platform capture while
 /// still exercising the production HTTP repositories against the real API.
@@ -96,6 +101,14 @@ GetIt configureDependencies({
   final access = AccessRepositoryImpl(AccessRemoteDataSource(api));
   di.registerSingleton<AccessRepository>(access);
   di.registerFactory(() => AccessCubit(AccessUseCases(access)));
+  final history = KycHistoryRepositoryImpl(KycHistoryRemoteDataSource(api));
+  di.registerSingleton<KycHistoryRepository>(history);
+  di.registerFactory(
+    () => KycHistoryCubit(
+      loadHistory: LoadKycHistory(history),
+      loadMedia: LoadKycHistoryMedia(history),
+    ),
+  );
   final kyc = KycRepositoryImpl(
     KycRemoteDataSource(api),
     camera ?? ImagePickerCameraDataSource(),

@@ -47,6 +47,13 @@ class ReviewerDetailPage extends StatelessWidget {
             Text(detail.email, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text('Status: ${profile!.status.label}'),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('view-applicant-history'),
+              onPressed: () => context.go('/reviews/$userId/history'),
+              icon: const Icon(Icons.history),
+              label: const Text('View previous submissions'),
+            ),
             const SizedBox(height: 20),
             Text(
               'Personal details',

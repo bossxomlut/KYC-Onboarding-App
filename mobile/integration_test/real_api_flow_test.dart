@@ -287,6 +287,37 @@ void main() {
       await waitFor(tester, find.text('Verified'));
       await pause(tester);
       await tap(tester, find.text('Back to home'));
+      // The rejected round stays readable after the replacement round verifies.
+      final history = (await di<Dio>().get<Map<String, dynamic>>(
+        '/kyc/history',
+      )).data!;
+      expect(history['total'], 2);
+      final original = (history['submissions'] as List).last as Map;
+      expect((original['profile'] as Map)['status'], 'rejected');
+      expect((original['review'] as Map)['reviewer'], isNotNull);
+      await tap(tester, find.byKey(const Key('view-kyc-history')));
+      await waitFor(tester, find.text('Submission #1'));
+      expect(find.text('Submission #2'), findsOneWidget);
+      await tap(
+        tester,
+        find.byKey(Key('history-submission-${original['id']}')),
+      );
+      await waitFor(tester, find.text('Maya Demo'));
+      await waitFor(
+        tester,
+        find.byWidgetPredicate(
+          (widget) => widget is Image && widget.image is MemoryImage,
+        ),
+      );
+      expect(find.byType(Image), findsNWidgets(2));
+      expect(
+        find.text('Please retake your demo selfie in better light.'),
+        findsWidgets,
+      );
+      expect(find.text('Edit'), findsNothing);
+      await tap(tester, find.byKey(const Key('history-detail-close')));
+      await tap(tester, find.byTooltip('Home'));
+      await waitFor(tester, find.byKey(const Key('logout')));
       await tap(tester, find.byKey(const Key('logout')));
       await waitFor(tester, find.text('Welcome back'));
       mail.close();

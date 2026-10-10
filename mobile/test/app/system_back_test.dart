@@ -46,6 +46,8 @@ void main() {
     '/admin': UserRole.superAdmin,
     '/reviews': UserRole.reviewer,
     '/reviews/applicant': UserRole.reviewer,
+    '/kyc/history': UserRole.user,
+    '/reviews/applicant/history': UserRole.reviewer,
   }.entries) {
     testWidgets('device Back from ${entry.key} returns home', (tester) async {
       final (_, router) = await pumpApp(
@@ -293,7 +295,13 @@ Future<(GetIt, GoRouter)> pumpApp(
       '/reviews/applicant/decision' => {
         'profile': {...profileJson, 'status': 'verified', 'nextStep': 'result'},
       },
-      _ => {'users': [], 'requests': [], 'profiles': [], 'total': 0},
+      _ => {
+        'users': [],
+        'requests': [],
+        'profiles': [],
+        'submissions': [],
+        'total': 0,
+      },
     });
   });
   addTearDown(() async {

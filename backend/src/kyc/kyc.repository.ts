@@ -7,6 +7,10 @@ import { ApiError } from "../errors.js";
 import { decrypt } from "../security.js";
 import { requireRole } from "../auth/roles.js";
 import {
+  ensureCurrentSubmission,
+  recordSubmissionReview,
+} from "./kyc-history.repository.js";
+import {
   requiredStepSchema,
   type MediaKind,
   type PersonalDetails,
@@ -159,7 +163,12 @@ export async function reviewProfile(
     );
   const steps = z.array(requiredStepSchema).max(3).parse(requiredSteps);
   return transaction(pool, async (client) => {
-    await requireRole(client, reviewedBy, ["reviewer", "super_admin"], true);
+    const actor = await requireRole(
+      client,
+      reviewedBy,
+      ["reviewer", "super_admin"],
+      true,
+    );
     const profile = await lockedProfile(client, userId);
     if (profile.status !== "pending_review")
       throw new ApiError(
@@ -167,6 +176,15 @@ export async function reviewProfile(
         "KYC_REVIEW_NOT_PENDING",
         "Only pending profiles can be reviewed.",
       );
+    const submissionId = await ensureCurrentSubmission(client, userId);
+    await recordSubmissionReview(
+      client,
+      submissionId,
+      actor,
+      status,
+      status === "rejected" ? reason!.trim() : null,
+      status === "rejected" ? [...new Set(steps)] : [],
+    );
     await client.query(
       "UPDATE kyc_profiles SET status=$2,rejection_reason=$3,required_steps=$4,updated_at=now() WHERE user_id=$1",
       [

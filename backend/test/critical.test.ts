@@ -684,6 +684,10 @@ test("KYC validates details and media, keeps private encrypted storage, and resu
     413,
   );
   assert.equal((await upload("document")).statusCode, 200);
+  const previousDocument = await pool.query<{ storage_key: string }>(
+    "SELECT storage_key FROM kyc_media WHERE user_id=$1 AND kind='document'",
+    [session.user.id],
+  );
   const captureId = randomBytes(16).toString("hex");
   const captured = await upload(
     "document",
@@ -692,6 +696,11 @@ test("KYC validates details and media, keeps private encrypted storage, and resu
     captureId,
   );
   assert.equal(captured.json().profile.document.captureId, captureId);
+  await assert.rejects(
+    readFile(join(config.mediaDir, previousDocument.rows[0]!.storage_key)),
+    { code: "ENOENT" },
+    "An unsubmitted retake must still remove the replaced file.",
+  );
   const replay = await upload(
     "document",
     image,

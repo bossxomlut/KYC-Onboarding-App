@@ -61,7 +61,9 @@ abstract final class RoutePolicy {
     if (role == UserRole.superAdmin && location.startsWith('/kyc/')) {
       return '/';
     }
-    if (location.startsWith('/kyc/') && location != '/kyc/status') {
+    if (location.startsWith('/kyc/') &&
+        location != '/kyc/status' &&
+        location != '/kyc/history') {
       if (['pending_review', 'verified', 'rejected'].contains(kycStatus)) {
         return '/kyc/status';
       }

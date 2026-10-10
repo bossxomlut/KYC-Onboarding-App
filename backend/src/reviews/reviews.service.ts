@@ -15,6 +15,11 @@ import {
 } from "../kyc/kyc.repository.js";
 import type { MediaKind } from "../kyc/kyc.schemas.js";
 import { decrypt } from "../security.js";
+import {
+  archivedMedia,
+  submissionHistory,
+} from "../kyc/kyc-history.repository.js";
+import type { HistoryPagination } from "../kyc/kyc-history.schemas.js";
 import type { ReviewDecision, ReviewPagination } from "./reviews.schemas.js";
 
 const reviewerRoles: UserRole[] = ["reviewer", "super_admin"];
@@ -101,7 +106,45 @@ export class ReviewsService {
     return { profile };
   }
 
+  async history(
+    actorId: string,
+    userId: string,
+    pagination: HistoryPagination,
+  ) {
+    return transaction(this.pool, async (client) => {
+      await this.authorizedProfile(client, actorId, userId);
+      return submissionHistory(client, userId, pagination, this.config);
+    });
+  }
+
+  async historyMedia(
+    actorId: string,
+    userId: string,
+    submissionId: string,
+    kind: MediaKind,
+  ) {
+    return transaction(this.pool, async (client) => {
+      await this.authorizedProfile(client, actorId, userId);
+      return archivedMedia(client, userId, submissionId, kind, this.config);
+    });
+  }
+
   private async pendingProfile(
+    client: PoolClient,
+    actorId: string,
+    userId: string,
+  ) {
+    const profile = await this.authorizedProfile(client, actorId, userId);
+    if (profile.status !== "pending_review")
+      throw new ApiError(
+        404,
+        "KYC_REVIEW_NOT_FOUND",
+        "Pending profile not found.",
+      );
+    return profile;
+  }
+
+  private async authorizedProfile(
     client: PoolClient,
     actorId: string,
     userId: string,
@@ -113,13 +156,6 @@ export class ReviewsService {
         "SELF_REVIEW_FORBIDDEN",
         "You cannot review your own profile.",
       );
-    const profile = await lockedProfile(client, userId);
-    if (profile.status !== "pending_review")
-      throw new ApiError(
-        404,
-        "KYC_REVIEW_NOT_FOUND",
-        "Pending profile not found.",
-      );
-    return profile;
+    return lockedProfile(client, userId);
   }
 }

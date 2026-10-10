@@ -10,6 +10,13 @@ import { ApiError } from "../errors.js";
 import { APP_CONFIG, DATABASE_POOL } from "../infrastructure/tokens.js";
 import { decrypt, encrypt } from "../security.js";
 import {
+  archivedMedia,
+  ensureCurrentSubmission,
+  removeUnreferencedMedia,
+  submissionHistory,
+} from "./kyc-history.repository.js";
+import type { HistoryPagination } from "./kyc-history.schemas.js";
+import {
   assertEditable,
   getProfile,
   lockedProfile,
@@ -37,6 +44,17 @@ export class KycService {
 
   async profile(userId: string) {
     return { profile: await getProfile(this.pool, userId, this.config) };
+  }
+
+  async history(userId: string, pagination: HistoryPagination) {
+    return transaction(this.pool, async (client) => {
+      await lockedProfile(client, userId);
+      return submissionHistory(client, userId, pagination, this.config);
+    });
+  }
+
+  async historyMedia(userId: string, submissionId: string, kind: MediaKind) {
+    return archivedMedia(this.pool, userId, submissionId, kind, this.config);
   }
 
   /** Invoked by the upload guard before multipart buffering/decoding begins. */
@@ -160,7 +178,7 @@ export class KycService {
       });
       if (existingCapture) await rm(location, { force: true }).catch(() => {});
       if (oldKey)
-        await rm(join(this.config.mediaDir, oldKey), { force: true }).catch(
+        await removeUnreferencedMedia(this.pool, this.config, oldKey).catch(
           () => {},
         );
       return result;
@@ -189,8 +207,10 @@ export class KycService {
   async submit(userId: string) {
     return transaction(this.pool, async (client) => {
       const profile = await lockedProfile(client, userId);
-      if (profile.status === "pending_review")
+      if (profile.status === "pending_review") {
+        await ensureCurrentSubmission(client, userId);
         return { profile: await getProfile(client, userId, this.config) };
+      }
       assertEditable(profile);
       const media = await client.query(
         "SELECT kind FROM kyc_media WHERE user_id=$1",
@@ -206,6 +226,7 @@ export class KycService {
         "UPDATE kyc_profiles SET status='pending_review',submitted_at=now(),required_steps='{}',rejection_reason=NULL,updated_at=now() WHERE user_id=$1",
         [userId],
       );
+      await ensureCurrentSubmission(client, userId);
       return { profile: await getProfile(client, userId, this.config) };
     });
   }
@@ -220,6 +241,7 @@ export class KycService {
           "KYC_NOT_REJECTED",
           "Only a rejected profile can be reopened.",
         );
+      await ensureCurrentSubmission(client, userId);
       const steps = profile.required_steps;
       const removed = await client.query<Pick<MediaRecord, "storage_key">>(
         "DELETE FROM kyc_media WHERE user_id=$1 AND kind=ANY($2::text[]) RETURNING storage_key",
@@ -227,14 +249,14 @@ export class KycService {
       );
       oldKeys = removed.rows.map((item) => item.storage_key);
       await client.query(
-        "UPDATE kyc_profiles SET status='in_progress',personal_details=CASE WHEN $2 THEN NULL ELSE personal_details END,rejection_reason=NULL,required_steps='{}',submitted_at=NULL,updated_at=now() WHERE user_id=$1",
+        "UPDATE kyc_profiles SET status='in_progress',personal_details=CASE WHEN $2 THEN NULL ELSE personal_details END,rejection_reason=NULL,required_steps='{}',submitted_at=NULL,current_submission_id=NULL,updated_at=now() WHERE user_id=$1",
         [userId, steps.includes("personal_details")],
       );
       return { profile: await getProfile(client, userId, this.config) };
     });
     await Promise.all(
       oldKeys.map((key) =>
-        rm(join(this.config.mediaDir, key), { force: true }).catch(() => {}),
+        removeUnreferencedMedia(this.pool, this.config, key).catch(() => {}),
       ),
     );
     return result;

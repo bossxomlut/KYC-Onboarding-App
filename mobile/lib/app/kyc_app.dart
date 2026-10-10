@@ -30,6 +30,8 @@ import '../features/kyc/presentation/pages/personal_details_page.dart';
 import '../features/kyc/presentation/pages/capture_page.dart';
 import '../features/kyc/presentation/pages/review_page.dart';
 import '../features/kyc/presentation/pages/verification_page.dart';
+import '../features/kyc_history/presentation/bloc/kyc_history_cubit.dart';
+import '../features/kyc_history/presentation/pages/kyc_history_page.dart';
 import 'di/dependencies.dart';
 import 'router/back_to_home_scope.dart';
 import 'router/route_policy.dart';
@@ -186,6 +188,27 @@ class _KycAppState extends State<KycApp> {
               ),
             );
           },
+        ),
+        GoRoute(
+          path: '/kyc/history',
+          builder: (context, state) => BackToHomeScope(
+            child: BlocProvider(
+              create: (_) => di<KycHistoryCubit>(),
+              child: const KycHistoryPage(),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/reviews/:userId/history',
+          builder: (context, state) => BackToHomeScope(
+            child: BlocProvider(
+              key: ValueKey(state.pathParameters['userId']),
+              create: (_) => di<KycHistoryCubit>(),
+              child: KycHistoryPage(
+                reviewerUserId: state.pathParameters['userId']!,
+              ),
+            ),
+          ),
         ),
         ShellRoute(
           builder: (context, state, child) {

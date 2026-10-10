@@ -126,3 +126,23 @@ Verified on 10 October 2026. System Back from authenticated feature pages now re
 | `flutter build apk --debug --no-pub --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1` | Passed; `mobile/build/app/outputs/flutter-apk/app-debug.apk` |
 
 The new tests exercise the production app/router with synthetic HTTP/platform substitutes. They cover all nine feature routes, modal dismissal, Home system exit, profile loading/failure, KYC provider lifetime and completion races before the previous page is disposed. Android navigation-channel tests verify that Flutter advertises Back handling across KYC steps and after modal dismissal, then releases it at Home. Physical-device/emulator Back button presses, real-API device integration, iOS builds and the recording were not rerun for this update.
+
+## Submission history and reviewer attribution
+
+Verified on 10 October 2026. Every submit now creates a separate encrypted submission snapshot, including references to its original document and selfie. Rejection and resubmission preserve the previous version, and new decisions capture the authenticated reviewer's ID, email, role and review time. Home and verification status expose applicant history; reviewer detail exposes prior submissions for comparison. Historical detail is read-only and loads private images through authenticated endpoints.
+
+| Check | Actual result |
+| --- | --- |
+| Backend focused history and migration tests | 9/9 passed against disposable real PostgreSQL and Nest HTTP; missing history routes and missing migration observed failing before implementation |
+| Backend `npm run check`, `npm run build`, full `npm test` on Node24.19.0 | Passed; 42/42 tests |
+| History feature data/Cubit/widget tests | 16/16 passed; focused cases observed failing before their implementations, including legacy final records without an audit |
+| `flutter test --no-pub --reporter expanded` | 169/169 passed, including architecture boundaries, existing KYC flows and history navigation |
+| `flutter analyze --no-pub` | No issues found |
+| Bundled Dart format check on 22 affected files, backend Prettier checks, `git diff --check` | Passed |
+| `flutter build apk --debug --no-pub --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1` | Passed |
+| Local `npm run migrate` and compiled API restart | Passed; health200 and unauthenticated new history route401 |
+| Synthetic visual inspection | List and read-only detail at390×844 with real fonts; large text scale2 widget case passed |
+
+Backend coverage verifies submission retry/concurrency, version order/pagination, owner isolation, live role revocation, original personal details and exact photo bytes across multiple rounds, retained reviewer identity after email/role changes, and preserving an accepted document when retaken after a partial rejection. An unsubmitted retake still deletes its obsolete file. The upgrade test applies migrations001–004 to a legacy database before005 and preserves only the actually available current submission and matching review audit.
+
+Migration005 was applied to the configured local development database without displaying existing applicant records. Previously overwritten details and deleted photos cannot be recovered. Legacy audits retain known reviewer IDs but cannot supply historical email/role values that were never stored; missing audit timestamps remain unavailable. A local authenticated smoke using the existing ignored synthetic-admin credential file returned401 INVALID_CREDENTIALS; credentials/accounts were not changed and no smoke session was created. Authenticated history checks passed in the isolated backend suite. Real-API device integration, native camera checks, iOS builds and the recording were not rerun. The integration-test source now verifies reading the rejected round after the replacement round becomes verified.
