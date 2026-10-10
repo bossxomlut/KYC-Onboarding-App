@@ -1,10 +1,11 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
+import { mkdir, writeFile, unlink } from "node:fs/promises";
+import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { z } from "zod";
 import { loadConfig } from "./config.js";
 import { createPool, migrate, transaction } from "./database.js";
 import { passwordHash } from "./auth/password.js";
-import { reviewProfile } from "./kyc/kyc.repository.js";
+import { bootstrapSuperAdmin } from "./auth/bootstrap-admin.js";
 
 const config = loadConfig();
 const pool = createPool(config.databaseUrl);
@@ -24,25 +25,63 @@ try {
       await migrate(pool);
       console.log("Database migrations applied.");
       break;
-    case "review": {
-      let id = values.user;
-      if (values.email) {
-        const result = await pool.query(
-          "SELECT id FROM users WHERE email_normalized=$1",
-          [values.email.trim().toLowerCase()],
-        );
-        id = result.rows[0]?.id;
-      }
-      if (!id) throw new Error("Provide --user UUID or --email EMAIL.");
-      const status = z.enum(["verified", "rejected"]).parse(values.status);
-      await reviewProfile(
-        pool,
-        id,
-        status,
-        values.reason,
-        values.steps?.split(",") ?? [],
+    case "review":
+      throw new Error(
+        "Direct database reviews have been removed. Sign in to the app as a reviewer or super admin and open Review profiles.",
       );
-      console.log(`Review saved: ${status}.`);
+    case "admin:bootstrap": {
+      const production = config.nodeEnv === "production";
+      const email =
+        values.email ??
+        process.env.BOOTSTRAP_ADMIN_EMAIL ??
+        (production ? undefined : "superadmin@kyc.example");
+      if (!email || (production && !process.env.BOOTSTRAP_ADMIN_PASSWORD))
+        throw new Error(
+          "Production bootstrap requires BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD supplied securely by the operator.",
+        );
+      const password =
+        process.env.BOOTSTRAP_ADMIN_PASSWORD ??
+        `Aa1!${randomBytes(32).toString("base64url")}`;
+      const credentialsPath = resolve(".local/super-admin.json");
+      let credentialFileCreated = false;
+      try {
+        // Persist the generated credential before committing its account, so a
+        // filesystem failure cannot leave an owner with an unknown password.
+        if (!production) {
+          const existing = await pool.query(
+            "SELECT 1 FROM users WHERE role='super_admin'",
+          );
+          if (!existing.rowCount) {
+            await mkdir(resolve(".local"), { recursive: true, mode: 0o700 });
+            await writeFile(
+              credentialsPath,
+              JSON.stringify(
+                { email: email.trim().toLowerCase(), password },
+                null,
+                2,
+              ) + "\n",
+              { mode: 0o600, flag: "wx" },
+            );
+            credentialFileCreated = true;
+          }
+        }
+        const result = await bootstrapSuperAdmin(pool, email, password);
+        if (result.created)
+          console.log(
+            production
+              ? "Super admin created. Use the credentials supplied by the operator."
+              : `Super admin created. Local credentials: ${credentialsPath}`,
+          );
+        else {
+          if (credentialFileCreated) await unlink(credentialsPath);
+          console.log(
+            "Super admin already exists; credentials and roles were preserved.",
+          );
+        }
+      } catch (error) {
+        if (credentialFileCreated) await unlink(credentialsPath);
+        throw error;
+      }
       break;
     }
     case "demo": {
@@ -67,7 +106,7 @@ try {
     }
     default:
       throw new Error(
-        "Usage: npm run migrate | npm run demo | npm run review -- --email EMAIL --status verified|rejected [--reason REASON --steps selfie,document,personal_details]",
+        "Usage: npm run migrate | npm run demo | npm run admin:bootstrap [-- --email EMAIL]",
       );
   }
 } catch (error) {

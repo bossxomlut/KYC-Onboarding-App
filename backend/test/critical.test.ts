@@ -16,6 +16,7 @@ import type { Mail } from "../src/mail.js";
 import { deliverQueued } from "../src/mail.js";
 import { AuthService } from "../src/auth/auth.service.js";
 import { KycService } from "../src/kyc/kyc.service.js";
+import { bootstrapSuperAdmin } from "../src/auth/bootstrap-admin.js";
 import {
   APP_CONFIG,
   DATABASE_POOL,
@@ -30,6 +31,7 @@ let image: Buffer;
 const mails: Mail[] = [];
 const email = "alice@example.test";
 const password = "SyntheticPass123!";
+const reviewerId = randomUUID();
 let session: {
   accessToken: string;
   refreshToken: string;
@@ -56,6 +58,10 @@ before(async () => {
       "postgresql://postgres:test-only@localhost:55439/postgres",
   });
   await migrate(pool);
+  await pool.query(
+    "INSERT INTO users(id,email_normalized,password_hash,email_verified_at,status,role) VALUES($1,'reviewer@example.test','test-only',now(),'active','reviewer')",
+    [reviewerId],
+  );
   config = {
     nodeEnv: "test",
     host: "127.0.0.1",
@@ -142,6 +148,59 @@ type MultipartPart = {
   filename?: string;
   contentType?: string;
 };
+
+test("review writes require an authenticated reviewer identity", async () => {
+  const userId = randomUUID();
+  await pool.query(
+    "INSERT INTO users(id,email_normalized,password_hash,email_verified_at,status) VALUES($1,'review-boundary@example.test','test-only',now(),'active')",
+    [userId],
+  );
+  await pool.query(
+    "INSERT INTO kyc_profiles(id,user_id,status) VALUES($1,$2,'pending_review')",
+    [randomUUID(), userId],
+  );
+  await assert.rejects(
+    reviewProfile(pool, userId, "verified"),
+    (error: any) => error.code === "REVIEWER_REQUIRED",
+  );
+  const unchanged = await pool.query(
+    "SELECT status FROM kyc_profiles WHERE user_id=$1",
+    [userId],
+  );
+  assert.equal(unchanged.rows[0].status, "pending_review");
+});
+
+test("super admin bootstrap is atomic, idempotent and preserves existing credentials", async () => {
+  await assert.rejects(
+    bootstrapSuperAdmin(pool, "review-boundary@example.test", password),
+    (error: any) => error.code === "ACCOUNT_EXISTS",
+  );
+  const results = await Promise.all([
+    bootstrapSuperAdmin(pool, "owner@example.test", password),
+    bootstrapSuperAdmin(pool, "owner@example.test", "DifferentPass456!"),
+  ]);
+  assert.equal(results.filter((result) => result.created).length, 1);
+  assert.equal(results[0].userId, results[1].userId);
+  const before = await pool.query(
+    "SELECT password_hash,role FROM users WHERE id=$1",
+    [results[0].userId],
+  );
+  await bootstrapSuperAdmin(pool, "owner@example.test", "AnotherPassword789!");
+  const after = await pool.query(
+    "SELECT password_hash,role FROM users WHERE id=$1",
+    [results[0].userId],
+  );
+  assert.deepEqual(before.rows, after.rows);
+  assert.equal(after.rows[0].role, "super_admin");
+  await assert.rejects(
+    bootstrapSuperAdmin(pool, "another-owner@example.test", password),
+    (error: any) => error.code === "SUPER_ADMIN_EXISTS",
+  );
+  const count = await pool.query(
+    "SELECT COUNT(*) FROM users WHERE role='super_admin'",
+  );
+  assert.equal(count.rows[0].count, "1");
+});
 
 function multipart(
   application: Parameters<typeof http>[0],
@@ -820,6 +879,7 @@ test("cross-user access is isolated; submit/reject/resubmit only clears rejected
     "rejected",
     "Synthetic selfie needs retaking",
     ["selfie"],
+    reviewerId,
   );
   let rejected = (
     await json("GET", "/kyc", undefined, session.accessToken)
@@ -837,7 +897,14 @@ test("cross-user access is isolated; submit/reject/resubmit only clears rejected
   assert.equal(rejected.selfie, null);
   assert.equal((await upload("selfie")).statusCode, 200);
   await json("POST", "/kyc/submit", {}, session.accessToken);
-  await reviewProfile(pool, session.user.id, "verified");
+  await reviewProfile(
+    pool,
+    session.user.id,
+    "verified",
+    undefined,
+    [],
+    reviewerId,
+  );
   const verified = (
     await json("GET", "/kyc", undefined, session.accessToken)
   ).json().profile;

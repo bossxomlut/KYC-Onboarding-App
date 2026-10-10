@@ -6,6 +6,8 @@ import type { Mailer } from "./mail.js";
 import { InfrastructureModule } from "./infrastructure/infrastructure.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { KycModule } from "./kyc/kyc.module.js";
+import { AccessModule } from "./access/access.module.js";
+import { ReviewsModule } from "./reviews/reviews.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { ApiExceptionFilter } from "./common/api-exception.filter.js";
 import { RateLimitGuard } from "./common/rate-limit.guard.js";
@@ -19,6 +21,8 @@ export class AppModule {
         InfrastructureModule.register(config, pool, mailer),
         AuthModule,
         KycModule,
+        AccessModule,
+        ReviewsModule,
       ],
       controllers: [HealthController],
       providers: [

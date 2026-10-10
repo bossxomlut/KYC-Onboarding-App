@@ -27,6 +27,7 @@ const publicUser = (row: any) => ({
   id: row.id,
   email: row.email_normalized,
   emailVerified: row.email_verified_at !== null,
+  role: row.role,
 });
 
 async function issueSession(
@@ -53,7 +54,7 @@ function sessionResponse(session: Awaited<ReturnType<typeof issueSession>>) {
   const { sessionId, ...response } = session;
   return response;
 }
-async function createOtp(client: PoolClient, user: any, config: Config) {
+export async function createOtp(client: PoolClient, user: any, config: Config) {
   const code = String(randomInt(100000, 1000000));
   await client.query(
     "UPDATE email_verification_tokens SET consumed_at=now() WHERE user_id=$1 AND consumed_at IS NULL",
@@ -268,7 +269,7 @@ export class AuthService implements OnModuleInit {
         [owner.family_id],
       );
       const records = await client.query(
-        "SELECT s.*,u.email_normalized,u.email_verified_at,u.status AS user_status FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.refresh_token_hash=$1 FOR UPDATE OF s",
+        "SELECT s.*,u.email_normalized,u.email_verified_at,u.role,u.status AS user_status FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.refresh_token_hash=$1 FOR UPDATE OF s",
         [tokenHash(refreshToken, config.tokenPepper)],
       );
       const old = records.rows[0];

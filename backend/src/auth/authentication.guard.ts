@@ -10,9 +10,11 @@ import type { Config } from "../config.js";
 import { ApiError } from "../errors.js";
 import { APP_CONFIG, DATABASE_POOL } from "../infrastructure/tokens.js";
 import { verifyAccess } from "../security.js";
+import type { UserRole } from "./roles.js";
 
 export interface AuthenticatedRequest extends Request {
   userId: string;
+  userRole: UserRole;
 }
 
 @Injectable()
@@ -38,7 +40,7 @@ export class AuthenticationGuard implements CanActivate {
       );
     }
     const active = await this.pool.query(
-      "SELECT 1 FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.id=$1 AND s.user_id=$2 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='active'",
+      "SELECT u.role FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.id=$1 AND s.user_id=$2 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.status='active' AND u.email_verified_at IS NOT NULL",
       [claims.sessionId, claims.userId],
     );
     if (!active.rowCount)
@@ -48,6 +50,7 @@ export class AuthenticationGuard implements CanActivate {
         "Your session has expired. Please sign in again.",
       );
     request.userId = claims.userId;
+    request.userRole = active.rows[0].role;
     return true;
   }
 }

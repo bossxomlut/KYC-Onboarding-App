@@ -5,6 +5,7 @@ import type { Config } from "../config.js";
 import { transaction } from "../database.js";
 import { ApiError } from "../errors.js";
 import { decrypt } from "../security.js";
+import { requireRole } from "../auth/roles.js";
 import {
   requiredStepSchema,
   type MediaKind,
@@ -122,22 +123,43 @@ export async function getProfile(
   };
 }
 
-/** Privileged CLI operation; no HTTP route exposes reviewer access. */
+/** Every review records a separate, authorized actor, including internal callers. */
 export async function reviewProfile(
   pool: Pool,
   userId: string,
   status: "verified" | "rejected",
   reason?: string,
   requiredSteps: string[] = [],
+  reviewedBy?: string,
+  config?: Config,
 ) {
-  if (status === "rejected" && (!reason?.trim() || requiredSteps.length === 0))
+  if (!reviewedBy)
+    throw new ApiError(
+      403,
+      "REVIEWER_REQUIRED",
+      "An authorized reviewer is required.",
+    );
+  if (reviewedBy === userId)
+    throw new ApiError(
+      403,
+      "SELF_REVIEW_FORBIDDEN",
+      "You cannot review your own profile.",
+    );
+  if (
+    status === "rejected" &&
+    (!reason?.trim() ||
+      reason.trim().length < 3 ||
+      reason.trim().length > 1000 ||
+      requiredSteps.length === 0)
+  )
     throw new ApiError(
       400,
       "INVALID_REVIEW",
       "A rejection requires a reason and at least one required step.",
     );
   const steps = z.array(requiredStepSchema).max(3).parse(requiredSteps);
-  await transaction(pool, async (client) => {
+  return transaction(pool, async (client) => {
+    await requireRole(client, reviewedBy, ["reviewer", "super_admin"], true);
     const profile = await lockedProfile(client, userId);
     if (profile.status !== "pending_review")
       throw new ApiError(
@@ -155,8 +177,16 @@ export async function reviewProfile(
       ],
     );
     await client.query(
-      "INSERT INTO kyc_reviews(id,user_id,decision,required_steps) VALUES($1,$2,$3,$4)",
-      [randomUUID(), userId, status, status === "rejected" ? steps : []],
+      "INSERT INTO kyc_reviews(id,user_id,decision,required_steps,reviewed_by,reason) VALUES($1,$2,$3,$4,$5,$6)",
+      [
+        randomUUID(),
+        userId,
+        status,
+        status === "rejected" ? [...new Set(steps)] : [],
+        reviewedBy,
+        status === "rejected" ? reason!.trim() : null,
+      ],
     );
+    return config ? getProfile(client, userId, config) : undefined;
   });
 }
