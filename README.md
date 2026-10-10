@@ -1,12 +1,12 @@
 # Identity — KYC Onboarding
 
-Flutter iOS/Android onboarding with a real TypeScript/Fastify API and PostgreSQL. Material 3, primary green `#026220`. Registration and email OTP, login, secure session restore, password reset, personal details, camera document/selfie upload, review/edit, submission, rejection/resubmission and saved progress are implemented. There is no production mock API or unrelated dashboard.
+Flutter iOS/Android onboarding with a real TypeScript/NestJS 12.1.2 API (Express adapter) and PostgreSQL. Material 3, primary green `#026220`. Registration and email OTP, login, secure session restore, password reset, personal details, camera document/selfie upload, review/edit, submission, rejection/resubmission and saved progress are implemented. There is no production mock API or unrelated dashboard.
 
 ## Run locally
 
-Prerequisites: Flutter **3.44.6** / its bundled Dart **3.12.2**, Node **22 LTS** (minimum 20.17), npm, Docker Compose, Xcode for iOS or Android SDK/JDK17 for Android. Put the Flutter SDK's `bin` directory first in `PATH` if you also installed standalone Dart. Lockfiles are committed. Docker is optional if you use the embedded PostgreSQL alternative below.
+Prerequisites: Flutter **3.44.6** / its bundled Dart **3.12.2**, Node **22 LTS** (minimum **22.12**), npm, Docker Compose, Xcode for iOS or Android SDK/JDK17 for Android. Put the Flutter SDK's `bin` directory first in `PATH` if you also installed standalone Dart. Lockfiles are committed. Docker is optional if you use the embedded PostgreSQL alternative below.
 
-From the repository root:
+From the repository root (`.nvmrc` selects Node 22; run `nvm use` if you use nvm):
 
 ```sh
 node scripts/init-env.mjs
@@ -72,6 +72,10 @@ Rejections require a reason and one or more of `personal_details,document,selfie
 
 ## Architecture and contracts
 
+The backend is a NestJS 12.1.2 application using the Express adapter. `AppModule` composes `AuthModule`, `KycModule` and health checks. A global `InfrastructureModule` injects one configuration, PostgreSQL pool and mail transport, and owns the email worker lifecycle. Controllers handle HTTP boundaries; injectable services perform authentication and KYC operations with the existing PostgreSQL transactions. DTOs and strict schemas are validated through `ZodValidationPipe`.
+
+`AuthenticationGuard` verifies the JWT and active database session before protected handlers. On media uploads, authentication and `KycUploadGuard` run before the Express `FileInterceptor` parses multipart data; Multer applies file, field and part limits. A global `ApiExceptionFilter` preserves `{error:{code,message,requestId}}` without exposing internals. The global `RateLimitGuard` applies per-route/IP limits; auth policies attach to controller metadata, so URL casing does not bypass them. API paths and persisted user/profile/session data remain compatible.
+
 `mobile/lib/features/auth` and `mobile/lib/features/kyc` use feature-first Clean Architecture. Domain contains pure Dart entities, typed results, repository contracts and use cases. Data wraps Dio, secure storage and the camera/filesystem, maps API models and converts exceptions into failures. Presentation Cubits call use cases; widgets render state. GetIt is confined to `lib/app` composition. GoRouter protects authentication and server-derived KYC progression.
 
 The auth Cubit is app-owned. A route-shell provider owns one KYC flow Cubit and disposes it when the authenticated flow ends; page forms have their own scope. Camera/image bytes and profile data are not kept in global state. Shared Material 3 tokens live in `core/theme`. API and schema details: [contracts](docs/architecture/contracts.md) and [backend guide](docs/backend.md). [Requirement analysis](docs/assignment-analysis.md) distinguishes assignment requirements from the additional implementation choices.
@@ -92,7 +96,7 @@ A rotated refresh response lost in transit can cause the old token to be rejecte
 
 ## Tests and demo
 
-Run core automated checks with `./scripts/check.sh` (backend type checking/tests and Flutter formatting/analysis/tests). Builds, dependency audit and real-API integration run separately. Backend tests start an isolated real PostgreSQL instance (no Docker required); they exercise the real Fastify routes and SQL. Flutter tests use test doubles only at platform/repository boundaries. They cover session restore and refresh concurrency, invalidation, offline retry, route guards, KYC resume/transitions and the UI flow with failed upload/retry. Architecture tests enforce inward dependencies.
+Run core automated checks with `./scripts/check.sh` (backend type checking/tests and Flutter formatting/analysis/tests). Builds, dependency audit and real-API integration run separately. Backend tests start an isolated real PostgreSQL instance (no Docker required); they exercise the real NestJS application over HTTP using Supertest and SQL. The backend suite has 14 cases: the ten existing behavior cases plus four Nest-specific checks for dependency injection, errors, upload-guard ordering/limits and private-media failures. Flutter tests use test doubles only at platform/repository boundaries. They cover session restore and refresh concurrency, invalidation, offline retry, route guards, KYC resume/transitions and the UI flow with failed upload/retry. Architecture tests enforce inward dependencies.
 
 ```sh
 cd backend
@@ -106,7 +110,7 @@ flutter build ios --simulator --debug
 flutter build apk --debug
 ```
 
-[Watch the 46-second demo](demo/full-flow.mp4). [Demo instructions](demo/README.md) describe the real-API integration test, synthetic fixtures, reviewer coordination and screen recording. See [verification evidence](docs/verification.md) for actual commands/results and remaining physical-device checks; do not treat unperformed checks as passed.
+[Watch the 46-second demo](demo/full-flow.mp4), recorded against the compiled NestJS API, real PostgreSQL and Mailpit. [Demo instructions](demo/README.md) describe the real-API integration test, synthetic fixtures, reviewer coordination and screen recording. See [verification evidence](docs/verification.md) for actual commands/results and remaining physical-device checks; do not treat unperformed checks as passed.
 
 ## Assumptions and further work
 

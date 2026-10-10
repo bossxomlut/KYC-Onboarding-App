@@ -1,10 +1,10 @@
 # Synthetic end-to-end demo
 
-The delivered recording is `full-flow.mp4` (about 46 seconds). The raw simulator recording is kept locally as `full-flow.mov` and includes build/startup time. The delivered MP4 removes that idle prefix and preserves the full test flow.
+The delivered recording is `full-flow.mp4` (about 46 seconds), recorded against the compiled NestJS 12.1.2 API with real PostgreSQL and Mailpit. The raw simulator recording is kept locally as `full-flow.mov` and includes build/startup time. The delivered MP4 removes that idle prefix and preserves the full test flow.
 
 `document.jpg` and `selfie.jpg` in `assets/` are generated illustrations marked **DEMO / NOT VALID**. Names, document number, address and email are fictional. `mobile/integration_test/demo_fixtures.dart` embeds the JPEGs only in the integration-test target; the normal app always uses the real device camera.
 
-The automated recording exercises the **real running backend, SMTP catcher, PostgreSQL, session rotation, encrypted private media and reviewer transitions**. Only camera capture is substituted because iOS Simulator cannot take a real photograph. One upload request is deliberately interrupted before transmission to demonstrate retained capture and retry. Reviewer decisions come from a privileged test coordinator calling the same server review function as the local CLI; the app has no reviewer control or demo verification endpoint.
+The automated recording exercises the **real running NestJS backend, SMTP catcher, PostgreSQL, session rotation, encrypted private media and reviewer transitions**. Only camera capture is substituted because iOS Simulator cannot take a real photograph. One upload request is deliberately interrupted before transmission to demonstrate retained capture and retry. Reviewer decisions come from a privileged test coordinator calling the same server review function as the local CLI; the app has no reviewer control or demo verification endpoint.
 
 1. Start API/PostgreSQL/Mailpit using the root README.
 2. Boot an iOS Simulator. Get its ID with `flutter devices` or `xcrun simctl list devices booted`.

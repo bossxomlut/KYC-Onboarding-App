@@ -20,6 +20,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
+      - run: npm run build
   mobile:
     runs-on: ubuntu-latest
     defaults:

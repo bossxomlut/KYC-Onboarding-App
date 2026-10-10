@@ -1,10 +1,10 @@
 # Backend setup and decisions
 
-The mobile app uses this real Fastify API and PostgreSQL database. API URLs start with `/api/v1`; the unauthenticated readiness endpoint is `GET /health`. The API listens on `0.0.0.0:3000` by default. PostgreSQL and email catcher ports are bound to localhost.
+The mobile app uses this real NestJS 12.1.2 API (Express adapter) and PostgreSQL database. API URLs start with `/api/v1`; the unauthenticated readiness endpoint is `GET /health`. The API listens on `0.0.0.0:3000` by default. PostgreSQL and email catcher ports are bound to localhost.
 
 ## Run locally
 
-Use Node.js 20.17 or newer, npm, and Docker with Compose. From the repository root:
+Use Node.js **22.12 or newer**; Node 22 LTS is recommended and selected by root `.nvmrc`. Use npm and Docker with Compose, or the real embedded PostgreSQL alternative below. From the repository root (run `nvm use` first if using nvm):
 
 ```sh
 docker compose up -d
@@ -55,6 +55,16 @@ npm run review -- --email demo@kyc.example --status verified
 
 Each command requires a currently pending profile. Use rejection steps `personal_details`, `document`, `selfie`, or a comma-separated combination. The CLI also accepts `--user <UUID>` instead of email. Review reasons should describe image quality or the required correction and must not contain PII. Poll or refresh the app's status screen after a CLI review.
 
+## NestJS architecture
+
+`AppModule` composes feature modules and registers the global filter and rate-limit guard. `AuthModule` owns authentication DTOs, controller, service and `AuthenticationGuard`; it exports the service/guard for protected features. `KycModule` owns the profile controller/service, schemas, upload fields pipe and upload guard. `InfrastructureModule` is global and injects `APP_CONFIG`, `DATABASE_POOL` and `MAILER` into providers; the email outbox worker starts and stops through Nest lifecycle hooks. Database pool ownership remains with application startup/shutdown.
+
+Controllers contain route/status-code declarations and HTTP input/output. Services contain the existing authentication/KYC operations and PostgreSQL transactions. Strict schemas are applied by `ZodValidationPipe`; Auth has named request DTOs. Explicit injection tokens make dependency resolution work both in production builds and the TypeScript development/test runner.
+
+Nest executes guards before interceptors. Protected uploads run `AuthenticationGuard` and `KycUploadGuard` before `FileInterceptor("file")`; Multer uses bounded in-memory upload parsing, and the upload fields pipe validates the parsed multipart fields. Media bytes still go through signature/decoding checks and encrypted private storage in the KYC service. `ApiExceptionFilter` maps application, validation, multipart and HTTP failures into the stable error contract. `RateLimitGuard` uses per-handler/IP counters: configured auth POST limits and 120 requests/minute for other handlers. The auth policy is attached to Nest controller metadata rather than matched against URL text, so case-insensitive routing cannot bypass it. The guard emits rate-limit/retry headers, and proxy trust is disabled by default.
+
+API paths, success bodies, status/error codes, database migrations and existing user/profile/session data remain compatible. The privileged review CLI uses the shared review operation directly; it does not expose a reviewer API.
+
 ## Security and state behavior
 
 - Passwords use Argon2id with 19 MiB memory, two iterations, and one lane. New passwords are 12–128 characters with an uppercase letter, lowercase letter, and digit. Unknown-account login verifies a precomputed dummy hash to avoid skipping password-hashing work.
@@ -80,6 +90,6 @@ npm run build
 npm audit --omit=dev
 ```
 
-Tests launch disposable real PostgreSQL instances, run actual migrations, and exercise actual HTTP handlers. They inject only the mail delivery transport so codes can be inspected and outages simulated. Coverage prioritizes OTP expiry/attempt limits, login restrictions, refresh concurrency/replay, logout and reset revocation, single-use resets, encrypted storage, image limits, authorization, and KYC rejection/resubmission. A separate mobile integration test uses this real API and database.
+The 14 test cases launch disposable real PostgreSQL instances, run actual migrations, and exercise the actual Nest application over HTTP with Supertest. They inject only the mail delivery transport so codes can be inspected and outages simulated. Coverage prioritizes OTP expiry/attempt limits, login restrictions, refresh concurrency/replay, logout and reset revocation, single-use resets, encrypted storage, image limits, authorization, and KYC rejection/resubmission. Four Nest-specific cases check injectable module resolution, stable JSON/validation/404 errors, guard execution before multipart parsing and upload limits, and safe errors on private-media filesystem failures. All 14 cases passed on Node 22.23.2 and Node 24.19.0. The mobile integration test also passed against the compiled NestJS API, real PostgreSQL and Mailpit; see [verification evidence](verification.md) for scope and commands.
 
 Development uses a single API instance with in-process IP rate limiting and local media files. Production needs a TLS reverse proxy, trusted proxy configuration, a shared rate-limit store, external private object storage, managed keys and key rotation, storage cleanup/retention, backups, and monitoring that redacts sensitive values. Preserve the data-encryption key across restarts or saved drafts/files cannot be decrypted. This setup does not implement an assignment-specific legal retention policy. SMTP must use TLS in production. The HTTP and known database credentials in `.env.example` and Compose are for local development only.
