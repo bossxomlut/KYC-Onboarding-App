@@ -19,7 +19,13 @@ abstract interface class RotatingTokenStore implements TokenStore {
   });
 }
 
-final class SecureTokenStore implements RotatingTokenStore {
+/// A completed operation may only remove the credentials it started with.
+abstract interface class ConditionalTokenStore implements TokenStore {
+  Future<bool> clearIfUnchanged({required String? expectedRefreshToken});
+}
+
+final class SecureTokenStore
+    implements RotatingTokenStore, ConditionalTokenStore {
   SecureTokenStore(this._storage);
   final FlutterSecureStorage _storage;
   static const _key = 'kyc.refresh-token.v1';
@@ -68,4 +74,15 @@ final class SecureTokenStore implements RotatingTokenStore {
     await _storage.delete(key: _key);
     _accessToken = null;
   });
+
+  @override
+  Future<bool> clearIfUnchanged({required String? expectedRefreshToken}) =>
+      _serialize(() async {
+        if (await _storage.read(key: _key) != expectedRefreshToken) {
+          return false;
+        }
+        await _storage.delete(key: _key);
+        _accessToken = null;
+        return true;
+      });
 }

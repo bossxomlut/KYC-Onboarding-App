@@ -13,6 +13,7 @@ abstract interface class AuthRepository {
   });
   Future<Result<void>> resendVerificationCode(String email);
   Future<Result<User?>> restoreSession();
+  Future<Result<User>> revalidateSession();
   Future<Result<void>> logout();
   Future<Result<void>> requestPasswordReset(String email);
   Future<Result<void>> resetPassword({

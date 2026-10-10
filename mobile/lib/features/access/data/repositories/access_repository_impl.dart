@@ -131,17 +131,24 @@ class AccessRepositoryImpl implements AccessRepository {
     () async => AccessModels.detail(await _remote.reviewDetail(userId)),
   );
   @override
-  Future<Result<Uint8List>> reviewMedia(String userId, MediaKind kind) =>
-      _guard(() => _remote.reviewMedia(userId, kind.name));
+  Future<Result<Uint8List>> reviewMedia(
+    String userId,
+    MediaKind kind, {
+    required String submissionId,
+  }) => _guard(
+    () => _remote.reviewMedia(userId, kind.name, submissionId: submissionId),
+  );
   @override
   Future<Result<KycProfile>> decideProfile(
     String userId,
     ReviewDecision decision, {
+    required String submissionId,
     String? reason,
     List<KycStep> requiredSteps = const [],
   }) => _guard(
     () async => KycProfileModel.fromJson(
       (await _remote.decideProfile(userId, {
+            'submissionId': submissionId,
             'decision': decision.name,
             if (decision == ReviewDecision.rejected) ...{
               'reason': reason,

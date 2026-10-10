@@ -13,6 +13,8 @@ class KycHistoryState extends Equatable {
     this.nextOffset = 0,
     this.loading = false,
     this.loadingMore = false,
+    this.refreshing = false,
+    this.refreshError,
     this.error,
     this.selectedSubmission,
     this.media = const {},
@@ -24,6 +26,8 @@ class KycHistoryState extends Equatable {
   final int nextOffset;
   final bool loading;
   final bool loadingMore;
+  final bool refreshing;
+  final AppFailure? refreshError;
   final AppFailure? error;
   final KycHistorySubmission? selectedSubmission;
   final Map<MediaKind, Uint8List> media;
@@ -36,6 +40,9 @@ class KycHistoryState extends Equatable {
     int? nextOffset,
     bool? loading,
     bool? loadingMore,
+    bool? refreshing,
+    AppFailure? refreshError,
+    bool clearRefreshError = false,
     AppFailure? error,
     KycHistorySubmission? selectedSubmission,
     bool clearSelection = false,
@@ -48,6 +55,8 @@ class KycHistoryState extends Equatable {
     nextOffset: nextOffset ?? this.nextOffset,
     loading: loading ?? this.loading,
     loadingMore: loadingMore ?? this.loadingMore,
+    refreshing: refreshing ?? this.refreshing,
+    refreshError: clearRefreshError ? null : refreshError ?? this.refreshError,
     error: error,
     selectedSubmission: clearSelection
         ? null
@@ -63,6 +72,8 @@ class KycHistoryState extends Equatable {
     nextOffset,
     loading,
     loadingMore,
+    refreshing,
+    refreshError,
     error,
     selectedSubmission,
     media,
@@ -84,6 +95,7 @@ class KycHistoryCubit extends Cubit<KycHistoryState> {
   String? _reviewerUserId;
   int _listGeneration = 0;
   int _mediaGeneration = 0;
+  bool _refreshQueued = false;
 
   void _update(KycHistoryState value) {
     if (!isClosed) emit(value);
@@ -101,12 +113,13 @@ class KycHistoryCubit extends Cubit<KycHistoryState> {
     if (!_isAuthorizationFailure(error)) return false;
     _listGeneration++;
     _mediaGeneration++;
+    _refreshQueued = false;
     _update(KycHistoryState(error: error));
     return true;
   }
 
   Future<void> load({String? reviewerUserId}) async {
-    if (isClosed || state.loading) return;
+    if (isClosed || state.loading || state.refreshing) return;
     if (reviewerUserId != null) _reviewerUserId = reviewerUserId;
     final generation = ++_listGeneration;
     _mediaGeneration++;
@@ -125,10 +138,97 @@ class KycHistoryCubit extends Cubit<KycHistoryState> {
           ),
         );
     }
+    await _drainRefresh();
+  }
+
+  /// Reconcile loaded rounds without replacing an open immutable snapshot.
+  Future<void> refresh() async {
+    if (isClosed) return;
+    if (state.loading || state.loadingMore || state.refreshing) {
+      _refreshQueued = true;
+      return;
+    }
+    final generation = ++_listGeneration;
+    final target = state.nextOffset > 20 ? state.nextOffset : 20;
+    _update(
+      state.copyWith(
+        refreshing: true,
+        clearRefreshError: true,
+        error: state.error,
+        mediaError: state.mediaError,
+      ),
+    );
+    final submissions = <KycHistorySubmission>[];
+    final knownIds = <String>{};
+    var offset = 0;
+    var total = 0;
+    do {
+      final result = await _load(
+        offset: offset,
+        reviewerUserId: _reviewerUserId,
+      );
+      if (isClosed || generation != _listGeneration) return;
+      switch (result) {
+        case Failure<KycHistoryPageResult>(:final error):
+          if (!_clearOnAuthorizationFailure(error)) {
+            _update(
+              state.copyWith(
+                refreshing: false,
+                refreshError: error,
+                error: state.error,
+                mediaError: state.mediaError,
+              ),
+            );
+          }
+          await _drainRefresh();
+          return;
+        case Success<KycHistoryPageResult>(:final value):
+          submissions.addAll(
+            value.submissions.where((entry) => knownIds.add(entry.id)),
+          );
+          total = value.total;
+          offset = value.submissions.isEmpty
+              ? total
+              : value.offset + value.submissions.length;
+      }
+    } while (offset < total && offset < target);
+    final selected = state.selectedSubmission;
+    KycHistorySubmission? reconciled;
+    if (selected != null) {
+      for (final submission in submissions) {
+        if (submission.id == selected.id) {
+          reconciled = submission;
+          break;
+        }
+      }
+    }
+    _update(
+      state.copyWith(
+        submissions: List.unmodifiable(submissions),
+        selectedSubmission: reconciled,
+        total: total,
+        nextOffset: offset,
+        refreshing: false,
+        clearRefreshError: true,
+        mediaError: state.mediaError,
+      ),
+    );
+    await _drainRefresh();
+  }
+
+  Future<void> _drainRefresh() async {
+    if (_refreshQueued && !isClosed) {
+      _refreshQueued = false;
+      await refresh();
+    }
   }
 
   Future<void> loadMore() async {
-    if (isClosed || state.loading || state.loadingMore || !state.hasMore) {
+    if (isClosed ||
+        state.loading ||
+        state.loadingMore ||
+        state.refreshing ||
+        !state.hasMore) {
       return;
     }
     final generation = _listGeneration;
@@ -159,6 +259,7 @@ class KycHistoryCubit extends Cubit<KycHistoryState> {
           ),
         );
     }
+    await _drainRefresh();
   }
 
   Future<void> select(KycHistorySubmission submission) async {

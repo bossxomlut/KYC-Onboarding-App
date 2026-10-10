@@ -27,10 +27,15 @@ abstract interface class AccessRepository {
   });
   Future<Result<PageResult<ReviewSummary>>> reviewQueue({int offset = 0});
   Future<Result<ReviewDetail>> reviewDetail(String userId);
-  Future<Result<Uint8List>> reviewMedia(String userId, MediaKind kind);
+  Future<Result<Uint8List>> reviewMedia(
+    String userId,
+    MediaKind kind, {
+    required String submissionId,
+  });
   Future<Result<KycProfile>> decideProfile(
     String userId,
     ReviewDecision decision, {
+    required String submissionId,
     String? reason,
     List<KycStep> requiredSteps = const [],
   });

@@ -146,3 +146,23 @@ Verified on 10 October 2026. Every submit now creates a separate encrypted submi
 Backend coverage verifies submission retry/concurrency, version order/pagination, owner isolation, live role revocation, original personal details and exact photo bytes across multiple rounds, retained reviewer identity after email/role changes, and preserving an accepted document when retaken after a partial rejection. An unsubmitted retake still deletes its obsolete file. The upgrade test applies migrations001–004 to a legacy database before005 and preserves only the actually available current submission and matching review audit.
 
 Migration005 was applied to the configured local development database without displaying existing applicant records. Previously overwritten details and deleted photos cannot be recovered. Legacy audits retain known reviewer IDs but cannot supply historical email/role values that were never stored; missing audit timestamps remain unavailable. A local authenticated smoke using the existing ignored synthetic-admin credential file returned401 INVALID_CREDENTIALS; credentials/accounts were not changed and no smoke session was created. Authenticated history checks passed in the isolated backend suite. Real-API device integration, native camera checks, iOS builds and the recording were not rerun. The integration-test source now verifies reading the rejected round after the replacement round becomes verified.
+
+## Background and foreground recovery
+
+Verified on 10 October 2026. One app-owned observer recognizes actual background cycles and revalidates the live session before refreshing the current screen. Focus-only interruptions do not reload. Forms, capture previews and open history sheets retain their state; access/reviewer actions wait for fresh permissions/data. KYC reads coalesce and queue behind active operations without repeating writes. Old permission/profile responses cannot override newer foreground data, including two background cycles while a response is delayed. History refresh keeps the loaded pages and removes duplicate submission IDs when offset pages shift.
+
+Reviewer detail, private photos and decisions now share an immutable `submissionId`. The backend rejects an old ID against a newer pending submission before writing a decision or audit. OTP resend uses a 30-second wall-clock deadline and does not send automatically on resume. A new reset link clears the old form/token; successful reset completion still invalidates its original app session after the form changes or closes. Atomic token clearing preserves a newer login.
+
+| Check | Actual result |
+| --- | --- |
+| Full Flutter `flutter test --no-pub --reporter expanded` | 227/227 passed, including architecture boundaries and existing Back/KYC/history flows |
+| Focused app resume/reset widget tests and session retry tests | 22/22 passed on final UI source |
+| Flutter `flutter analyze --no-pub` | No issues found |
+| Bundled Dart format check on `lib test integration_test` | 128 files, no changes required |
+| Backend `npm run check`, `npm run build`, full `npm test` | Passed; 44/44 tests with isolated PostgreSQL/Nest HTTP coverage |
+| Changed backend Prettier checks and `git diff --check` | Passed |
+| `flutter build apk --debug --no-pub --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1` | Passed; `mobile/build/app/outputs/flutter-apk/app-debug.apk` |
+
+Focused tests reproduced the incorrect focus-only reload, missing foreground reads, stale permissions/profile responses, skipped trailing refresh, stale/missing photo cache, wrong read Retry, drifting OTP cooldown, old reset token/completion, clearing a newer login, and duplicate history cards before their fixes. Backend regressions submit a new version after rejection and prove that old-version photos/decisions are rejected without a new audit; the latest version can still be reviewed.
+
+Backend/mobile must be updated together because reviewer photo and decision requests now require `submissionId`; older clients receive validation400. No new database migration is needed. This update does not add durable unsaved form drafts: normal background transitions preserve memory, while process termination restores saved server progress and existing private capture recovery. Real-device camera/permission → Settings transitions, OS force-kill, real-API device integration, iOS builds and the recording were not rerun for this change. The running development API and installed app were not replaced by these automated checks.

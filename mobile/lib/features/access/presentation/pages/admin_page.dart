@@ -33,6 +33,7 @@ class _AdminPageState extends State<AdminPage> {
       return AccessScaffold(
         title: 'Manage accounts',
         busy: state.busy,
+        revalidating: state.needsRevalidation,
         error: state.error,
         message: state.message,
         onRefresh: () => cubit.loadAdmin(),
@@ -49,7 +50,7 @@ class _AdminPageState extends State<AdminPage> {
               TextField(
                 key: const Key('admin-create-email'),
                 controller: _email,
-                enabled: !state.busy,
+                enabled: !state.busy && !state.needsRevalidation,
                 keyboardType: TextInputType.emailAddress,
                 autocorrect: false,
                 decoration: const InputDecoration(labelText: 'Email'),
@@ -58,7 +59,7 @@ class _AdminPageState extends State<AdminPage> {
               TextField(
                 key: const Key('admin-create-password'),
                 controller: _password,
-                enabled: !state.busy,
+                enabled: !state.busy && !state.needsRevalidation,
                 obscureText: !_showPassword,
                 autocorrect: false,
                 enableSuggestions: false,
@@ -84,7 +85,7 @@ class _AdminPageState extends State<AdminPage> {
                   for (final role in [UserRole.user, UserRole.reviewer])
                     DropdownMenuItem(value: role, child: Text(role.label)),
                 ],
-                onChanged: state.busy
+                onChanged: state.busy || state.needsRevalidation
                     ? null
                     : (role) => setState(() => _newRole = role!),
               ),
@@ -95,7 +96,7 @@ class _AdminPageState extends State<AdminPage> {
               const SizedBox(height: 12),
               FilledButton(
                 key: const Key('admin-create-account'),
-                onPressed: state.busy
+                onPressed: state.busy || state.needsRevalidation
                     ? null
                     : () async {
                         if (await cubit.createUser(
@@ -138,7 +139,7 @@ class _AdminPageState extends State<AdminPage> {
                       spacing: 12,
                       children: [
                         FilledButton(
-                          onPressed: state.busy
+                          onPressed: state.busy || state.needsRevalidation
                               ? null
                               : () => _decideRequest(
                                   context,
@@ -148,7 +149,7 @@ class _AdminPageState extends State<AdminPage> {
                           child: const Text('Approve access'),
                         ),
                         OutlinedButton(
-                          onPressed: state.busy
+                          onPressed: state.busy || state.needsRevalidation
                               ? null
                               : () => _decideRequest(
                                   context,
@@ -202,7 +203,7 @@ class _AdminPageState extends State<AdminPage> {
                     else ...[
                       const SizedBox(height: 12),
                       OutlinedButton(
-                        onPressed: state.busy
+                        onPressed: state.busy || state.needsRevalidation
                             ? null
                             : () => _changeRole(context, managed.user),
                         child: Text(

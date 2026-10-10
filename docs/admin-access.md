@@ -65,9 +65,11 @@ Trạng thái KYC có màu nhất quán trên Home, màn hình kết quả và p
 - `GET /api/v1/admin/role-requests`: danh sách yêu cầu; hỗ trợ `status`, `limit`, `offset`, mặc định đang chờ.
 - `POST /api/v1/admin/role-requests/:id/decision`: chấp thuận/từ chối.
 - `GET /api/v1/reviews`: danh sách hồ sơ chờ của người khác.
-- `GET /api/v1/reviews/:userId`: chi tiết hồ sơ chờ.
-- `GET /api/v1/reviews/:userId/media/:kind`: ảnh JPEG riêng tư.
-- `POST /api/v1/reviews/:userId/decision`: quyết định KYC.
+- `GET /api/v1/reviews/:userId`: chi tiết hồ sơ chờ và `submissionId` của lần nộp đang xem.
+- `GET /api/v1/reviews/:userId/media/:kind?submissionId=<uuid>`: ảnh JPEG riêng tư của đúng lần nộp đó.
+- `POST /api/v1/reviews/:userId/decision`: quyết định KYC; body bắt buộc có `submissionId` lấy từ chi tiết.
+
+Khi app trở lại từ background, app kiểm tra phiên/quyền và tải lại màn hình hiện tại. Nút quản lý/duyệt bị khóa cho tới khi dữ liệu được xác nhận; bản nháp lý do vẫn được giữ nếu lần nộp không đổi. Nếu có lần nộp mới, ảnh hoặc quyết định dùng ID cũ nhận `409 KYC_REVIEW_CHANGED` và phải tải lại trước khi duyệt. Cập nhật backend và mobile cùng lúc; client cũ thiếu `submissionId` nhận lỗi validation400.
 
 Migration `004_account_roles.sql` giữ tài khoản hiện có là `user`, thêm `role_requests` và `role_audit_events`. Lịch sử thay đổi quyền lưu người thực hiện, tài khoản đích, quyền cũ/mới và thời điểm. Yêu cầu lưu người quyết định; `kyc_reviews` mới lưu `reviewed_by` và lý do từ chối. Quyết định CLI trước migration giữ `NULL` ở trường người duyệt.
 

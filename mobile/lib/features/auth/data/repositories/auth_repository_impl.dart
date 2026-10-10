@@ -79,6 +79,10 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Result<User>> revalidateSession() =>
+      _result(() async => (await _remote.me()).toEntity());
+
+  @override
   Future<Result<void>> logout() => _result(() async {
     final token = await _tokens.readRefreshToken();
     if (token != null) {
@@ -100,7 +104,13 @@ class AuthRepositoryImpl implements AuthRepository {
     required String token,
     required String newPassword,
   }) => _result(() async {
+    final expectedToken = await _tokens.readRefreshToken();
     await _remote.resetPassword(token: token, newPassword: newPassword);
-    await _tokens.clear();
+    final store = _tokens;
+    if (store is ConditionalTokenStore) {
+      await store.clearIfUnchanged(expectedRefreshToken: expectedToken);
+    } else if (await store.readRefreshToken() == expectedToken) {
+      await store.clear();
+    }
   });
 }

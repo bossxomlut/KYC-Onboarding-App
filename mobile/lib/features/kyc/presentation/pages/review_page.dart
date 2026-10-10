@@ -13,12 +13,20 @@ class ReviewPage extends StatefulWidget {
 }
 
 class _ReviewPageState extends State<ReviewPage> {
+  late final KycCubit _cubit;
   @override
   void initState() {
     super.initState();
+    _cubit = context.read<KycCubit>()..retainReviewMediaView();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<KycCubit>().loadReviewMedia();
+      if (mounted) _cubit.loadReviewMedia();
     });
+  }
+
+  @override
+  void dispose() {
+    _cubit.releaseReviewMediaView();
+    super.dispose();
   }
 
   @override
@@ -37,7 +45,11 @@ class _ReviewPageState extends State<ReviewPage> {
                   'Check your details and photos before sending your profile for verification.',
               icon: Icons.fact_check_outlined,
             ),
-            KycError(onRetry: () => context.read<KycCubit>().loadReviewMedia()),
+            KycError(
+              onRetry: state.errorSource == KycErrorSource.operation
+                  ? null
+                  : () => context.read<KycCubit>().retryRead(),
+            ),
             if (state.busy) const LinearProgressIndicator(),
             const SizedBox(height: 16),
             KycProfileSummary(

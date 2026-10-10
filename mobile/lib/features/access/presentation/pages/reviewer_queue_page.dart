@@ -16,6 +16,7 @@ class ReviewerQueuePage extends StatelessWidget {
       return AccessScaffold(
         title: 'Review profiles',
         busy: state.busy,
+        revalidating: state.needsRevalidation,
         error: state.error,
         message: state.message,
         onRefresh: () => cubit.loadQueue(),

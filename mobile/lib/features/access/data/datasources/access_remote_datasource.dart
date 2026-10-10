@@ -29,8 +29,13 @@ class AccessRemoteDataSource {
       _api.get('/reviews?limit=50&offset=$offset');
   Future<Map<String, dynamic>> reviewDetail(String id) =>
       _api.get('/reviews/${Uri.encodeComponent(id)}');
-  Future<Uint8List> reviewMedia(String id, String kind) =>
-      _api.bytes('/reviews/${Uri.encodeComponent(id)}/media/$kind');
+  Future<Uint8List> reviewMedia(
+    String id,
+    String kind, {
+    required String submissionId,
+  }) => _api.bytes(
+    '/reviews/${Uri.encodeComponent(id)}/media/$kind?submissionId=${Uri.encodeQueryComponent(submissionId)}',
+  );
   Future<Map<String, dynamic>> decideProfile(
     String id,
     Map<String, dynamic> body,

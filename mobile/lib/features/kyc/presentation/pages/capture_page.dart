@@ -34,27 +34,7 @@ class _CaptureView extends StatefulWidget {
   State<_CaptureView> createState() => _CapturePageState();
 }
 
-class _CapturePageState extends State<_CaptureView>
-    with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) {
-      context.read<KycCubit>().load();
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
+class _CapturePageState extends State<_CaptureView> {
   Future<void> _capture() async {
     final cubit = context.read<KycCubit>();
     await cubit.capture(
@@ -137,11 +117,14 @@ class _CapturePageState extends State<_CaptureView>
             if (state.busy) ...[
               LinearProgressIndicator(value: state.uploadProgress),
               const SizedBox(height: 12),
-              Text(
-                state.uploadProgress == null
-                    ? 'Opening camera…'
-                    : 'Uploading ${(state.uploadProgress! * 100).round()}%',
-              ),
+              Text(switch (state.operation) {
+                KycOperation.capturing => 'Opening camera…',
+                KycOperation.uploading =>
+                  'Uploading ${((state.uploadProgress ?? 0) * 100).round()}%',
+                KycOperation.loadingProfile => 'Loading your profile…',
+                KycOperation.loadingMedia => 'Loading photos…',
+                _ => 'Saving your progress…',
+              }),
               const SizedBox(height: 16),
             ],
             if (draft != null) ...[

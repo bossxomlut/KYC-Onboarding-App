@@ -5,8 +5,8 @@ import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme/app_theme.dart';
+import '../core/navigation/current_route.dart';
 import '../features/auth/presentation/bloc/auth_session_cubit.dart';
-import '../features/auth/presentation/bloc/auth_form_state.dart';
 import '../features/auth/presentation/bloc/login_cubit.dart';
 import '../features/auth/presentation/bloc/register_cubit.dart';
 import '../features/auth/presentation/bloc/email_verification_cubit.dart';
@@ -33,6 +33,7 @@ import '../features/kyc/presentation/pages/verification_page.dart';
 import '../features/kyc_history/presentation/bloc/kyc_history_cubit.dart';
 import '../features/kyc_history/presentation/pages/kyc_history_page.dart';
 import 'di/dependencies.dart';
+import 'lifecycle/foreground_refresh.dart';
 import 'router/back_to_home_scope.dart';
 import 'router/route_policy.dart';
 
@@ -44,7 +45,8 @@ class KycApp extends StatefulWidget {
   State<KycApp> createState() => _KycAppState();
 }
 
-class _KycAppState extends State<KycApp> {
+class _KycAppState extends State<KycApp> with WidgetsBindingObserver {
+  final _foreground = ForegroundRefreshController();
   late final AuthSessionCubit _session;
   late final _RouterRefresh _refresh;
   late final GoRouter _router;
@@ -105,14 +107,25 @@ class _KycAppState extends State<KycApp> {
                 ? auth.email
                 : state.uri.queryParameters['email'] ?? '';
             return BlocProvider(
-              create: (_) => di<EmailVerificationCubit>(),
-              child: VerifyEmailPage(
-                email: email,
-                onSignedIn: _session.signedIn,
-                onChangeEmail: () {
-                  _session.cancelVerification();
-                  context.go('/register');
-                },
+              create: (_) {
+                final cubit = di<EmailVerificationCubit>();
+                if (auth is AuthEmailVerificationRequired) {
+                  cubit.startCooldown();
+                }
+                return cubit;
+              },
+              child: RouteForegroundRefresh(
+                location: state.uri.path,
+                onResume: (context) async =>
+                    context.read<EmailVerificationCubit>().reconcileCooldown(),
+                child: VerifyEmailPage(
+                  email: email,
+                  onSignedIn: _session.signedIn,
+                  onChangeEmail: () {
+                    _session.cancelVerification();
+                    context.go('/register');
+                  },
+                ),
               ),
             );
           },
@@ -126,30 +139,35 @@ class _KycAppState extends State<KycApp> {
         ),
         GoRoute(
           path: '/reset-password',
-          builder: (context, state) => BlocProvider(
-            create: (_) => di<PasswordResetCubit>(),
-            child: BlocListener<PasswordResetCubit, AuthFormState>(
-              listenWhen: (previous, current) =>
-                  previous.status != current.status,
-              listener: (context, form) {
-                if (form.status == AuthFormStatus.success) {
-                  unawaited(_session.sessionInvalidated());
-                }
-              },
+          builder: (context, state) {
+            return BlocProvider(
+              create: (_) => di<PasswordResetCubit>(),
               child: ResetPasswordPage(
                 token: state.uri.queryParameters['token'] ?? '',
+                onPasswordResetStarted: () {
+                  final scope = _session.sessionScope;
+                  return () async {
+                    if (scope == _session.sessionScope) {
+                      await _session.sessionInvalidated();
+                    }
+                  };
+                },
               ),
-            ),
-          ),
+            );
+          },
         ),
         GoRoute(
           path: '/access',
           builder: (context, state) => BackToHomeScope(
             child: BlocProvider(
               create: (_) => di<AccessCubit>()..loadAccess(),
-              child: AccessPage(
-                user: (_session.state as AuthAuthenticated).user,
-                onUserUpdated: _session.updateUser,
+              child: _accessForegroundPage(
+                state,
+                refresh: (cubit) => cubit.loadAccess(),
+                child: AccessPage(
+                  user: (_session.state as AuthAuthenticated).user,
+                  onUserUpdated: _session.updateUser,
+                ),
               ),
             ),
           ),
@@ -159,7 +177,14 @@ class _KycAppState extends State<KycApp> {
           builder: (context, state) => BackToHomeScope(
             child: BlocProvider(
               create: (_) => di<AccessCubit>()..loadAdmin(),
-              child: const AdminPage(),
+              child: _accessForegroundPage(
+                state,
+                refresh: (cubit) => cubit.loadAdmin(
+                  offset: cubit.state.users?.offset ?? 0,
+                  requestOffset: cubit.state.requests?.offset ?? 0,
+                ),
+                child: const AdminPage(),
+              ),
             ),
           ),
         ),
@@ -168,8 +193,13 @@ class _KycAppState extends State<KycApp> {
           builder: (context, state) => BackToHomeScope(
             child: BlocProvider(
               create: (_) => di<AccessCubit>()..loadQueue(),
-              child: ReviewerQueuePage(
-                actorId: (_session.state as AuthAuthenticated).user.id,
+              child: _accessForegroundPage(
+                state,
+                refresh: (cubit) =>
+                    cubit.loadQueue(offset: cubit.state.queue?.offset ?? 0),
+                child: ReviewerQueuePage(
+                  actorId: (_session.state as AuthAuthenticated).user.id,
+                ),
               ),
             ),
           ),
@@ -181,9 +211,13 @@ class _KycAppState extends State<KycApp> {
             return BackToHomeScope(
               child: BlocProvider(
                 create: (_) => di<AccessCubit>()..loadDetail(userId),
-                child: ReviewerDetailPage(
-                  userId: userId,
-                  actorId: (_session.state as AuthAuthenticated).user.id,
+                child: _accessForegroundPage(
+                  state,
+                  refresh: (cubit) => cubit.loadDetail(userId),
+                  child: ReviewerDetailPage(
+                    userId: userId,
+                    actorId: (_session.state as AuthAuthenticated).user.id,
+                  ),
                 ),
               ),
             );
@@ -194,7 +228,7 @@ class _KycAppState extends State<KycApp> {
           builder: (context, state) => BackToHomeScope(
             child: BlocProvider(
               create: (_) => di<KycHistoryCubit>(),
-              child: const KycHistoryPage(),
+              child: _historyForegroundPage(state, const KycHistoryPage()),
             ),
           ),
         ),
@@ -204,8 +238,9 @@ class _KycAppState extends State<KycApp> {
             child: BlocProvider(
               key: ValueKey(state.pathParameters['userId']),
               create: (_) => di<KycHistoryCubit>(),
-              child: KycHistoryPage(
-                reviewerUserId: state.pathParameters['userId']!,
+              child: _historyForegroundPage(
+                state,
+                KycHistoryPage(reviewerUserId: state.pathParameters['userId']!),
               ),
             ),
           ),
@@ -232,13 +267,16 @@ class _KycAppState extends State<KycApp> {
                       if (auth is! AuthAuthenticated) {
                         return const _SessionPage();
                       }
-                      return AdminHomePage(
-                        user: auth.user,
-                        isSigningOut: auth.isSigningOut,
-                        error: auth.error,
-                        onLogout: () async {
-                          await _session.signOut();
-                        },
+                      return _AuthenticatedForegroundRefresh(
+                        location: state.uri.path,
+                        child: AdminHomePage(
+                          user: auth.user,
+                          isSigningOut: auth.isSigningOut,
+                          error: auth.error,
+                          onLogout: () async {
+                            await _session.signOut();
+                          },
+                        ),
                       );
                     },
                   );
@@ -304,11 +342,24 @@ class _KycAppState extends State<KycApp> {
         ),
       ),
     );
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_session.restore());
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_foreground.isBackgrounded &&
+        (state == AppLifecycleState.hidden ||
+            state == AppLifecycleState.paused)) {
+      _session.markForRevalidation();
+    }
+    _foreground.handle(state);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _foreground.dispose();
     _router.dispose();
     _refresh.dispose();
     unawaited(_session.close());
@@ -316,13 +367,58 @@ class _KycAppState extends State<KycApp> {
   }
 
   @override
-  Widget build(BuildContext context) => BlocProvider.value(
-    value: _session,
-    child: MaterialApp.router(
-      title: 'Identity',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      routerConfig: _router,
+  Widget build(BuildContext context) => ForegroundRefreshScope(
+    controller: _foreground,
+    child: BlocProvider.value(
+      value: _session,
+      child: MaterialApp.router(
+        title: 'Identity',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        routerConfig: _router,
+        builder: (context, child) =>
+            BlocBuilder<AuthSessionCubit, AuthSessionState>(
+              builder: (context, state) => Stack(
+                children: [
+                  child!,
+                  if (state is AuthAuthenticated &&
+                      state.revalidationError != null)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 16,
+                      child: SafeArea(
+                        child: Material(
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(12),
+                          color: Theme.of(context).colorScheme.errorContainer,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(state.revalidationError!.message),
+                                ),
+                                TextButton(
+                                  key: const Key('retry-foreground'),
+                                  onPressed: state.isRevalidating
+                                      ? null
+                                      : _foreground.retry,
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+      ),
     ),
   );
 }
@@ -341,8 +437,65 @@ class _RouterRefresh extends ChangeNotifier {
 
 Widget _kycPage(GoRouterState state, Widget child) => BackToHomeScope(
   enabled: state.uri.path != '/',
-  child: _KycFlowGuard(location: state.uri.path, child: child),
+  child: _AuthenticatedForegroundRefresh(
+    location: state.uri.path,
+    prepare: (context) => context.read<KycCubit>().prepareForResume(),
+    refresh: (context) => context.read<KycCubit>().refresh(),
+    child: _KycFlowGuard(location: state.uri.path, child: child),
+  ),
 );
+
+Widget _accessForegroundPage(
+  GoRouterState state, {
+  required Future<void> Function(AccessCubit) refresh,
+  required Widget child,
+}) => _AuthenticatedForegroundRefresh(
+  location: state.uri.path,
+  prepare: (context) => context.read<AccessCubit>().prepareForResume(),
+  refresh: (context) => refresh(context.read<AccessCubit>()),
+  child: child,
+);
+
+Widget _historyForegroundPage(GoRouterState state, Widget child) =>
+    _AuthenticatedForegroundRefresh(
+      location: state.uri.path,
+      refresh: (context) => context.read<KycHistoryCubit>().refresh(),
+      child: child,
+    );
+
+class _AuthenticatedForegroundRefresh extends StatelessWidget {
+  const _AuthenticatedForegroundRefresh({
+    required this.location,
+    required this.child,
+    this.prepare,
+    this.refresh,
+  });
+  final String location;
+  final Widget child;
+  final void Function(BuildContext)? prepare;
+  final Future<void> Function(BuildContext)? refresh;
+  @override
+  Widget build(BuildContext context) => RouteForegroundRefresh(
+    location: location,
+    onBackground: prepare,
+    onResume: (context) async {
+      final controller = ForegroundRefreshScope.of(context);
+      final session = context.read<AuthSessionCubit>();
+      final scope = session.sessionScope;
+      final generation = controller.generation;
+      final confirmed = await session.revalidate();
+      if (confirmed &&
+          context.mounted &&
+          !controller.isBackgrounded &&
+          generation == controller.generation &&
+          scope == session.sessionScope &&
+          isCurrentRoute(context)) {
+        await refresh?.call(context);
+      }
+    },
+    child: child,
+  );
+}
 
 class _SessionPage extends StatelessWidget {
   const _SessionPage();
@@ -392,27 +545,7 @@ class _KycFlowGuard extends StatefulWidget {
   State<_KycFlowGuard> createState() => _KycFlowGuardState();
 }
 
-class _KycFlowGuardState extends State<_KycFlowGuard>
-    with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      unawaited(context.read<KycCubit>().load());
-    }
-  }
-
+class _KycFlowGuardState extends State<_KycFlowGuard> {
   String? _redirect(KycProfile profile) => RoutePolicy.redirect(
     access: SessionAccess.authenticated,
     location: widget.location,

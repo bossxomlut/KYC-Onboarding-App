@@ -37,6 +37,7 @@ class _AccessPageState extends State<AccessPage> {
       return AccessScaffold(
         title: 'Account access',
         busy: state.busy,
+        revalidating: state.needsRevalidation,
         error: state.error,
         message: state.message,
         onRefresh: () => context.read<AccessCubit>().loadAccess(),
@@ -91,7 +92,7 @@ class _AccessPageState extends State<AccessPage> {
             TextField(
               key: const Key('request-reason'),
               controller: _reason,
-              enabled: !state.busy,
+              enabled: !state.busy && !state.needsRevalidation,
               maxLines: 4,
               maxLength: 1000,
               decoration: const InputDecoration(
@@ -102,7 +103,7 @@ class _AccessPageState extends State<AccessPage> {
             const SizedBox(height: 12),
             FilledButton(
               key: const Key('request-reviewer'),
-              onPressed: state.busy
+              onPressed: state.busy || state.needsRevalidation
                   ? null
                   : () async {
                       if (await context.read<AccessCubit>().requestReviewer(

@@ -328,6 +328,7 @@ test("rejected and verified versions retain original details, photos and reviewe
     `/reviews/${applicant.id}/decision`,
     reviewer.token,
     {
+      submissionId: firstPending.id,
       decision: "rejected",
       reason: "  Update synthetic details and retake photos  ",
       requiredSteps: ["selfie"],
@@ -421,7 +422,7 @@ test("rejected and verified versions retain original details, photos and reviewe
     "POST",
     `/reviews/${applicant.id}/decision`,
     administrator.token,
-    { decision: "verified" },
+    { submissionId: second.id, decision: "verified" },
   );
   assert.equal(verified.status, 200);
   const completed = await history(applicant);
@@ -456,11 +457,13 @@ test("history paginates newest versions first and does not record draft correcti
   for (let version = 1; version <= 3; version++) {
     await submit(applicant);
     if (version === 3) break;
+    const submissionId = (await history(applicant)).submissions[0]!.id;
     const rejected = await json(
       "POST",
       `/reviews/${applicant.id}/decision`,
       reviewer.token,
       {
+        submissionId,
         decision: "rejected",
         reason: "Retake selfie",
         requiredSteps: ["selfie"],
@@ -535,12 +538,10 @@ test("concurrent reviewer decisions attach only the winning decision to the subm
   ];
   const responses = await Promise.all(
     decisions.map((decision) =>
-      json(
-        "POST",
-        `/reviews/${applicant.id}/decision`,
-        decision.actor.token,
-        decision.body,
-      ),
+      json("POST", `/reviews/${applicant.id}/decision`, decision.actor.token, {
+        submissionId: pending.id,
+        ...decision.body,
+      }),
     ),
   );
   assert.deepEqual(
@@ -650,11 +651,12 @@ test("revoked reviewer role immediately removes historical list and photo access
   const reviewer = await actor("revoked-history-reviewer", "reviewer");
   await completeDraft(applicant);
   await submit(applicant);
+  const submissionId = (await history(applicant)).submissions[0]!.id;
   const decision = await json(
     "POST",
     `/reviews/${applicant.id}/decision`,
     reviewer.token,
-    { decision: "verified" },
+    { submissionId, decision: "verified" },
   );
   assert.equal(decision.status, 200);
   const submission = (await history(applicant, reviewer)).submissions[0]!;
@@ -720,11 +722,17 @@ test("legacy pending profiles acquire a historical snapshot before reviewer deci
   const reviewer = await actor("legacy-history-reviewer", "reviewer");
   await legacyProfile(applicant, "pending_review");
   const pending = await json("GET", "/kyc", applicant.token);
+  const inspected = await json(
+    "GET",
+    `/reviews/${applicant.id}`,
+    reviewer.token,
+  );
   const rejected = await json(
     "POST",
     `/reviews/${applicant.id}/decision`,
     reviewer.token,
     {
+      submissionId: inspected.body.submissionId,
       decision: "rejected",
       reason: "Retake legacy selfie",
       requiredSteps: ["selfie"],

@@ -28,6 +28,7 @@ class ReviewerDetailPage extends StatelessWidget {
           state.media.length == 2;
       final canDecide =
           !state.busy &&
+          !state.needsRevalidation &&
           state.error == null &&
           profile?.status == KycStatus.pendingReview &&
           actorId != userId &&
@@ -35,6 +36,7 @@ class ReviewerDetailPage extends StatelessWidget {
       return AccessScaffold(
         title: 'Review identity',
         busy: state.busy,
+        revalidating: state.needsRevalidation,
         error: state.error,
         onRefresh: () => context.read<AccessCubit>().loadDetail(userId),
         children: [
@@ -107,13 +109,17 @@ class ReviewerDetailPage extends StatelessWidget {
               ),
             FilledButton(
               key: const Key('review-approve'),
-              onPressed: canDecide ? () => _approve(context) : null,
+              onPressed: canDecide
+                  ? () => _approve(context, detail.submissionId)
+                  : null,
               child: const Text('Approve identity'),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
               key: const Key('review-reject'),
-              onPressed: canDecide ? () => _reject(context) : null,
+              onPressed: canDecide
+                  ? () => _reject(context, detail.submissionId)
+                  : null,
               child: const Text('Reject and request updates'),
             ),
           ],
@@ -132,30 +138,46 @@ class ReviewerDetailPage extends StatelessWidget {
       ],
     ),
   );
-  Future<void> _approve(BuildContext context) async {
+  Future<void> _approve(BuildContext context, String submissionId) async {
+    final cubit = context.read<AccessCubit>();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialog) => AlertDialog(
-        title: const Text('Approve this identity?'),
-        content: const Text(
-          'Confirm that you have checked the details, document and selfie.',
+      builder: (dialog) => BlocBuilder<AccessCubit, AccessState>(
+        bloc: cubit,
+        builder: (_, state) => AlertDialog(
+          title: const Text('Approve this identity?'),
+          content: Text(
+            state.needsRevalidation
+                ? 'Rechecking your access and this submission…'
+                : state.detail?.submissionId != submissionId
+                ? 'This submission has changed. Close this dialog and review the current submission.'
+                : 'Confirm that you have checked the details, document and selfie.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed:
+                  state.busy ||
+                      state.needsRevalidation ||
+                      state.detail?.submissionId != submissionId
+                  ? null
+                  : () => Navigator.pop(dialog, true),
+              child: const Text('Approve'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialog, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('Approve'),
-          ),
-        ],
       ),
     );
-    if (confirmed != true || !context.mounted) return;
+    if (confirmed != true || !context.mounted || !isCurrentRoute(context)) {
+      return;
+    }
     final saved = await context.read<AccessCubit>().decideProfile(
       userId,
       ReviewDecision.verified,
+      submissionId: submissionId,
       actorId: actorId,
     );
     if (saved && context.mounted && isCurrentRoute(context)) {
@@ -163,15 +185,18 @@ class ReviewerDetailPage extends StatelessWidget {
     }
   }
 
-  Future<void> _reject(BuildContext context) async {
+  Future<void> _reject(BuildContext context, String submissionId) async {
+    final cubit = context.read<AccessCubit>();
     final result = await showDialog<_Rejection>(
       context: context,
-      builder: (_) => const _RejectionDialog(),
+      builder: (_) =>
+          _RejectionDialog(cubit: cubit, submissionId: submissionId),
     );
-    if (result == null || !context.mounted) return;
+    if (result == null || !context.mounted || !isCurrentRoute(context)) return;
     final saved = await context.read<AccessCubit>().decideProfile(
       userId,
       ReviewDecision.rejected,
+      submissionId: submissionId,
       actorId: actorId,
       reason: result.reason,
       requiredSteps: result.steps,
@@ -189,7 +214,9 @@ class _Rejection {
 }
 
 class _RejectionDialog extends StatefulWidget {
-  const _RejectionDialog();
+  const _RejectionDialog({required this.cubit, required this.submissionId});
+  final AccessCubit cubit;
+  final String submissionId;
   @override
   State<_RejectionDialog> createState() => _RejectionDialogState();
 }
@@ -205,61 +232,77 @@ class _RejectionDialogState extends State<_RejectionDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Request updates'),
-    content: SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            key: const Key('rejection-reason'),
-            controller: _reason,
-            maxLines: 3,
-            maxLength: 1000,
-            decoration: InputDecoration(
-              labelText: 'Reason',
-              helperText: '3–1000 characters',
-              errorText: _error,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text('Which steps must the user update?'),
-          for (final step in [
-            KycStep.personalDetails,
-            KycStep.document,
-            KycStep.selfie,
-          ])
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(step.label),
-              value: _steps.contains(step),
-              onChanged: (selected) => setState(
-                () => selected == true ? _steps.add(step) : _steps.remove(step),
+  Widget build(BuildContext context) => BlocBuilder<AccessCubit, AccessState>(
+    bloc: widget.cubit,
+    builder: (_, state) => AlertDialog(
+      title: const Text('Request updates'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (state.needsRevalidation)
+              const Text('Rechecking your access and this submission…')
+            else if (state.detail?.submissionId != widget.submissionId)
+              const Text(
+                'This submission has changed. Close this dialog and review the current submission.',
+              ),
+            TextField(
+              key: const Key('rejection-reason'),
+              controller: _reason,
+              maxLines: 3,
+              maxLength: 1000,
+              decoration: InputDecoration(
+                labelText: 'Reason',
+                helperText: '3–1000 characters',
+                errorText: _error,
               ),
             ),
-        ],
+            const SizedBox(height: 12),
+            const Text('Which steps must the user update?'),
+            for (final step in [
+              KycStep.personalDetails,
+              KycStep.document,
+              KycStep.selfie,
+            ])
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(step.label),
+                value: _steps.contains(step),
+                onChanged: (selected) => setState(
+                  () =>
+                      selected == true ? _steps.add(step) : _steps.remove(step),
+                ),
+              ),
+          ],
+        ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed:
+              state.busy ||
+                  state.needsRevalidation ||
+                  state.detail?.submissionId != widget.submissionId
+              ? null
+              : () {
+                  if (_reason.text.trim().length < 3 || _steps.isEmpty) {
+                    setState(
+                      () => _error =
+                          'Give a reason and select at least one step.',
+                    );
+                    return;
+                  }
+                  Navigator.pop(
+                    context,
+                    _Rejection(_reason.text.trim(), List.unmodifiable(_steps)),
+                  );
+                },
+          child: const Text('Save rejection'),
+        ),
+      ],
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(
-        onPressed: () {
-          if (_reason.text.trim().length < 3 || _steps.isEmpty) {
-            setState(
-              () => _error = 'Give a reason and select at least one step.',
-            );
-            return;
-          }
-          Navigator.pop(
-            context,
-            _Rejection(_reason.text.trim(), List.unmodifiable(_steps)),
-          );
-        },
-        child: const Text('Save rejection'),
-      ),
-    ],
   );
 }

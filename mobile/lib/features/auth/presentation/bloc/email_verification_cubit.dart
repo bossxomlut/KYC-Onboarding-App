@@ -9,11 +9,53 @@ import '../../domain/usecases/verify_email.dart';
 import 'auth_form_state.dart';
 
 class EmailVerificationCubit extends Cubit<AuthFormState> {
-  EmailVerificationCubit(this._verify, this._resend)
-    : super(const AuthFormState());
+  EmailVerificationCubit(this._verify, this._resend, {DateTime Function()? now})
+    : _now = now ?? DateTime.now,
+      super(const AuthFormState());
   final VerifyEmail _verify;
   final ResendVerificationCode _resend;
   Timer? _cooldown;
+  final DateTime Function() _now;
+  DateTime? _resendAvailableAt;
+
+  void startCooldown({Duration duration = const Duration(seconds: 30)}) {
+    if (isClosed) return;
+    _resendAvailableAt = _now().add(duration);
+    _cooldown?.cancel();
+    reconcileCooldown();
+    if (state.resendSeconds > 0) {
+      _cooldown = Timer.periodic(
+        const Duration(seconds: 1),
+        (_) => reconcileCooldown(),
+      );
+    }
+  }
+
+  void reconcileCooldown() {
+    if (isClosed) return;
+    final deadline = _resendAvailableAt;
+    if (deadline == null) return;
+    final remaining = deadline.difference(_now()).inMicroseconds;
+    final seconds = remaining <= 0
+        ? 0
+        : (remaining / Duration.microsecondsPerSecond).ceil();
+    if (seconds == 0) {
+      _cooldown?.cancel();
+      _resendAvailableAt = null;
+    }
+    if (seconds == state.resendSeconds) return;
+    emit(
+      AuthFormState(
+        status: state.status,
+        user: state.user,
+        email: state.email,
+        error: state.error,
+        message: state.message,
+        resendSeconds: seconds,
+        isResending: state.isResending,
+      ),
+    );
+  }
 
   Future<void> submit({required String email, required String code}) async {
     if (state.isLoading || state.isResending) return;
@@ -27,6 +69,8 @@ class EmailVerificationCubit extends Cubit<AuthFormState> {
     if (isClosed) return;
     switch (result) {
       case Success<User>(:final value):
+        _cooldown?.cancel();
+        _resendAvailableAt = null;
         emit(AuthFormState(status: AuthFormStatus.success, user: value));
       case Failure<User>(:final error):
         emit(
@@ -40,6 +84,7 @@ class EmailVerificationCubit extends Cubit<AuthFormState> {
   }
 
   Future<void> resend(String email) async {
+    reconcileCooldown();
     if (state.isLoading || state.isResending || state.resendSeconds > 0) return;
     emit(const AuthFormState(isResending: true));
     final result = await _resend(email);
@@ -49,35 +94,10 @@ class EmailVerificationCubit extends Cubit<AuthFormState> {
         emit(
           const AuthFormState(
             message: 'A new verification code has been sent.',
-            resendSeconds: 60,
+            resendSeconds: 30,
           ),
         );
-        _cooldown?.cancel();
-        _cooldown = Timer.periodic(const Duration(seconds: 1), (timer) {
-          if (isClosed || state.resendSeconds <= 1) {
-            timer.cancel();
-            if (!isClosed) {
-              emit(
-                AuthFormState(
-                  status: state.status,
-                  user: state.user,
-                  error: state.error,
-                  message: state.message,
-                ),
-              );
-            }
-          } else {
-            emit(
-              AuthFormState(
-                status: state.status,
-                user: state.user,
-                error: state.error,
-                message: state.message,
-                resendSeconds: state.resendSeconds - 1,
-              ),
-            );
-          }
-        });
+        startCooldown();
       case Failure<void>(:final error):
         emit(AuthFormState(status: AuthFormStatus.failure, error: error));
     }

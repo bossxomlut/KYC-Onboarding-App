@@ -89,6 +89,8 @@ The auth Cubit is app-owned. A route-shell provider owns one KYC flow Cubit and 
 
 Server state is authoritative. Saving details and uploading each photo immediately checkpoints progress. On restart, the app refreshes the secure session, loads the user and KYC profile, and offers the server’s next step. Incomplete uploads retain a private temporary capture for retry; the original camera cache file is removed. Unsaved form edits are held only in memory and must be saved before closing. Transient network errors preserve credentials and saved profile progress.
 
+Returning from background checks the live session/role and refreshes only the current screen, preserving form drafts, photo previews and an open history sheet. Focus-only interruptions do not reload. Reads wait for active KYC operations rather than repeating a write; network failures remain retryable. OTP resend uses the server's 30-second cooldown and elapsed wall time. Reviewer photos and decisions are bound to the exact `submissionId` shown, so an old screen cannot decide a newer submission. Deploy backend/mobile together for this required reviewer API field; see [contracts](docs/architecture/contracts.md).
+
 ## Security and privacy
 
 - Passwords use Argon2id; OTPs, reset tokens and refresh tokens are stored as keyed hashes. Access JWTs last 15 minutes; refresh sessions last 30 days and rotate transactionally. Replay revokes the entire token family. Logout revokes the family; password reset revokes all user sessions. Every protected request also checks the session is active, so revocation applies immediately.

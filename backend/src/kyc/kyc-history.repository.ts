@@ -112,6 +112,56 @@ const metadata = (row: ArchivedMedia | undefined) =>
       }
     : null;
 
+function submittedProfile(
+  row: SubmissionRecord,
+  photos: ArchivedMedia[],
+  config: Config,
+) {
+  const personalDetails: PersonalDetails | null = row.personal_details
+    ? JSON.parse(
+        decrypt(
+          Buffer.from(row.personal_details, "base64"),
+          config.mediaKey,
+        ).toString("utf8"),
+      )
+    : null;
+  return {
+    id: row.profile_id,
+    status: row.status,
+    nextStep: "result",
+    personalDetails,
+    document: metadata(photos.find((photo) => photo.kind === "document")),
+    selfie: metadata(photos.find((photo) => photo.kind === "selfie")),
+    rejectionReason: row.rejection_reason,
+    requiredSteps: row.required_steps,
+    submittedAt: row.submitted_at?.toISOString() ?? null,
+    updatedAt: row.updated_at.toISOString(),
+  };
+}
+
+export async function submissionSnapshot(
+  client: PoolClient,
+  userId: string,
+  submissionId: string,
+  config: Config,
+) {
+  const rows = await client.query<SubmissionRecord>(
+    "SELECT * FROM kyc_submissions WHERE user_id=$1 AND id=$2",
+    [userId, submissionId],
+  );
+  if (!rows.rows[0])
+    throw new ApiError(
+      404,
+      "KYC_REVIEW_NOT_FOUND",
+      "Pending submission not found.",
+    );
+  const photos = await client.query<ArchivedMedia>(
+    "SELECT * FROM kyc_submission_media WHERE submission_id=$1",
+    [submissionId],
+  );
+  return submittedProfile(rows.rows[0], photos.rows, config);
+}
+
 export async function submissionHistory(
   client: Pool | PoolClient,
   userId: string,
@@ -137,29 +187,10 @@ export async function submissionHistory(
       const photos = media.rows.filter(
         (photo) => photo.submission_id === row.id,
       );
-      const personalDetails: PersonalDetails | null = row.personal_details
-        ? JSON.parse(
-            decrypt(
-              Buffer.from(row.personal_details, "base64"),
-              config.mediaKey,
-            ).toString("utf8"),
-          )
-        : null;
       return {
         id: row.id,
         version: row.version,
-        profile: {
-          id: row.profile_id,
-          status: row.status,
-          nextStep: "result",
-          personalDetails,
-          document: metadata(photos.find((photo) => photo.kind === "document")),
-          selfie: metadata(photos.find((photo) => photo.kind === "selfie")),
-          rejectionReason: row.rejection_reason,
-          requiredSteps: row.required_steps,
-          submittedAt: row.submitted_at?.toISOString() ?? null,
-          updatedAt: row.updated_at.toISOString(),
-        },
+        profile: submittedProfile(row, photos, config),
         review:
           row.review_decision && row.reviewed_at
             ? {

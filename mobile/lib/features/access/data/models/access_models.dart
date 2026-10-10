@@ -30,6 +30,7 @@ abstract final class AccessModels {
   static ReviewDetail detail(Map<String, dynamic> json) {
     final user = json['user'] as Map<String, dynamic>;
     return ReviewDetail(
+      submissionId: json['submissionId'] as String,
       userId: user['id'] as String,
       email: user['email'] as String,
       profile: KycProfileModel.fromJson(

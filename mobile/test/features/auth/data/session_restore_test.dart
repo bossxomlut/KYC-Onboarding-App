@@ -86,6 +86,25 @@ void main() {
   });
   tearDown(() => dio.close());
 
+  test(
+    'foreground revalidation only fetches live user without rotation',
+    () async {
+      final calls = <String>[];
+      dio.httpClientAdapter = TestAdapter((options) {
+        calls.add(options.path);
+        return jsonResponse({
+          'user': {...userJson, 'role': 'reviewer'},
+        });
+      });
+      final result = await repository.revalidateSession();
+      expect(result, isA<Success<User>>());
+      expect((result as Success<User>).value.role, UserRole.reviewer);
+      expect(calls, ['/auth/me']);
+      expect(tokens.refreshToken, 'saved-refresh');
+      expect(tokens.clearCount, 0);
+    },
+  );
+
   test('restore rotates credentials then retrieves server user', () async {
     final calls = <String>[];
     dio.httpClientAdapter = TestAdapter((options) {
@@ -177,6 +196,30 @@ void main() {
     );
     expect(result, isA<Success<void>>());
     expect(tokens.refreshToken, isNull);
+  });
+
+  test('late password reset cannot clear a newer login session', () async {
+    final reachedServer = Completer<void>();
+    final release = Completer<void>();
+    dio.httpClientAdapter = TestAdapter((_) async {
+      reachedServer.complete();
+      await release.future;
+      return jsonResponse({'success': true});
+    });
+    final reset = repository.resetPassword(
+      token: 'reset-token',
+      newPassword: 'DemoPassword12',
+    );
+    await reachedServer.future;
+    await tokens.saveTokens(
+      accessToken: 'new-login-access',
+      refreshToken: 'new-login-refresh',
+    );
+    release.complete();
+    expect(await reset, isA<Success<void>>());
+    expect(tokens.accessToken, 'new-login-access');
+    expect(tokens.refreshToken, 'new-login-refresh');
+    expect(tokens.clearCount, 0);
   });
 
   test('offline logout retains session and reports failure', () async {

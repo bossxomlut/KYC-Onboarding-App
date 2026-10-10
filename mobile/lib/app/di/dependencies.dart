@@ -18,6 +18,7 @@ import '../../features/auth/domain/usecases/request_password_reset.dart';
 import '../../features/auth/domain/usecases/resend_verification_code.dart';
 import '../../features/auth/domain/usecases/reset_password.dart';
 import '../../features/auth/domain/usecases/restore_session.dart';
+import '../../features/auth/domain/usecases/revalidate_session.dart';
 import '../../features/auth/domain/usecases/verify_email.dart';
 import '../../features/auth/presentation/bloc/auth_session_cubit.dart';
 import '../../features/auth/presentation/bloc/login_cubit.dart';
@@ -87,7 +88,11 @@ GetIt configureDependencies({
   di.registerSingleton<AuthRepository>(auth);
   di.registerSingleton<SessionRefresher>(refresher);
   di.registerFactory(
-    () => AuthSessionCubit(RestoreSession(auth), Logout(auth)),
+    () => AuthSessionCubit(
+      RestoreSession(auth),
+      Logout(auth),
+      revalidateSession: RevalidateSession(auth),
+    ),
   );
   di.registerFactory(() => LoginCubit(Login(auth)));
   di.registerFactory(() => RegisterCubit(Register(auth)));

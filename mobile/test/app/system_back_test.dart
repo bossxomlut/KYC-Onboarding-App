@@ -267,6 +267,7 @@ Future<(GetIt, GoRouter)> pumpApp(
       '/auth/me' => {'user': user},
       '/access/role-request' => {'request': null},
       '/reviews/applicant' => {
+        'submissionId': '00000000-0000-4000-8000-000000000001',
         'user': {'id': 'applicant', 'email': 'applicant@example.test'},
         'profile': {
           ...profileJson,

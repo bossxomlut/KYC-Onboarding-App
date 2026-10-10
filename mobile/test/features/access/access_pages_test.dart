@@ -16,6 +16,87 @@ import 'package:kyc_onboarding/features/auth/domain/entities/user.dart';
 import 'access_cubit_test.dart';
 
 void main() {
+  for (final approve in [true, false]) {
+    testWidgets(
+      '${approve ? 'approval' : 'rejection'} confirmation revalidates its original submission after background',
+      (tester) async {
+        final repository = _UiRepository();
+        final cubit = AccessCubit(AccessUseCases(repository));
+        await cubit.loadDetail('u');
+        final router = GoRouter(
+          initialLocation: '/reviews/u',
+          routes: [
+            GoRoute(
+              path: '/reviews/u',
+              builder: (_, _) =>
+                  const ReviewerDetailPage(userId: 'u', actorId: 'r'),
+            ),
+            GoRoute(
+              path: '/reviews',
+              builder: (_, _) => const Scaffold(body: Text('Review queue')),
+            ),
+          ],
+        );
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox());
+          router.dispose();
+          await cubit.close();
+        });
+        await tester.pumpWidget(
+          BlocProvider.value(
+            value: cubit,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final open = find.byKey(
+          Key(approve ? 'review-approve' : 'review-reject'),
+        );
+        await tester.ensureVisible(open);
+        await tester.tap(open);
+        await tester.pumpAndSettle();
+        if (!approve) {
+          await tester.enterText(
+            find.byKey(const Key('rejection-reason')),
+            'Please retake this selfie.',
+          );
+          await tester.tap(find.widgetWithText(CheckboxListTile, 'Selfie'));
+        }
+        final confirm = find.widgetWithText(
+          FilledButton,
+          approve ? 'Approve' : 'Save rejection',
+        );
+        cubit.prepareForResume();
+        await tester.pumpAndSettle();
+        expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+        await cubit.loadDetail('u');
+        await tester.pumpAndSettle();
+        expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+        if (!approve) {
+          expect(
+            tester
+                .widget<TextField>(find.byKey(const Key('rejection-reason')))
+                .controller!
+                .text,
+            'Please retake this selfie.',
+          );
+        }
+        repository.detailSubmissionId = 'submission-2';
+        cubit.prepareForResume();
+        await cubit.loadDetail('u');
+        await tester.pumpAndSettle();
+        expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+        expect(
+          find.textContaining('This submission has changed.'),
+          findsOneWidget,
+        );
+        expect(repository.decisions, 0);
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(cubit.state.detail!.submissionId, 'submission-2');
+      },
+    );
+  }
   testWidgets(
     'ordinary user submits a request and pending state prevents duplicates',
     (tester) async {
@@ -278,6 +359,7 @@ class _UiRepository extends FakeAccessRepository {
   @override
   Future<Result<ReviewDetail>> reviewDetail(String userId) async => Success(
     ReviewDetail(
+      submissionId: detailSubmissionId,
       userId: userId,
       email: 'sample@example.test',
       profile: const KycProfile(
@@ -290,8 +372,11 @@ class _UiRepository extends FakeAccessRepository {
     ),
   );
   @override
-  Future<Result<Uint8List>> reviewMedia(String userId, MediaKind kind) async =>
-      mediaUnavailable
+  Future<Result<Uint8List>> reviewMedia(
+    String userId,
+    MediaKind kind, {
+    required String submissionId,
+  }) async => mediaUnavailable
       ? const Failure(
           AppFailure(code: 'SERVER_ERROR', message: 'Private image missing'),
         )

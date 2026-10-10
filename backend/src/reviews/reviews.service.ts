@@ -1,22 +1,16 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { Pool, PoolClient } from "pg";
 import { requireRole, type UserRole } from "../auth/roles.js";
 import type { Config } from "../config.js";
 import { transaction } from "../database.js";
 import { ApiError } from "../errors.js";
 import { APP_CONFIG, DATABASE_POOL } from "../infrastructure/tokens.js";
-import {
-  getProfile,
-  lockedProfile,
-  reviewProfile,
-  type MediaRecord,
-} from "../kyc/kyc.repository.js";
+import { lockedProfile, reviewProfile } from "../kyc/kyc.repository.js";
 import type { MediaKind } from "../kyc/kyc.schemas.js";
-import { decrypt } from "../security.js";
 import {
   archivedMedia,
+  ensureCurrentSubmission,
+  submissionSnapshot,
   submissionHistory,
 } from "../kyc/kyc-history.repository.js";
 import type { HistoryPagination } from "../kyc/kyc-history.schemas.js";
@@ -62,34 +56,40 @@ export class ReviewsService {
   async detail(actorId: string, userId: string) {
     return transaction(this.pool, async (client) => {
       await this.pendingProfile(client, actorId, userId);
+      const submissionId = await ensureCurrentSubmission(client, userId);
       const user = await client.query<{ id: string; email_normalized: string }>(
         "SELECT id,email_normalized FROM users WHERE id=$1",
         [userId],
       );
       return {
+        submissionId,
         user: { id: userId, email: user.rows[0]!.email_normalized },
-        profile: await getProfile(client, userId, this.config),
+        profile: await submissionSnapshot(
+          client,
+          userId,
+          submissionId,
+          this.config,
+        ),
       };
     });
   }
 
-  async media(actorId: string, userId: string, kind: MediaKind) {
+  async media(
+    actorId: string,
+    userId: string,
+    submissionId: string,
+    kind: MediaKind,
+  ) {
     return transaction(this.pool, async (client) => {
       await this.pendingProfile(client, actorId, userId);
-      const rows = await client.query<MediaRecord>(
-        "SELECT * FROM kyc_media WHERE user_id=$1 AND kind=$2",
-        [userId, kind],
-      );
-      const record = rows.rows[0];
-      if (!record)
-        throw new ApiError(404, "MEDIA_NOT_FOUND", "Image not found.");
-      return {
-        data: decrypt(
-          await readFile(join(this.config.mediaDir, record.storage_key)),
-          this.config.mediaKey,
-        ),
-        mimeType: record.mime_type,
-      };
+      const currentId = await ensureCurrentSubmission(client, userId);
+      if (currentId !== submissionId)
+        throw new ApiError(
+          409,
+          "KYC_REVIEW_CHANGED",
+          "This submission has changed. Reload it before reviewing its photos.",
+        );
+      return archivedMedia(client, userId, submissionId, kind, this.config);
     });
   }
 
@@ -102,6 +102,7 @@ export class ReviewsService {
       decision.requiredSteps,
       actorId,
       this.config,
+      decision.submissionId,
     );
     return { profile };
   }

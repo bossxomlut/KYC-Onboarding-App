@@ -14,28 +14,13 @@ class VerificationPage extends StatefulWidget {
   State<VerificationPage> createState() => _VerificationPageState();
 }
 
-class _VerificationPageState extends State<VerificationPage>
-    with WidgetsBindingObserver {
+class _VerificationPageState extends State<VerificationPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<KycCubit>().load();
     });
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) {
-      context.read<KycCubit>().load();
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
   }
 
   Future<void> _viewSubmittedProfile() => showModalBottomSheet<void>(

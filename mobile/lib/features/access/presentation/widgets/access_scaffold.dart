@@ -7,6 +7,7 @@ class AccessScaffold extends StatelessWidget {
     required this.title,
     required this.children,
     this.busy = false,
+    this.revalidating = false,
     this.error,
     this.message,
     this.onRefresh,
@@ -15,6 +16,7 @@ class AccessScaffold extends StatelessWidget {
   final String title;
   final List<Widget> children;
   final bool busy;
+  final bool revalidating;
   final AppFailure? error;
   final String? message;
   final VoidCallback? onRefresh;
@@ -43,6 +45,13 @@ class AccessScaffold extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (busy) const LinearProgressIndicator(),
+            if (revalidating)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Checking account access and refreshing information…',
+                ),
+              ),
             if (error != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),

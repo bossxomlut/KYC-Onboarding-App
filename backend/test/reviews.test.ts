@@ -11,7 +11,8 @@ import request from "supertest";
 import { buildApp } from "../src/app.js";
 import { passwordHash } from "../src/auth/password.js";
 import type { Config } from "../src/config.js";
-import { migrate } from "../src/database.js";
+import { migrate, transaction } from "../src/database.js";
+import { ensureCurrentSubmission } from "../src/kyc/kyc-history.repository.js";
 import { reviewProfile } from "../src/kyc/kyc.repository.js";
 import { encrypt } from "../src/security.js";
 
@@ -233,10 +234,11 @@ test("reviewers can inspect pending details and authenticated JPEGs, with self a
     email: applicant.email,
   });
   assert.deepEqual(profile.body.profile.personalDetails, details);
+  assert.equal(typeof profile.body.submissionId, "string");
   for (const kind of ["document", "selfie"]) {
     const media = await json(
       "GET",
-      `/reviews/${applicant.id}/media/${kind}`,
+      `/reviews/${applicant.id}/media/${kind}?submissionId=${profile.body.submissionId}`,
       reviewer.token,
     );
     assert.equal(media.status, 200);
@@ -244,7 +246,7 @@ test("reviewers can inspect pending details and authenticated JPEGs, with self a
     assert.equal(media.headers["cache-control"], "no-store");
     assert.deepEqual(media.body, image);
   }
-  for (const suffix of ["", "/media/document"]) {
+  for (const suffix of ["", `/media/document?submissionId=${randomUUID()}`]) {
     assert.equal(
       (await json("GET", `/reviews/${reviewer.id}${suffix}`, reviewer.token))
         .status,
@@ -264,6 +266,7 @@ test("reviewers can inspect pending details and authenticated JPEGs, with self a
   assert.equal(
     (
       await json("POST", `/reviews/${reviewer.id}/decision`, reviewer.token, {
+        submissionId: randomUUID(),
         decision: "verified",
       })
     ).status,
@@ -290,6 +293,11 @@ test("reviewers can inspect pending details and authenticated JPEGs, with self a
 });
 
 test("super admin can reject a pending profile, recording the authenticated decision maker", async () => {
+  const detail = await json(
+    "GET",
+    `/reviews/${applicant.id}`,
+    administrator.token,
+  );
   for (const body of [
     { decision: "rejected" },
     { decision: "rejected", reason: "Retake", requiredSteps: [] },
@@ -302,7 +310,7 @@ test("super admin can reject a pending profile, recording the authenticated deci
           "POST",
           `/reviews/${applicant.id}/decision`,
           administrator.token,
-          body,
+          { submissionId: detail.body.submissionId, ...body },
         )
       ).status,
       400,
@@ -313,6 +321,7 @@ test("super admin can reject a pending profile, recording the authenticated deci
     `/reviews/${applicant.id}/decision`,
     administrator.token,
     {
+      submissionId: detail.body.submissionId,
       decision: "rejected",
       reason: "  Synthetic image needs retaking  ",
       requiredSteps: ["selfie"],
@@ -337,6 +346,7 @@ test("super admin can reject a pending profile, recording the authenticated deci
   assert.equal(
     (
       await json("POST", `/reviews/${applicant.id}/decision`, reviewer.token, {
+        submissionId: detail.body.submissionId,
         decision: "verified",
       })
     ).status,
@@ -351,11 +361,14 @@ test("super admin can reject a pending profile, recording the authenticated deci
 test("concurrent reviewer decisions produce a single audit record and leave the profile locked", async () => {
   const candidate = await actor("concurrent-applicant", "user");
   await pending(candidate.id);
+  const detail = await json("GET", `/reviews/${candidate.id}`, reviewer.token);
   const results = await Promise.all([
     json("POST", `/reviews/${candidate.id}/decision`, reviewer.token, {
+      submissionId: detail.body.submissionId,
       decision: "verified",
     }),
     json("POST", `/reviews/${candidate.id}/decision`, otherReviewer.token, {
+      submissionId: detail.body.submissionId,
       decision: "verified",
     }),
   ]);
@@ -372,7 +385,7 @@ test("concurrent reviewer decisions produce a single audit record and leave the 
     (
       await json(
         "GET",
-        `/reviews/${candidate.id}/media/document`,
+        `/reviews/${candidate.id}/media/document?submissionId=${detail.body.submissionId}`,
         reviewer.token,
       )
     ).status,
@@ -402,4 +415,128 @@ test("revoked reviewer privileges take effect on the original access token for a
     (await json("GET", "/auth/me", revoked.token)).body.user.role,
     "user",
   );
+});
+
+test("a review stays bound to the inspected submission after rejection and resubmission", async () => {
+  const candidate = await actor("stale-review-applicant", "user");
+  await pending(candidate.id);
+  const originalId = await transaction(pool, (client) =>
+    ensureCurrentSubmission(client, candidate.id),
+  );
+  const inspected = await json(
+    "GET",
+    `/reviews/${candidate.id}`,
+    reviewer.token,
+  );
+  assert.equal(inspected.body.submissionId, originalId);
+
+  const rejected = await json(
+    "POST",
+    `/reviews/${candidate.id}/decision`,
+    otherReviewer.token,
+    {
+      submissionId: originalId,
+      decision: "rejected",
+      reason: "Retake the selfie",
+      requiredSteps: ["selfie"],
+    },
+  );
+  assert.equal(rejected.status, 200);
+  assert.equal(
+    (await json("POST", "/kyc/resubmit", candidate.token)).status,
+    200,
+  );
+  await pending(candidate.id);
+  const current = await json("GET", `/reviews/${candidate.id}`, reviewer.token);
+  assert.notEqual(current.body.submissionId, originalId);
+  assert.deepEqual(current.body.profile.personalDetails, details);
+
+  for (const kind of ["document", "selfie"]) {
+    const stale = await json(
+      "GET",
+      `/reviews/${candidate.id}/media/${kind}?submissionId=${originalId}`,
+      reviewer.token,
+    );
+    assert.equal(stale.status, 409);
+    assert.equal(stale.body.error.code, "KYC_REVIEW_CHANGED");
+    const fresh = await json(
+      "GET",
+      `/reviews/${candidate.id}/media/${kind}?submissionId=${current.body.submissionId}`,
+      reviewer.token,
+    );
+    assert.equal(fresh.status, 200);
+    assert.deepEqual(fresh.body, image);
+  }
+  const staleDecision = await json(
+    "POST",
+    `/reviews/${candidate.id}/decision`,
+    reviewer.token,
+    {
+      submissionId: originalId,
+      decision: "verified",
+    },
+  );
+  assert.equal(staleDecision.status, 409);
+  assert.equal(staleDecision.body.error.code, "KYC_REVIEW_CHANGED");
+  const audit = await pool.query("SELECT * FROM kyc_reviews WHERE user_id=$1", [
+    candidate.id,
+  ]);
+  assert.equal(audit.rowCount, 1);
+  assert.equal(
+    (await json("GET", `/reviews/${candidate.id}`, reviewer.token)).body.profile
+      .status,
+    "pending_review",
+  );
+  assert.equal(
+    (
+      await json("POST", `/reviews/${candidate.id}/decision`, reviewer.token, {
+        submissionId: current.body.submissionId,
+        decision: "verified",
+      })
+    ).status,
+    200,
+  );
+});
+
+test("review media and decisions require a valid inspected submission identity", async () => {
+  const candidate = await actor("unbound-review-applicant", "user");
+  await pending(candidate.id);
+  const detail = await json("GET", `/reviews/${candidate.id}`, reviewer.token);
+  for (const query of [
+    "",
+    "?submissionId=invalid",
+    `?submissionId=${detail.body.submissionId}&extra=true`,
+  ]) {
+    assert.equal(
+      (
+        await json(
+          "GET",
+          `/reviews/${candidate.id}/media/document${query}`,
+          reviewer.token,
+        )
+      ).status,
+      400,
+    );
+  }
+  for (const body of [
+    { decision: "verified" },
+    { decision: "verified", submissionId: "invalid" },
+  ]) {
+    assert.equal(
+      (
+        await json(
+          "POST",
+          `/reviews/${candidate.id}/decision`,
+          reviewer.token,
+          body,
+        )
+      ).status,
+      400,
+    );
+  }
+  const count = await pool.query(
+    "SELECT count(*) AS total FROM kyc_reviews WHERE user_id=$1",
+    [candidate.id],
+  );
+  assert.equal(count.rows[0].total, "0");
 });

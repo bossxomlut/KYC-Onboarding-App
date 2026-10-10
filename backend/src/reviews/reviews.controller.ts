@@ -23,6 +23,7 @@ import {
 } from "../kyc/kyc-history.schemas.js";
 import {
   reviewDecisionSchema,
+  reviewMediaQuerySchema,
   reviewPaginationSchema,
   reviewUserIdSchema,
   type ReviewDecision,
@@ -92,9 +93,16 @@ export class ReviewsController {
     @CurrentUser() actorId: string,
     @Param("userId", new ZodValidationPipe(reviewUserIdSchema)) userId: string,
     @Param("kind", new ZodValidationPipe(mediaKindSchema)) kind: MediaKind,
+    @Query(new ZodValidationPipe(reviewMediaQuerySchema))
+    query: { submissionId: string },
     @Res() response: Response,
   ) {
-    const media = await this.reviews.media(actorId, userId, kind);
+    const media = await this.reviews.media(
+      actorId,
+      userId,
+      query.submissionId,
+      kind,
+    );
     response
       .set("cache-control", "no-store")
       .set("content-disposition", "inline")

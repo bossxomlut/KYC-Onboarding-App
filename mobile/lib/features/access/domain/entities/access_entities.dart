@@ -57,11 +57,13 @@ class ReviewSummary {
 
 class ReviewDetail {
   const ReviewDetail({
+    required this.submissionId,
     required this.userId,
     required this.email,
     required this.profile,
   });
   final String userId;
+  final String submissionId;
   final String email;
   final KycProfile profile;
 }

@@ -285,6 +285,29 @@ void main() {
     expect(tester.takeException(), isNull);
     expectNoMutations(repository);
   });
+
+  testWidgets('submitted preview retries a failed profile refresh as a GET', (
+    tester,
+  ) async {
+    final repository = SubmittedProfileRepository(KycStatus.pendingReview);
+    final cubit = await mountVerification(tester, repository);
+    await openPreview(tester);
+    final photoCalls = repository.privateMediaCalls.length;
+    repository.loadFailure = true;
+    await cubit.refresh();
+    await tester.pumpAndSettle();
+    expect(repository.loadCalls, 2);
+    repository.loadFailure = false;
+    final retry = inSheet(find.byKey(const Key('retry-submitted-media')));
+    await tester.ensureVisible(retry);
+    await tester.tap(retry);
+    await tester.pumpAndSettle();
+    expect(repository.loadCalls, 3);
+    expect(repository.privateMediaCalls.length, photoCalls);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(inSheet(find.byKey(const Key('kyc-error'))), findsNothing);
+    expectNoMutations(repository);
+  });
 }
 
 Finder inSheet(Finder finder) =>

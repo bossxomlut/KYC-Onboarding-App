@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kyc_onboarding/core/domain/result.dart';
@@ -13,6 +14,10 @@ class FakeAccessRepository implements AccessRepository {
   int decisions = 0;
   bool forbidden = false;
   String failureCode = 'FORBIDDEN';
+  String detailSubmissionId = 'submission-1';
+  final mediaSubmissionIds = <String>[];
+  String? decidedSubmissionId;
+  Completer<void>? decisionGate;
   @override
   Future<Result<User>> currentUser() async => const Success(
     User(
@@ -44,6 +49,7 @@ class FakeAccessRepository implements AccessRepository {
       ? Failure(AppFailure(code: failureCode, message: 'Permission revoked'))
       : Success(
           ReviewDetail(
+            submissionId: detailSubmissionId,
             userId: userId,
             email: 'sample@example.test',
             profile: const KycProfile(
@@ -51,20 +57,31 @@ class FakeAccessRepository implements AccessRepository {
               status: KycStatus.pendingReview,
               nextStep: KycStep.result,
               document: KycMedia(id: 'doc', mimeType: 'image/jpeg', size: 2),
+              selfie: KycMedia(id: 'selfie', mimeType: 'image/jpeg', size: 2),
             ),
           ),
         );
   @override
-  Future<Result<Uint8List>> reviewMedia(String userId, MediaKind kind) async =>
-      Success(Uint8List.fromList([1, 2]));
+  Future<Result<Uint8List>> reviewMedia(
+    String userId,
+    MediaKind kind, {
+    required String submissionId,
+  }) async {
+    mediaSubmissionIds.add(submissionId);
+    return Success(Uint8List.fromList([1, 2]));
+  }
+
   @override
   Future<Result<KycProfile>> decideProfile(
     String userId,
     ReviewDecision decision, {
+    required String submissionId,
     String? reason,
     List<KycStep> requiredSteps = const [],
   }) async {
     decisions++;
+    decidedSubmissionId = submissionId;
+    if (decisionGate != null) await decisionGate!.future;
     return const Success(
       KycProfile(id: 'p', status: KycStatus.verified, nextStep: KycStep.result),
     );
@@ -75,6 +92,103 @@ class FakeAccessRepository implements AccessRepository {
 }
 
 void main() {
+  test(
+    'fresh role is published even when the role request fails to load',
+    () async {
+      final cubit = AccessCubit(AccessUseCases(_PartialAccessRepository()));
+      await cubit.loadAccess();
+      expect(cubit.state.user?.role, UserRole.reviewer);
+      expect(cubit.state.error?.code, 'NETWORK_ERROR');
+      await cubit.close();
+    },
+  );
+  test(
+    'background blocks decisions until the same submission has revalidated',
+    () async {
+      final repository = FakeAccessRepository();
+      final cubit = AccessCubit(AccessUseCases(repository));
+      await cubit.loadDetail('u');
+      cubit.prepareForResume();
+      expect(cubit.state.needsRevalidation, isTrue);
+      expect(
+        await cubit.decideProfile(
+          'u',
+          ReviewDecision.verified,
+          submissionId: 'submission-1',
+        ),
+        isFalse,
+      );
+      expect(repository.decisions, 0);
+      await cubit.loadDetail('u');
+      expect(cubit.state.needsRevalidation, isFalse);
+      expect(repository.mediaSubmissionIds.toSet(), {'submission-1'});
+      repository.detailSubmissionId = 'submission-2';
+      cubit.prepareForResume();
+      await cubit.loadDetail('u');
+      expect(
+        await cubit.decideProfile(
+          'u',
+          ReviewDecision.verified,
+          submissionId: 'submission-1',
+        ),
+        isFalse,
+      );
+      expect(repository.decisions, 0);
+      expect(cubit.state.error?.code, 'KYC_REVIEW_CHANGED');
+      expect(cubit.state.detail, isNull);
+      expect(cubit.state.media, isEmpty);
+      await cubit.close();
+    },
+  );
+
+  test(
+    'resume queues a trailing refresh and ignores the pre-background read',
+    () async {
+      final repository = _DeferredQueueRepository();
+      final cubit = AccessCubit(AccessUseCases(repository));
+      final initial = cubit.loadQueue(offset: 50);
+      cubit.prepareForResume();
+      final resumed = cubit.loadQueue(offset: 50);
+      expect(repository.offsets, [50]);
+      repository.gates[0].complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(repository.offsets, [50, 50]);
+      expect(cubit.state.needsRevalidation, isTrue);
+      expect(cubit.state.queue, isNull);
+      repository.gates[1].complete();
+      await Future.wait([initial, resumed]);
+      expect(cubit.state.queue!.items.single.email, 'round-2@example.test');
+      expect(cubit.state.queue!.offset, 50);
+      expect(cubit.state.needsRevalidation, isFalse);
+      expect(cubit.state.busy, isFalse);
+      await cubit.close();
+    },
+  );
+
+  test(
+    'a committed decision is retained when background interrupts its response',
+    () async {
+      final repository = FakeAccessRepository()
+        ..decisionGate = Completer<void>();
+      final cubit = AccessCubit(AccessUseCases(repository));
+      await cubit.loadDetail('u');
+      final decision = cubit.decideProfile(
+        'u',
+        ReviewDecision.verified,
+        submissionId: 'submission-1',
+      );
+      cubit.prepareForResume();
+      repository.decisionGate!.complete();
+      expect(await decision, isTrue);
+      expect(repository.decisions, 1);
+      expect(repository.decidedSubmissionId, 'submission-1');
+      expect(cubit.state.message, 'Review decision saved.');
+      expect(cubit.state.needsRevalidation, isTrue);
+      expect(cubit.state.media, isEmpty);
+      await cubit.close();
+    },
+  );
+
   test(
     'invalid requests and incomplete rejection cannot reach repository',
     () async {
@@ -89,10 +203,12 @@ void main() {
       );
       expect(repository.requestCount, 1);
       expect(cubit.state.request?.status, RoleRequestStatus.pending);
+      await cubit.loadDetail('u');
       expect(
         await cubit.decideProfile(
           'u',
           ReviewDecision.rejected,
+          submissionId: 'submission-1',
           reason: 'bad',
           requiredSteps: [],
         ),
@@ -124,6 +240,7 @@ void main() {
     final result = await usecases.decideProfile(
       'r',
       ReviewDecision.verified,
+      submissionId: 'submission-1',
       actorId: 'r',
     );
     expect(result, isA<Failure<KycProfile>>());
@@ -179,6 +296,13 @@ void main() {
   }
 }
 
+class _PartialAccessRepository extends FakeAccessRepository {
+  @override
+  Future<Result<RoleRequest?>> ownRequest() async => const Failure(
+    AppFailure(code: 'NETWORK_ERROR', message: 'Request status unavailable'),
+  );
+}
+
 class _ReloadFailureRepository extends FakeAccessRepository {
   @override
   Future<Result<PageResult<ManagedUser>>> users({int offset = 0}) async =>
@@ -215,4 +339,30 @@ class _ReloadFailureRepository extends FakeAccessRepository {
       createdAt: DateTime(2026),
     ),
   );
+}
+
+class _DeferredQueueRepository extends FakeAccessRepository {
+  final offsets = <int>[];
+  final gates = [Completer<void>(), Completer<void>()];
+  @override
+  Future<Result<PageResult<ReviewSummary>>> reviewQueue({
+    int offset = 0,
+  }) async {
+    offsets.add(offset);
+    final call = offsets.length;
+    await gates[call - 1].future;
+    return Success(
+      PageResult(
+        items: [
+          ReviewSummary(
+            userId: 'u',
+            email: 'round-$call@example.test',
+            submittedAt: null,
+          ),
+        ],
+        total: 51,
+        offset: offset,
+      ),
+    );
+  }
 }

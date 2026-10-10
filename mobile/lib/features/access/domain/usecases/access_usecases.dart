@@ -122,6 +122,7 @@ class AccessUseCases {
   Future<Result<KycProfile>> decideProfile(
     String userId,
     ReviewDecision decision, {
+    required String submissionId,
     String? actorId,
     String? reason,
     List<KycStep> requiredSteps = const [],
@@ -160,14 +161,23 @@ class AccessUseCases {
     return _repository.decideProfile(
       userId,
       decision,
+      submissionId: submissionId,
       reason: reason?.trim(),
       requiredSteps: requiredSteps,
     );
   }
 
   // Kept in the domain facade so byte loading remains behind a use case.
-  Future<Result<List<int>>> media(String userId, MediaKind kind) async {
-    final result = await _repository.reviewMedia(userId, kind);
+  Future<Result<List<int>>> media(
+    String userId,
+    MediaKind kind, {
+    required String submissionId,
+  }) async {
+    final result = await _repository.reviewMedia(
+      userId,
+      kind,
+      submissionId: submissionId,
+    );
     return switch (result) {
       Success(:final value) => Success(value),
       Failure(:final error) => Failure(error),

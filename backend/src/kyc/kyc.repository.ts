@@ -136,6 +136,7 @@ export async function reviewProfile(
   requiredSteps: string[] = [],
   reviewedBy?: string,
   config?: Config,
+  expectedSubmissionId?: string,
 ) {
   if (!reviewedBy)
     throw new ApiError(
@@ -177,6 +178,15 @@ export async function reviewProfile(
         "Only pending profiles can be reviewed.",
       );
     const submissionId = await ensureCurrentSubmission(client, userId);
+    if (
+      expectedSubmissionId !== undefined &&
+      submissionId !== expectedSubmissionId
+    )
+      throw new ApiError(
+        409,
+        "KYC_REVIEW_CHANGED",
+        "This submission has changed. Reload it before making a decision.",
+      );
     await recordSubmissionReview(
       client,
       submissionId,

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kyc_onboarding/core/domain/result.dart';
@@ -22,6 +23,12 @@ class _Api extends ApiClient {
   }
 
   @override
+  Future<Uint8List> bytes(String path) async {
+    this.path = path;
+    return Uint8List.fromList([1, 2]);
+  }
+
+  @override
   Future<Map<String, dynamic>> post(
     String path, {
     Map<String, dynamic>? data,
@@ -34,6 +41,32 @@ class _Api extends ApiClient {
 }
 
 void main() {
+  test(
+    'review detail and private photo requests preserve the submission identity',
+    () async {
+      final api = _Api()
+        ..response = {
+          'submissionId': 'submission-1',
+          'user': {'id': 'u', 'email': 'u@example.test'},
+          'profile': {
+            'id': 'p',
+            'status': 'pending_review',
+            'nextStep': 'result',
+            'requiredSteps': <String>[],
+          },
+        };
+      final repository = AccessRepositoryImpl(AccessRemoteDataSource(api));
+      final detail =
+          await repository.reviewDetail('u') as Success<ReviewDetail>;
+      expect(detail.value.submissionId, 'submission-1');
+      await repository.reviewMedia(
+        'u',
+        MediaKind.selfie,
+        submissionId: detail.value.submissionId,
+      );
+      expect(api.path, '/reviews/u/media/selfie?submissionId=submission-1');
+    },
+  );
   test(
     'paginated pending requests map status, user and decision metadata',
     () async {
@@ -105,10 +138,12 @@ void main() {
       final result = await repo.decideProfile(
         'u',
         ReviewDecision.rejected,
+        submissionId: 'submission-1',
         reason: 'Update the address',
         requiredSteps: [KycStep.personalDetails],
       );
       expect(api.body, {
+        'submissionId': 'submission-1',
         'decision': 'rejected',
         'reason': 'Update the address',
         'requiredSteps': ['personal_details'],

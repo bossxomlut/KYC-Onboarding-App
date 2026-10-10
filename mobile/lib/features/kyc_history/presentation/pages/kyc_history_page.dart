@@ -64,7 +64,9 @@ class _KycHistoryPageState extends State<KycHistoryPage> {
           actions: [
             IconButton(
               tooltip: 'Refresh history',
-              onPressed: state.loading || state.loadingMore ? null : cubit.load,
+              onPressed: state.loading || state.loadingMore || state.refreshing
+                  ? null
+                  : cubit.refresh,
               icon: const Icon(Icons.refresh),
             ),
           ],
@@ -96,6 +98,18 @@ class _KycHistoryPageState extends State<KycHistoryPage> {
                     const SizedBox(height: 24),
                     if (state.loading)
                       const Center(child: CircularProgressIndicator()),
+                    if (state.refreshing) const LinearProgressIndicator(),
+                    if (state.refreshError != null) ...[
+                      Text(state.refreshError!.message),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          key: const Key('history-refresh-retry'),
+                          onPressed: state.refreshing ? null : cubit.refresh,
+                          child: const Text('Retry'),
+                        ),
+                      ),
+                    ],
                     if (state.error != null) ...[
                       Text(
                         state.error!.message,

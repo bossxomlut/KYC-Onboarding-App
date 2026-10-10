@@ -2,6 +2,9 @@ import { z } from "zod";
 import { requiredStepSchema } from "../kyc/kyc.schemas.js";
 
 export const reviewUserIdSchema = z.uuid();
+export const reviewMediaQuerySchema = z.strictObject({
+  submissionId: z.uuid(),
+});
 export const reviewPaginationSchema = z.strictObject({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).max(1_000_000).default(0),
@@ -9,6 +12,7 @@ export const reviewPaginationSchema = z.strictObject({
 
 export const reviewDecisionSchema = z
   .strictObject({
+    submissionId: z.uuid(),
     decision: z.enum(["verified", "rejected"]),
     reason: z.string().trim().min(3).max(1000).optional(),
     requiredSteps: z.array(requiredStepSchema).max(3).default([]),

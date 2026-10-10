@@ -126,6 +126,45 @@ void main() {
       expect(repository.uploadCount, 0);
     },
   );
+
+  testWidgets('loading profile never announces opening the camera', (
+    tester,
+  ) async {
+    final repository = CaptureRepository(MediaKind.document, uploaded: true);
+    final (cubit, _) = await pumpCapture(tester, repository);
+    repository.loadGate = Completer<void>();
+    final reload = cubit.load();
+    await tester.pump();
+    expect(find.text('Opening camera…'), findsNothing);
+    repository.loadGate!.complete();
+    await reload;
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('silent refresh preserves photo and explicit Continue', (
+    tester,
+  ) async {
+    final repository = CaptureRepository(MediaKind.document);
+    final (cubit, router) = await pumpCapture(tester, repository);
+    await tapCapture(tester, MediaKind.document);
+    await tester.pumpAndSettle();
+    repository.loadGate = Completer<void>();
+    final refresh = cubit.refresh();
+    await tester.pump();
+    expect(find.text('Opening camera…'), findsNothing);
+    expect(continueButton(tester, MediaKind.document).onPressed, isNotNull);
+    expect(
+      tester.widget<PrivatePhoto>(find.byType(PrivatePhoto)).bytes,
+      repository.image,
+    );
+    expect(router.routeInformationProvider.value.uri.path, repository.path);
+    repository.loadGate!.complete();
+    await refresh;
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, repository.path);
+    expect(repository.captureCount, 1);
+    expect(repository.uploadCount, 1);
+  });
 }
 
 FilledButton continueButton(WidgetTester tester, MediaKind kind) =>
@@ -211,6 +250,7 @@ class CaptureRepository extends FakeKycRepository {
   bool cancelCapture = false;
   int uploadCount = 0;
   Completer<void>? uploadGate;
+  Completer<void>? loadGate;
   final image = base64Decode(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aSu8AAAAASUVORK5CYII=',
   );
@@ -218,6 +258,12 @@ class CaptureRepository extends FakeKycRepository {
       kind == MediaKind.document ? '/kyc/document' : '/kyc/selfie';
   KycStep get nextStep =>
       kind == MediaKind.document ? KycStep.selfie : KycStep.review;
+
+  @override
+  Future<Result<KycProfile>> load() async {
+    if (loadGate != null) await loadGate!.future;
+    return super.load();
+  }
 
   @override
   Future<Result<CapturedMedia?>> capture(

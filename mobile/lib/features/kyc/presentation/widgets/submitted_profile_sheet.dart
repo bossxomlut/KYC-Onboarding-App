@@ -14,12 +14,20 @@ class SubmittedProfileSheet extends StatefulWidget {
 }
 
 class _SubmittedProfileSheetState extends State<SubmittedProfileSheet> {
+  late final KycCubit _cubit;
   @override
   void initState() {
     super.initState();
+    _cubit = context.read<KycCubit>()..retainReviewMediaView();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<KycCubit>().loadReviewMedia();
+      if (mounted) _cubit.loadReviewMedia();
     });
+  }
+
+  @override
+  void dispose() {
+    _cubit.releaseReviewMediaView();
+    super.dispose();
   }
 
   @override
@@ -70,8 +78,9 @@ class _SubmittedProfileSheetState extends State<SubmittedProfileSheet> {
                       const SizedBox(height: 20),
                       KycError(
                         retryKey: const Key('retry-submitted-media'),
-                        onRetry: () =>
-                            context.read<KycCubit>().loadReviewMedia(),
+                        onRetry: state.errorSource == KycErrorSource.operation
+                            ? null
+                            : () => context.read<KycCubit>().retryRead(),
                       ),
                       if (state.busy) ...[
                         const LinearProgressIndicator(),
