@@ -24,6 +24,11 @@ import '../../features/auth/presentation/bloc/login_cubit.dart';
 import '../../features/auth/presentation/bloc/register_cubit.dart';
 import '../../features/auth/presentation/bloc/email_verification_cubit.dart';
 import '../../features/auth/presentation/bloc/password_reset_cubit.dart';
+import '../../features/access/data/datasources/access_remote_datasource.dart';
+import '../../features/access/data/repositories/access_repository_impl.dart';
+import '../../features/access/domain/repositories/access_repository.dart';
+import '../../features/access/domain/usecases/access_usecases.dart';
+import '../../features/access/presentation/bloc/access_cubit.dart';
 import '../../features/kyc/data/datasources/camera_datasource.dart';
 import '../../features/kyc/data/datasources/kyc_remote_datasource.dart';
 import '../../features/kyc/data/repositories/kyc_repository_impl.dart';
@@ -88,6 +93,9 @@ GetIt configureDependencies({
   di.registerFactory(
     () => PasswordResetCubit(RequestPasswordReset(auth), ResetPassword(auth)),
   );
+  final access = AccessRepositoryImpl(AccessRemoteDataSource(api));
+  di.registerSingleton<AccessRepository>(access);
+  di.registerFactory(() => AccessCubit(AccessUseCases(access)));
   final kyc = KycRepositoryImpl(
     KycRemoteDataSource(api),
     camera ?? ImagePickerCameraDataSource(),

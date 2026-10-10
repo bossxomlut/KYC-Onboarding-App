@@ -6,9 +6,17 @@ import '../bloc/kyc_cubit.dart';
 import '../widgets/kyc_scaffold.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, required this.email, required this.onLogout});
+  const HomePage({
+    super.key,
+    required this.email,
+    required this.onLogout,
+    this.canReview = false,
+    this.canManageUsers = false,
+  });
   final String email;
   final Future<void> Function() onLogout;
+  final bool canReview;
+  final bool canManageUsers;
   @override
   Widget build(BuildContext context) => BlocBuilder<KycCubit, KycState>(
     builder: (context, state) {
@@ -16,6 +24,12 @@ class HomePage extends StatelessWidget {
       return KycScaffold(
         title: 'Your verification',
         actions: [
+          IconButton(
+            key: const Key('account-access'),
+            tooltip: 'Account access',
+            onPressed: () => context.go('/access'),
+            icon: const Icon(Icons.manage_accounts_outlined),
+          ),
           IconButton(
             key: const Key('logout'),
             tooltip: 'Sign out',
@@ -34,6 +48,21 @@ class HomePage extends StatelessWidget {
               icon: Icons.verified_user_outlined,
             ),
             Text(email, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 12),
+            if (canManageUsers)
+              OutlinedButton.icon(
+                key: const Key('manage-accounts'),
+                onPressed: () => context.go('/admin'),
+                icon: const Icon(Icons.manage_accounts_outlined),
+                label: const Text('Manage accounts'),
+              ),
+            if (canReview)
+              OutlinedButton.icon(
+                key: const Key('review-profiles'),
+                onPressed: () => context.go('/reviews'),
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('Review profiles'),
+              ),
             const SizedBox(height: 20),
             KycError(onRetry: () => context.read<KycCubit>().load()),
             if (state.busy && profile == null)
@@ -120,7 +149,7 @@ class HomePage extends StatelessWidget {
             ],
             const SizedBox(height: 16),
             const Text(
-              'Your photos are stored privately and can only be viewed in your authenticated session.',
+              'Your photos are stored privately. You and authorized reviewers can view them after signing in.',
               textAlign: TextAlign.center,
             ),
           ],

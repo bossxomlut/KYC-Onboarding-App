@@ -19,6 +19,7 @@ docker compose ps
 cd backend
 npm ci
 npm run migrate
+npm run admin:bootstrap
 npm run dev
 ```
 
@@ -62,25 +63,26 @@ Use “Forgot password?” and check Mailpit. The app accepts `kycapp://app/rese
 
 ### Review results
 
-Actual KYC checks are represented by a **privileged local CLI**, operated outside the mobile app. It changes persisted state; it is not a public reviewer endpoint or simulated client result.
+Sign in as a reviewer or super admin and open **Review profiles**. The backend checks the current account role, permits pending profiles belonging to other users, and records the reviewer with each decision. Approval is manual.
 
 ```sh
 cd backend
-npm run review -- --email maya@kyc.example --status rejected \
-  --reason 'Please retake the selfie in better light.' --steps selfie
-# In the app: Refresh status → Update and resubmit → capture requested photo → submit.
-npm run review -- --email maya@kyc.example --status verified
+npm run admin:bootstrap
+# Local credentials: backend/.local/super-admin.json (private, Git-ignored).
+# Sign in → Manage accounts to create accounts or grant reviewer permission.
 ```
 
-Rejections require a reason and one or more of `personal_details,document,selfie`. Only pending profiles can be reviewed. Reopening deletes only the requested fields/media; accepted steps remain. Submitted and verified profiles are locked. Refresh status or resume the app to fetch the latest decision.
+Public registration creates a normal user. Users request reviewer access through **Account access**; the single bootstrap super admin approves requests or grants/revokes access directly. See the [Vietnamese admin guide](docs/admin-access.md) for credentials, account creation, workflow and audits. The old direct-database review CLI no longer writes decisions.
+
+Rejections require a reason and one or more of `personal_details,document,selfie`. Only pending profiles can be reviewed. Reopening deletes only requested fields/media; accepted steps remain. Submitted and verified profiles are locked. Refresh status to fetch the decision.
 
 ## Architecture and contracts
 
-The backend is a NestJS 12.1.2 application using the Express adapter. `AppModule` composes `AuthModule`, `KycModule` and health checks. A global `InfrastructureModule` injects one configuration, PostgreSQL pool and mail transport, and owns the email worker lifecycle. Controllers handle HTTP boundaries; injectable services perform authentication and KYC operations with the existing PostgreSQL transactions. DTOs and strict schemas are validated through `ZodValidationPipe`.
+The backend is a NestJS 12.1.2 application using the Express adapter. `AppModule` composes `AuthModule`, `KycModule`, `AccessModule`, `ReviewsModule` and health checks. A global `InfrastructureModule` injects one configuration, PostgreSQL pool and mail transport, and owns the email worker lifecycle. Controllers handle HTTP boundaries; injectable services perform authentication and KYC operations with the existing PostgreSQL transactions. DTOs and strict schemas are validated through `ZodValidationPipe`.
 
 `AuthenticationGuard` verifies the JWT and active database session before protected handlers. On media uploads, authentication and `KycUploadGuard` run before the Express `FileInterceptor` parses multipart data; Multer applies file, field and part limits. A global `ApiExceptionFilter` preserves `{error:{code,message,requestId}}` without exposing internals. The global `RateLimitGuard` applies per-route/IP limits; auth policies attach to controller metadata, so URL casing does not bypass them. API paths and persisted user/profile/session data remain compatible.
 
-`mobile/lib/features/auth` and `mobile/lib/features/kyc` use feature-first Clean Architecture. Domain contains pure Dart entities, typed results, repository contracts and use cases. Data wraps Dio, secure storage and the camera/filesystem, maps API models and converts exceptions into failures. Presentation Cubits call use cases; widgets render state. GetIt is confined to `lib/app` composition. GoRouter protects authentication and server-derived KYC progression.
+`mobile/lib/features/auth`, `mobile/lib/features/kyc` and `mobile/lib/features/access` use feature-first Clean Architecture. Domain contains pure Dart entities, typed results, repository contracts and use cases. Data wraps Dio, secure storage and the camera/filesystem, maps API models and converts exceptions into failures. Presentation Cubits call use cases; widgets render state. GetIt is confined to `lib/app` composition. GoRouter protects authentication and server-derived KYC progression.
 
 The auth Cubit is app-owned. A route-shell provider owns one KYC flow Cubit and disposes it when the authenticated flow ends; page forms have their own scope. Camera/image bytes and profile data are not kept in global state. Shared Material 3 tokens live in `core/theme`. API and schema details: [contracts](docs/architecture/contracts.md) and [backend guide](docs/backend.md). [Requirement analysis](docs/assignment-analysis.md) distinguishes assignment requirements from the additional implementation choices.
 
@@ -91,16 +93,16 @@ Server state is authoritative. Saving details and uploading each photo immediate
 - Passwords use Argon2id; OTPs, reset tokens and refresh tokens are stored as keyed hashes. Access JWTs last 15 minutes; refresh sessions last 30 days and rotate transactionally. Replay revokes the entire token family. Logout revokes the family; password reset revokes all user sessions. Every protected request also checks the session is active, so revocation applies immediately.
 - Only refresh credentials persist in Keychain/Keystore; access tokens stay in memory. Android backups are disabled; iOS uses a device-only Keychain accessibility class. No password is saved on the device. Concurrent unauthorized requests share one refresh operation. Network failures do not clear a valid local session, and a failed server logout remains retryable.
 - Auth endpoints have IP rate limits, OTP attempt limits and a resend cooldown. Errors have stable codes/request IDs and no stack traces. Production request logging is disabled to avoid PII/secrets. Forgot-password responses remain generic, including mail outages.
-- Personal details and images are encrypted at rest with AES-256-GCM. Uploads are private, limited to 10 MB, validated by signature and real image decoding, then re-encoded to strip EXIF/GPS. The API derives ownership from authentication; it accepts no user ID for profile/media operations. Private images are returned only as authenticated bytes with `Cache-Control: no-store`.
+- Personal details and images are encrypted at rest with AES-256-GCM. Uploads are private, limited to 10 MB, validated by signature and real image decoding, then re-encoded to strip EXIF/GPS. The API derives ownership from authentication; it accepts no user ID for profile/media operations. Owners read their own images; authorized reviewers read pending profiles of other users. Private images are returned only as authenticated bytes with `Cache-Control: no-store`.
 - The development encryption key is provided through an ignored `.env` generated locally. Email addresses and operational KYC status metadata remain in PostgreSQL; encrypted details and media are application-protected. Local queued mail contains encrypted payloads. Local HTTP, local passwords and filesystem storage are development choices.
 
-For production: terminate HTTPS at a correctly configured ingress; use managed secret/KMS rotation, private object storage and encrypted database backups; apply retention/deletion policies and access audit trails; replace local CLI with authorized reviewer/provider integration and malware scanning; use shared rate-limit storage for multiple API replicas. The app does not claim to perform OCR, biometric matching or liveness detection.
+For production: terminate HTTPS at a correctly configured ingress; use managed secret/KMS rotation, private object storage and encrypted database backups; apply retention/deletion policies and access audit trails; integrate an identity verification provider and malware scanning; use shared rate-limit storage for multiple API replicas. The app does not claim to perform OCR, biometric matching or liveness detection.
 
 A rotated refresh response lost in transit can cause the old token to be rejected as replay on the next attempt; the user must sign in again. This favors replay protection. A filesystem/DB crash can leave an encrypted orphan image; an operational garbage-collection job is future work. App-private retry images are temporary and protected by the OS sandbox rather than a separate client encryption layer; a stronger device threat model would require encrypted drafts and explicit retention. These trade-offs are deliberate and do not make the local demo a production deployment.
 
 ## Tests and demo
 
-Run core automated checks with `./scripts/check.sh` (backend type checking/tests and Flutter formatting/analysis/tests). Builds, dependency audit and real-API integration run separately. Backend tests start an isolated real PostgreSQL instance (no Docker required); they exercise the real NestJS application over HTTP using Supertest and SQL. The backend suite has 16 cases: the ten existing behavior cases, four Nest-specific checks for dependency injection, errors, upload-guard ordering/limits and private-media failures, and two unverified-login OTP delivery/recovery cases. Flutter tests use test doubles only at platform/repository boundaries. They cover session restore and refresh concurrency, invalidation, offline retry, route guards, KYC resume/transitions, password visibility, wheel date selection, six-cell OTP editing, and the UI flow with failed upload/retry. Architecture tests enforce inward dependencies.
+Run core automated checks with `./scripts/check.sh` (backend type checking/tests and Flutter formatting/analysis/tests). Builds, dependency audit and real-API integration run separately. Backend tests start an isolated real PostgreSQL instance (no Docker required); they exercise the real NestJS application over HTTP using Supertest and SQL. The backend suite covers auth/KYC behavior, Nest guards/errors, super admin bootstrap, managed account creation, permission requests, reviewer authorization, role revocation and concurrent decisions using disposable PostgreSQL databases. Flutter tests use test doubles only at platform/repository boundaries. They cover session restore and refresh concurrency, invalidation, offline retry, route guards, KYC resume/transitions, password visibility, wheel date selection, six-cell OTP editing, and the UI flow with failed upload/retry. Architecture tests enforce inward dependencies.
 
 ```sh
 cd backend
@@ -118,6 +120,6 @@ flutter build apk --debug
 
 ## Assumptions and further work
 
-Email verification uses OTP; the UI is English to match the assignment. Applicants are adults aged 18–120; a passport/national ID/driving licence uses one document image in this scope (front/back support is future work). Local email goes to Mailpit only. Review is manual via CLI. There is no legal terms checkbox because the assignment supplies no product terms.
+Email verification uses OTP; the UI is English to match the assignment. Applicants are adults aged 18–120; a passport/national ID/driving licence uses one document image in this scope (front/back support is future work). Local email goes to Mailpit only. Review is manual through authorized accounts in the app. There is no legal terms checkbox because the assignment supplies no product terms.
 
 With more time: real-device camera/lifecycle matrix, screenshot protection/app-switcher redaction, encrypted local drafts, biometric/liveness/verification provider integration, distributed rate limiting and a separately deployed email worker, accessible/localized copy, back-side documents, push result notifications, operational monitoring and deletion/retention tooling. The API already retries the durable email outbox in process. Native store signing and production deployment are environment-specific follow-up work.

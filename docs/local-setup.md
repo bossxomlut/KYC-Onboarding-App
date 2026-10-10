@@ -167,6 +167,8 @@ Binary `/Users/vinhngo/KYC-Onboarding-App/tmp/mailpit/mailpit` được tải t�
 cd /Users/vinhngo/KYC-Onboarding-App
 nvm use
 cd backend
+npm run migrate
+npm run admin:bootstrap
 npm run dev
 ```
 
@@ -267,6 +269,10 @@ Email local chỉ vào Mailpit, không gửi đến Gmail/hộp thư thật. N�
 
 iOS Simulator không có camera thật. Để thử chụp ảnh, dùng Android emulator có camera hoặc điện thoại thật; dùng giấy tờ/ảnh giả cho assignment. Kiểm thử iOS với ảnh giả và video mẫu được mô tả trong [hướng dẫn demo](../demo/README.md).
 
+### Admin và quyền duyệt hồ sơ
+
+Sau khi database chạy, thực hiện `npm run migrate` và `npm run admin:bootstrap` trong `backend`. Email local mặc định `superadmin@kyc.example`; mật khẩu ngẫu nhiên lưu riêng trong `backend/.local/super-admin.json`, không in ra terminal. Chạy lại không reset tài khoản. Đăng nhập admin → **Manage accounts** để tạo tài khoản/cấp reviewer/xử lý yêu cầu; người dùng → **Account access** để xin quyền; reviewer → **Review profiles** để duyệt. Xem [hướng dẫn đầy đủ](admin-access.md).
+
 ## 7. Dừng và khởi động lại
 
 ### Cách A
@@ -330,4 +336,4 @@ DBeaver là công cụ xem database tùy chọn; cài từ [trang chính thức]
 lsof -nP -iTCP:8025 -sTCP:LISTEN
 ```
 
-Sau khi môi trường sẵn sàng, xem [README](../README.md) cho lệnh review/test/build, [backend guide](backend.md) cho API và [verification](verification.md) cho phạm vi đã kiểm chứng. Hướng dẫn này không yêu cầu cung cấp credentials production hoặc dữ liệu KYC thật cho công cụ AI.
+Sau khi môi trường sẵn sàng, xem [README](../README.md) cho chức năng review và lệnh test/build, [backend guide](backend.md) cho API và [verification](verification.md) cho phạm vi đã kiểm chứng. Hướng dẫn này không yêu cầu cung cấp credentials production hoặc dữ liệu KYC thật cho công cụ AI.

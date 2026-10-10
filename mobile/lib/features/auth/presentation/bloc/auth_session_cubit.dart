@@ -82,6 +82,22 @@ class AuthSessionCubit extends Cubit<AuthSessionState> {
     emit(AuthAuthenticated(user));
   }
 
+  /// Updates live account permissions without replacing the current session.
+  void updateUser(User user) {
+    final current = state;
+    if (!isClosed &&
+        current is AuthAuthenticated &&
+        current.user.id == user.id) {
+      emit(
+        AuthAuthenticated(
+          user,
+          isSigningOut: current.isSigningOut,
+          error: current.error,
+        ),
+      );
+    }
+  }
+
   void verificationRequired(String email) =>
       emit(AuthEmailVerificationRequired(email));
   void cancelVerification() {
@@ -110,7 +126,12 @@ class AuthSessionCubit extends Cubit<AuthSessionState> {
         emit(const AuthSignedOut());
         return true;
       case Failure<void>(:final error):
-        emit(AuthAuthenticated(previous.user, error: error));
+        final current = state;
+        final user =
+            current is AuthAuthenticated && current.user.id == previous.user.id
+            ? current.user
+            : previous.user;
+        emit(AuthAuthenticated(user, error: error));
         return false;
     }
   }

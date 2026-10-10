@@ -16,6 +16,12 @@ import '../features/auth/presentation/pages/register_page.dart';
 import '../features/auth/presentation/pages/verify_email_page.dart';
 import '../features/auth/presentation/pages/forgot_password_page.dart';
 import '../features/auth/presentation/pages/reset_password_page.dart';
+import '../features/auth/domain/entities/user.dart';
+import '../features/access/presentation/bloc/access_cubit.dart';
+import '../features/access/presentation/pages/access_page.dart';
+import '../features/access/presentation/pages/admin_page.dart';
+import '../features/access/presentation/pages/reviewer_queue_page.dart';
+import '../features/access/presentation/pages/reviewer_detail_page.dart';
 import '../features/kyc/domain/entities/kyc_profile.dart';
 import '../features/kyc/presentation/bloc/kyc_cubit.dart';
 import '../features/kyc/presentation/pages/home_page.dart';
@@ -56,7 +62,12 @@ class _KycAppState extends State<KycApp> {
           AuthEmailVerificationRequired() => SessionAccess.verifyEmail,
           AuthAuthenticated() => SessionAccess.authenticated,
         };
-        return RoutePolicy.redirect(access: access, location: state.uri.path);
+        final auth = _session.state;
+        return RoutePolicy.redirect(
+          access: access,
+          location: state.uri.path,
+          role: auth is AuthAuthenticated ? auth.user.role : UserRole.user,
+        );
       },
       routes: [
         GoRoute(
@@ -127,6 +138,45 @@ class _KycAppState extends State<KycApp> {
             ),
           ),
         ),
+        GoRoute(
+          path: '/access',
+          builder: (context, state) => BlocProvider(
+            create: (_) => di<AccessCubit>()..loadAccess(),
+            child: AccessPage(
+              user: (_session.state as AuthAuthenticated).user,
+              onUserUpdated: _session.updateUser,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/admin',
+          builder: (context, state) => BlocProvider(
+            create: (_) => di<AccessCubit>()..loadAdmin(),
+            child: const AdminPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/reviews',
+          builder: (context, state) => BlocProvider(
+            create: (_) => di<AccessCubit>()..loadQueue(),
+            child: ReviewerQueuePage(
+              actorId: (_session.state as AuthAuthenticated).user.id,
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/reviews/:userId',
+          builder: (context, state) {
+            final userId = state.pathParameters['userId']!;
+            return BlocProvider(
+              create: (_) => di<AccessCubit>()..loadDetail(userId),
+              child: ReviewerDetailPage(
+                userId: userId,
+                actorId: (_session.state as AuthAuthenticated).user.id,
+              ),
+            );
+          },
+        ),
         ShellRoute(
           builder: (context, state, child) {
             final auth = _session.state;
@@ -144,6 +194,8 @@ class _KycAppState extends State<KycApp> {
                 final user = (_session.state as AuthAuthenticated).user;
                 return HomePage(
                   email: user.email,
+                  canReview: user.canReview,
+                  canManageUsers: user.canManageUsers,
                   onLogout: () async {
                     final flow = context.read<KycCubit>();
                     await _session.signOut();

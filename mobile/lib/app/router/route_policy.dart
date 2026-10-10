@@ -1,3 +1,5 @@
+import '../../features/auth/domain/entities/user.dart';
+
 /// Pure navigation policy. The authenticated server profile controls progress.
 enum SessionAccess {
   initializing,
@@ -29,6 +31,7 @@ abstract final class RoutePolicy {
     required String location,
     String? kycStatus,
     String? nextStep,
+    UserRole role = UserRole.user,
   }) {
     switch (access) {
       case SessionAccess.initializing:
@@ -48,6 +51,12 @@ abstract final class RoutePolicy {
             location == '/session') {
           return '/';
         }
+    }
+    if (location == '/admin' || location.startsWith('/admin/')) {
+      if (role != UserRole.superAdmin) return '/access';
+    }
+    if (location == '/reviews' || location.startsWith('/reviews/')) {
+      if (role == UserRole.user) return '/access';
     }
     if (location.startsWith('/kyc/') && location != '/kyc/status') {
       if (['pending_review', 'verified', 'rejected'].contains(kycStatus)) {
