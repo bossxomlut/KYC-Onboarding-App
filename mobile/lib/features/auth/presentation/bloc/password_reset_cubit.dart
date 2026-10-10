@@ -17,27 +17,35 @@ class PasswordResetCubit extends Cubit<AuthFormState> {
     if (isClosed) return;
     switch (result) {
       case Success<void>():
-        emit(const AuthFormState(
+        emit(
+          const AuthFormState(
             status: AuthFormStatus.success,
             message:
-                'If an account exists for this email, password reset instructions have been sent.'));
+                'If an account exists for this email, password reset instructions have been sent.',
+          ),
+        );
       case Failure<void>(:final error):
         emit(AuthFormState(status: AuthFormStatus.failure, error: error));
     }
   }
 
-  Future<void> reset(
-      {required String token, required String newPassword}) async {
+  Future<void> reset({
+    required String token,
+    required String newPassword,
+  }) async {
     if (state.isLoading) return;
     emit(const AuthFormState(status: AuthFormStatus.loading));
     final result = await _reset(token: token, newPassword: newPassword);
     if (isClosed) return;
     switch (result) {
       case Success<void>():
-        emit(const AuthFormState(
+        emit(
+          const AuthFormState(
             status: AuthFormStatus.success,
             message:
-                'Your password has been changed. Sign in with your new password.'));
+                'Your password has been changed. Sign in with your new password.',
+          ),
+        );
       case Failure<void>(:final error):
         emit(AuthFormState(status: AuthFormStatus.failure, error: error));
     }

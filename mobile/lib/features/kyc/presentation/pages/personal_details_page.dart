@@ -9,19 +9,19 @@ class PersonalDetailsPage extends StatelessWidget {
   const PersonalDetailsPage({super.key});
   @override
   Widget build(BuildContext context) => BlocProvider(
-        create: (_) => PersonalDetailsFormCubit(
-          context.read<KycCubit>().state.profile?.personalDetails,
-        ),
-        child: const _PersonalDetailsForm(),
-      );
+    create: (_) => PersonalDetailsFormCubit(
+      context.read<KycCubit>().state.profile?.personalDetails,
+    ),
+    child: const _PersonalDetailsForm(),
+  );
 }
 
 class _PersonalDetailsForm extends StatelessWidget {
   const _PersonalDetailsForm();
   @override
   Widget build(BuildContext context) => BlocBuilder<KycCubit, KycState>(
-        builder: (context, flow) =>
-            BlocBuilder<PersonalDetailsFormCubit, PersonalDetailsFormState>(
+    builder: (context, flow) =>
+        BlocBuilder<PersonalDetailsFormCubit, PersonalDetailsFormState>(
           builder: (context, form) => KycScaffold(
             title: 'Personal details',
             child: Column(
@@ -92,8 +92,8 @@ class _PersonalDetailsForm extends StatelessWidget {
                     onPressed: flow.busy
                         ? null
                         : () async {
-                            final formCubit =
-                                context.read<PersonalDetailsFormCubit>();
+                            final formCubit = context
+                                .read<PersonalDetailsFormCubit>();
                             if (!formCubit.validate()) return;
                             final cubit = context.read<KycCubit>();
                             final success = await cubit.saveDetails(
@@ -118,7 +118,7 @@ class _PersonalDetailsForm extends StatelessWidget {
             ),
           ),
         ),
-      );
+  );
   Widget _field(
     BuildContext context,
     PersonalDetailsFormState form,
@@ -130,24 +130,23 @@ class _PersonalDetailsForm extends StatelessWidget {
     List<String>? autofillHints,
     int lines = 1,
     TextCapitalization capitalization = TextCapitalization.words,
-  }) =>
-      Padding(
-        padding: const EdgeInsets.only(bottom: 18),
-        child: TextFormField(
-          key: Key(field),
-          initialValue: value,
-          onChanged: (value) =>
-              context.read<PersonalDetailsFormCubit>().update(field, value),
-          decoration: InputDecoration(
-            labelText: label,
-            hintText: hint,
-            errorText: form.errors[field],
-          ),
-          keyboardType: keyboard,
-          autofillHints: autofillHints,
-          maxLines: lines,
-          textCapitalization: capitalization,
-          enabled: !context.read<KycCubit>().state.busy,
-        ),
-      );
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 18),
+    child: TextFormField(
+      key: Key(field),
+      initialValue: value,
+      onChanged: (value) =>
+          context.read<PersonalDetailsFormCubit>().update(field, value),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        errorText: form.errors[field],
+      ),
+      keyboardType: keyboard,
+      autofillHints: autofillHints,
+      maxLines: lines,
+      textCapitalization: capitalization,
+      enabled: !context.read<KycCubit>().state.busy,
+    ),
+  );
 }

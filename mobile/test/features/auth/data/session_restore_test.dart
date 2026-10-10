@@ -20,8 +20,10 @@ class MemoryTokens implements TokenStore {
   @override
   Future<String?> readRefreshToken() async => refreshToken;
   @override
-  Future<void> saveTokens(
-      {required String accessToken, required String refreshToken}) async {
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
   }
@@ -38,28 +40,34 @@ class TestAdapter implements HttpClientAdapter {
   TestAdapter(this.handler);
   final FutureOr<ResponseBody> Function(RequestOptions) handler;
   @override
-  Future<ResponseBody> fetch(RequestOptions options,
-          Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async =>
-      handler(options);
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async => handler(options);
   @override
   void close({bool force = false}) {}
 }
 
 ResponseBody jsonResponse(Object value, [int status = 200]) =>
-    ResponseBody.fromString(jsonEncode(value), status, headers: {
-      Headers.contentTypeHeader: ['application/json']
-    });
+    ResponseBody.fromString(
+      jsonEncode(value),
+      status,
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
+    );
 
 final userJson = {
   'id': 'user-1',
   'email': 'demo@example.test',
-  'emailVerified': true
+  'emailVerified': true,
 };
 final sessionJson = {
   'user': userJson,
   'accessToken': 'new-access',
   'refreshToken': 'new-refresh',
-  'expiresIn': 900
+  'expiresIn': 900,
 };
 
 void main() {
@@ -83,7 +91,8 @@ void main() {
     dio.httpClientAdapter = TestAdapter((options) {
       calls.add(options.path);
       return jsonResponse(
-          options.path == '/auth/refresh' ? sessionJson : {'user': userJson});
+        options.path == '/auth/refresh' ? sessionJson : {'user': userJson},
+      );
     });
     final result = await repository.restoreSession();
     expect(result, isA<Success<User?>>());
@@ -94,9 +103,11 @@ void main() {
   });
 
   test('invalid refresh signs out and clears tokens', () async {
-    dio.httpClientAdapter = TestAdapter((_) => jsonResponse({
-          'error': {'code': 'SESSION_EXPIRED', 'message': 'Sign in again.'}
-        }, 401));
+    dio.httpClientAdapter = TestAdapter(
+      (_) => jsonResponse({
+        'error': {'code': 'SESSION_EXPIRED', 'message': 'Sign in again.'},
+      }, 401),
+    );
     final result = await repository.restoreSession();
     expect(result, isA<Success<User?>>());
     expect((result as Success<User?>).value, isNull);
@@ -105,8 +116,12 @@ void main() {
   });
 
   test('network failure retains refresh token for retry', () async {
-    dio.httpClientAdapter = TestAdapter((options) => throw DioException(
-        requestOptions: options, type: DioExceptionType.connectionError));
+    dio.httpClientAdapter = TestAdapter(
+      (options) => throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+      ),
+    );
     final result = await repository.restoreSession();
     expect(result, isA<Failure<User?>>());
     expect((result as Failure<User?>).error.isNetwork, isTrue);
@@ -131,37 +146,46 @@ void main() {
     expect(tokens.refreshToken, 'new-refresh');
   });
 
-  test('late refresh does not overwrite a newly saved account session',
-      () async {
-    final reachedServer = Completer<void>();
-    final release = Completer<void>();
-    dio.httpClientAdapter = TestAdapter((_) async {
-      reachedServer.complete();
-      await release.future;
-      return jsonResponse(sessionJson);
-    });
-    final operation = refresher.refreshCredentials();
-    await reachedServer.future;
-    await tokens.saveTokens(
+  test(
+    'late refresh does not overwrite a newly saved account session',
+    () async {
+      final reachedServer = Completer<void>();
+      final release = Completer<void>();
+      dio.httpClientAdapter = TestAdapter((_) async {
+        reachedServer.complete();
+        await release.future;
+        return jsonResponse(sessionJson);
+      });
+      final operation = refresher.refreshCredentials();
+      await reachedServer.future;
+      await tokens.saveTokens(
         accessToken: 'another-account-access',
-        refreshToken: 'another-account-refresh');
-    release.complete();
-    await expectLater(operation, throwsA(isA<DioException>()));
-    expect(tokens.accessToken, 'another-account-access');
-    expect(tokens.refreshToken, 'another-account-refresh');
-  });
+        refreshToken: 'another-account-refresh',
+      );
+      release.complete();
+      await expectLater(operation, throwsA(isA<DioException>()));
+      expect(tokens.accessToken, 'another-account-access');
+      expect(tokens.refreshToken, 'another-account-refresh');
+    },
+  );
 
   test('successful password reset removes the revoked local session', () async {
     dio.httpClientAdapter = TestAdapter((_) => jsonResponse({'success': true}));
     final result = await repository.resetPassword(
-        token: 'reset-token', newPassword: 'DemoPassword12');
+      token: 'reset-token',
+      newPassword: 'DemoPassword12',
+    );
     expect(result, isA<Success<void>>());
     expect(tokens.refreshToken, isNull);
   });
 
   test('offline logout retains session and reports failure', () async {
-    dio.httpClientAdapter = TestAdapter((options) => throw DioException(
-        requestOptions: options, type: DioExceptionType.connectionError));
+    dio.httpClientAdapter = TestAdapter(
+      (options) => throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+      ),
+    );
     final result = await repository.logout();
     expect(result, isA<Failure<void>>());
     expect(tokens.refreshToken, 'saved-refresh');

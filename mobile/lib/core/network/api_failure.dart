@@ -12,9 +12,10 @@ AppFailure mapApiFailure(Object error) {
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.receiveTimeout) {
       return const AppFailure(
-          code: 'NETWORK_ERROR',
-          message:
-              'Unable to reach the server. Check your connection and try again.');
+        code: 'NETWORK_ERROR',
+        message:
+            'Unable to reach the server. Check your connection and try again.',
+      );
     }
     var body = error.response?.data;
     if (body is List<int>) {
@@ -27,20 +28,25 @@ AppFailure mapApiFailure(Object error) {
     if (body is Map && body['error'] is Map) {
       final apiError = body['error'] as Map;
       return AppFailure(
-          code: apiError['code'] as String? ?? 'SERVER_ERROR',
-          message: apiError['message'] as String? ??
-              'The request could not be completed.');
+        code: apiError['code'] as String? ?? 'SERVER_ERROR',
+        message:
+            apiError['message'] as String? ??
+            'The request could not be completed.',
+      );
     }
     return const AppFailure(
-        code: 'SERVER_ERROR',
-        message: 'The server could not complete the request. Try again.');
+      code: 'SERVER_ERROR',
+      message: 'The server could not complete the request. Try again.',
+    );
   }
   if (error is PlatformException) {
     return const AppFailure(
-        code: 'STORAGE_ERROR',
-        message: 'Secure storage is unavailable. Please try again.');
+      code: 'STORAGE_ERROR',
+      message: 'Secure storage is unavailable. Please try again.',
+    );
   }
   return const AppFailure(
-      code: 'UNEXPECTED_ERROR',
-      message: 'The request could not be completed. Please try again.');
+    code: 'UNEXPECTED_ERROR',
+    message: 'The request could not be completed. Please try again.',
+  );
 }

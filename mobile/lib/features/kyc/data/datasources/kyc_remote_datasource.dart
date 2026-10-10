@@ -8,27 +8,26 @@ class KycRemoteDataSource {
   final ApiClient api;
   Future<KycProfile> load() async => _profile(await api.get('/kyc'));
   Future<KycProfile> saveDetails(PersonalDetails details) async => _profile(
-        await api.put(
-          '/kyc/personal-details',
-          data: KycProfileModel.detailsJson(details),
-        ),
-      );
+    await api.put(
+      '/kyc/personal-details',
+      data: KycProfileModel.detailsJson(details),
+    ),
+  );
   Future<KycProfile> upload(
     CapturedMedia media, {
     void Function(int, int)? onProgress,
-  }) async =>
-      _profile(
-        await api.upload(
-          '/kyc/media/${media.kind.name}',
-          media.filePath,
-          fields: {
-            if (media.documentType != null)
-              'documentType': media.documentType!.apiValue,
-            if (media.captureId != null) 'captureId': media.captureId!,
-          },
-          onProgress: onProgress,
-        ),
-      );
+  }) async => _profile(
+    await api.upload(
+      '/kyc/media/${media.kind.name}',
+      media.filePath,
+      fields: {
+        if (media.documentType != null)
+          'documentType': media.documentType!.apiValue,
+        if (media.captureId != null) 'captureId': media.captureId!,
+      },
+      onProgress: onProgress,
+    ),
+  );
   Future<Uint8List> privateMedia(MediaKind kind) =>
       api.bytes('/kyc/media/${kind.name}');
   Future<KycProfile> submit() async => _profile(await api.post('/kyc/submit'));

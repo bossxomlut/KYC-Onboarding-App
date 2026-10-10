@@ -28,21 +28,21 @@ class KycProfileModel {
   }
 
   static KycStatus _status(String value) => switch (value) {
-        'not_started' => KycStatus.notStarted,
-        'in_progress' => KycStatus.inProgress,
-        'pending_review' => KycStatus.pendingReview,
-        'verified' => KycStatus.verified,
-        'rejected' => KycStatus.rejected,
-        _ => throw const FormatException('Unknown KYC status'),
-      };
+    'not_started' => KycStatus.notStarted,
+    'in_progress' => KycStatus.inProgress,
+    'pending_review' => KycStatus.pendingReview,
+    'verified' => KycStatus.verified,
+    'rejected' => KycStatus.rejected,
+    _ => throw const FormatException('Unknown KYC status'),
+  };
   static KycStep step(String value) => switch (value) {
-        'personal_details' => KycStep.personalDetails,
-        'document' => KycStep.document,
-        'selfie' => KycStep.selfie,
-        'review' => KycStep.review,
-        'result' => KycStep.result,
-        _ => throw const FormatException('Unknown KYC step'),
-      };
+    'personal_details' => KycStep.personalDetails,
+    'document' => KycStep.document,
+    'selfie' => KycStep.selfie,
+    'review' => KycStep.review,
+    'result' => KycStep.result,
+    _ => throw const FormatException('Unknown KYC step'),
+  };
   static KycMedia? _media(Map<String, dynamic>? json) => json == null
       ? null
       : KycMedia(
@@ -57,10 +57,10 @@ class KycProfileModel {
                 ),
         );
   static Map<String, dynamic> detailsJson(PersonalDetails d) => {
-        'fullName': d.fullName.trim(),
-        'dateOfBirth': d.dateOfBirth,
-        'nationality': d.nationality.trim(),
-        'address': d.address.trim(),
-        'documentNumber': d.documentNumber.trim(),
-      };
+    'fullName': d.fullName.trim(),
+    'dateOfBirth': d.dateOfBirth,
+    'nationality': d.nationality.trim(),
+    'address': d.address.trim(),
+    'documentNumber': d.documentNumber.trim(),
+  };
 }

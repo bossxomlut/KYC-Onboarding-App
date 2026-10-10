@@ -27,24 +27,23 @@ class KycState extends Equatable {
     double? uploadProgress,
     Map<MediaKind, CapturedMedia>? pendingCaptures,
     Map<MediaKind, Uint8List>? reviewMedia,
-  }) =>
-      KycState(
-        profile: profile ?? this.profile,
-        busy: busy ?? this.busy,
-        error: error,
-        uploadProgress: uploadProgress,
-        pendingCaptures: pendingCaptures ?? this.pendingCaptures,
-        reviewMedia: reviewMedia ?? this.reviewMedia,
-      );
+  }) => KycState(
+    profile: profile ?? this.profile,
+    busy: busy ?? this.busy,
+    error: error,
+    uploadProgress: uploadProgress,
+    pendingCaptures: pendingCaptures ?? this.pendingCaptures,
+    reviewMedia: reviewMedia ?? this.reviewMedia,
+  );
   @override
   List<Object?> get props => [
-        profile,
-        busy,
-        error,
-        uploadProgress,
-        pendingCaptures,
-        reviewMedia,
-      ];
+    profile,
+    busy,
+    error,
+    uploadProgress,
+    pendingCaptures,
+    reviewMedia,
+  ];
 }
 
 /// Flow-scoped; a provider in the authenticated routing shell owns its lifecycle.
@@ -59,16 +58,16 @@ class KycCubit extends Cubit<KycState> {
     required ResubmitKyc resubmitKyc,
     required RecoverCapture recoverCapture,
     required DiscardLocalMedia discardLocalMedia,
-  })  : _load = loadKyc,
-        _save = savePersonalDetails,
-        _capture = captureMedia,
-        _upload = uploadMedia,
-        _privateMedia = loadPrivateMedia,
-        _submit = submitKyc,
-        _resubmit = resubmitKyc,
-        _recover = recoverCapture,
-        _discard = discardLocalMedia,
-        super(const KycState());
+  }) : _load = loadKyc,
+       _save = savePersonalDetails,
+       _capture = captureMedia,
+       _upload = uploadMedia,
+       _privateMedia = loadPrivateMedia,
+       _submit = submitKyc,
+       _resubmit = resubmitKyc,
+       _recover = recoverCapture,
+       _discard = discardLocalMedia,
+       super(const KycState());
   final LoadKyc _load;
   final SavePersonalDetails _save;
   final CaptureMedia _capture;
@@ -95,8 +94,9 @@ class KycCubit extends Cubit<KycState> {
         AppFailure? recoveryError;
         if (value.canEdit) {
           for (final kind in MediaKind.values) {
-            final existingMedia =
-                kind == MediaKind.document ? value.document : value.selfie;
+            final existingMedia = kind == MediaKind.document
+                ? value.document
+                : value.selfie;
             final recovery = await _recover(
               kind,
               value.id,

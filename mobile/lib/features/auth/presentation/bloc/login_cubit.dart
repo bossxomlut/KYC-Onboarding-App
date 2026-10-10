@@ -17,12 +17,15 @@ class LoginCubit extends Cubit<AuthFormState> {
       case Success<User>(:final value):
         emit(AuthFormState(status: AuthFormStatus.success, user: value));
       case Failure<User>(:final error):
-        emit(AuthFormState(
+        emit(
+          AuthFormState(
             status: error.code == 'EMAIL_NOT_VERIFIED'
                 ? AuthFormStatus.verificationRequired
                 : AuthFormStatus.failure,
             email: email.trim().toLowerCase(),
-            error: error));
+            error: error,
+          ),
+        );
     }
   }
 }

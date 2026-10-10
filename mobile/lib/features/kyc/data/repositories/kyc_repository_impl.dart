@@ -38,28 +38,26 @@ class KycRepositoryImpl implements KycRepository {
     MediaKind kind,
     String profileId, {
     String? confirmedCaptureId,
-  }) =>
-      _guard(() async {
-        final media = await camera.recover(kind, profileId);
-        if (media != null &&
-            media.captureId != null &&
-            media.captureId == confirmedCaptureId) {
-          // Server accepted this exact upload before process termination; do not block submission with a stale draft.
-          await camera.remove(media);
-          return null;
-        }
-        return media;
-      });
+  }) => _guard(() async {
+    final media = await camera.recover(kind, profileId);
+    if (media != null &&
+        media.captureId != null &&
+        media.captureId == confirmedCaptureId) {
+      // Server accepted this exact upload before process termination; do not block submission with a stale draft.
+      await camera.remove(media);
+      return null;
+    }
+    return media;
+  });
   @override
   Future<Result<KycProfile>> upload(
     CapturedMedia media, {
     void Function(int, int)? onProgress,
-  }) =>
-      _guard(() async {
-        final profile = await remote.upload(media, onProgress: onProgress);
-        await camera.remove(media);
-        return profile;
-      });
+  }) => _guard(() async {
+    final profile = await remote.upload(media, onProgress: onProgress);
+    await camera.remove(media);
+    return profile;
+  });
   @override
   Future<Result<Uint8List>> privateMedia(MediaKind kind) =>
       _guard(() => remote.privateMedia(kind));

@@ -128,15 +128,14 @@ class FlowRepository extends FakeKycRepository {
   KycProfile _profile(
     KycStep step, {
     KycStatus status = KycStatus.inProgress,
-  }) =>
-      KycProfile(
-        id: 'demo-profile',
-        status: status,
-        nextStep: step,
-        personalDetails: details,
-        document: document,
-        selfie: selfie,
-      );
+  }) => KycProfile(
+    id: 'demo-profile',
+    status: status,
+    nextStep: step,
+    personalDetails: details,
+    document: document,
+    selfie: selfie,
+  );
   @override
   Future<Result<KycProfile>> saveDetails(PersonalDetails value) async {
     details = value;

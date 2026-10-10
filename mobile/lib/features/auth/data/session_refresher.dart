@@ -22,35 +22,41 @@ class SessionRefresher {
     final token = await _tokens.readRefreshToken();
     if (token == null) {
       throw DioException(
+        requestOptions: RequestOptions(path: '/auth/refresh'),
+        response: Response(
           requestOptions: RequestOptions(path: '/auth/refresh'),
-          response: Response(
-              requestOptions: RequestOptions(path: '/auth/refresh'),
-              statusCode: 401,
-              data: {
-                'error': {
-                  'code': 'SESSION_EXPIRED',
-                  'message': 'Please sign in again.'
-                }
-              }),
-          type: DioExceptionType.badResponse);
+          statusCode: 401,
+          data: {
+            'error': {
+              'code': 'SESSION_EXPIRED',
+              'message': 'Please sign in again.',
+            },
+          },
+        ),
+        type: DioExceptionType.badResponse,
+      );
     }
     final session = await _remote.refresh(token);
     final store = _tokens;
     if (store is RotatingTokenStore) {
       final saved = await store.rotateTokens(
-          expectedRefreshToken: token,
-          accessToken: session.accessToken,
-          refreshToken: session.refreshToken);
+        expectedRefreshToken: token,
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      );
       if (!saved) throw _sessionChanged();
     } else {
       if (await store.readRefreshToken() != token) throw _sessionChanged();
       await store.saveTokens(
-          accessToken: session.accessToken, refreshToken: session.refreshToken);
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      );
     }
   }
 
   DioException _sessionChanged() => DioException(
-      requestOptions: RequestOptions(path: '/auth/refresh'),
-      type: DioExceptionType.cancel,
-      error: 'Session changed during refresh.');
+    requestOptions: RequestOptions(path: '/auth/refresh'),
+    type: DioExceptionType.cancel,
+    error: 'Session changed during refresh.',
+  );
 }

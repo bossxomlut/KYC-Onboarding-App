@@ -9,28 +9,36 @@ void main() {
   test('atomic rotation refuses to replace a newer login', () async {
     final tokens = SecureTokenStore(const FlutterSecureStorage());
     await tokens.saveTokens(
-        accessToken: 'login-access', refreshToken: 'login-refresh');
+      accessToken: 'login-access',
+      refreshToken: 'login-refresh',
+    );
     final saved = await tokens.rotateTokens(
-        expectedRefreshToken: 'previous-refresh',
-        accessToken: 'stale-access',
-        refreshToken: 'stale-refresh');
+      expectedRefreshToken: 'previous-refresh',
+      accessToken: 'stale-access',
+      refreshToken: 'stale-refresh',
+    );
     expect(saved, isFalse);
     expect(await tokens.readRefreshToken(), 'login-refresh');
     expect(tokens.accessToken, 'login-access');
   });
 
-  test('rotation and logout are serialized so logout leaves no tokens',
-      () async {
-    final tokens = SecureTokenStore(const FlutterSecureStorage());
-    await tokens.saveTokens(
-        accessToken: 'old-access', refreshToken: 'old-refresh');
-    final rotation = tokens.rotateTokens(
+  test(
+    'rotation and logout are serialized so logout leaves no tokens',
+    () async {
+      final tokens = SecureTokenStore(const FlutterSecureStorage());
+      await tokens.saveTokens(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+      );
+      final rotation = tokens.rotateTokens(
         expectedRefreshToken: 'old-refresh',
         accessToken: 'new-access',
-        refreshToken: 'new-refresh');
-    final clearing = tokens.clear();
-    await Future.wait<Object?>([rotation, clearing]);
-    expect(await tokens.readRefreshToken(), isNull);
-    expect(tokens.accessToken, isNull);
-  });
+        refreshToken: 'new-refresh',
+      );
+      final clearing = tokens.clear();
+      await Future.wait<Object?>([rotation, clearing]);
+      expect(await tokens.readRefreshToken(), isNull);
+      expect(tokens.accessToken, isNull);
+    },
+  );
 }

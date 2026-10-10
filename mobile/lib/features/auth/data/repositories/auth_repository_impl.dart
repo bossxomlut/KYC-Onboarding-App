@@ -26,26 +26,34 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<User> _saveSession(Future<AuthSessionModel> operation) async {
     final session = await operation;
     await _tokens.saveTokens(
-        accessToken: session.accessToken, refreshToken: session.refreshToken);
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
+    );
     return session.user.toEntity();
   }
 
   @override
-  Future<Result<User>> register(
-          {required String email, required String password}) =>
-      _result(() async =>
-          (await _remote.register(email: email, password: password))
-              .toEntity());
+  Future<Result<User>> register({
+    required String email,
+    required String password,
+  }) => _result(
+    () async =>
+        (await _remote.register(email: email, password: password)).toEntity(),
+  );
   @override
-  Future<Result<User>> login(
-          {required String email, required String password}) =>
-      _result(
-          () => _saveSession(_remote.login(email: email, password: password)));
+  Future<Result<User>> login({
+    required String email,
+    required String password,
+  }) => _result(
+    () => _saveSession(_remote.login(email: email, password: password)),
+  );
   @override
-  Future<Result<User>> verifyEmail(
-          {required String email, required String code}) =>
-      _result(
-          () => _saveSession(_remote.verifyEmail(email: email, code: code)));
+  Future<Result<User>> verifyEmail({
+    required String email,
+    required String code,
+  }) => _result(
+    () => _saveSession(_remote.verifyEmail(email: email, code: code)),
+  );
   @override
   Future<Result<void>> resendVerificationCode(String email) =>
       _result(() => _remote.resendCode(email));
@@ -72,26 +80,27 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Result<void>> logout() => _result(() async {
-        final token = await _tokens.readRefreshToken();
-        if (token != null) {
-          try {
-            await _remote.logout(token);
-          } on DioException catch (error) {
-            // An already revoked session has the same safe local outcome.
-            if (!{401, 403}.contains(error.response?.statusCode)) rethrow;
-          }
-        }
-        await _tokens.clear();
-      });
+    final token = await _tokens.readRefreshToken();
+    if (token != null) {
+      try {
+        await _remote.logout(token);
+      } on DioException catch (error) {
+        // An already revoked session has the same safe local outcome.
+        if (!{401, 403}.contains(error.response?.statusCode)) rethrow;
+      }
+    }
+    await _tokens.clear();
+  });
 
   @override
   Future<Result<void>> requestPasswordReset(String email) =>
       _result(() => _remote.requestPasswordReset(email));
   @override
-  Future<Result<void>> resetPassword(
-          {required String token, required String newPassword}) =>
-      _result(() async {
-        await _remote.resetPassword(token: token, newPassword: newPassword);
-        await _tokens.clear();
-      });
+  Future<Result<void>> resetPassword({
+    required String token,
+    required String newPassword,
+  }) => _result(() async {
+    await _remote.resetPassword(token: token, newPassword: newPassword);
+    await _tokens.clear();
+  });
 }

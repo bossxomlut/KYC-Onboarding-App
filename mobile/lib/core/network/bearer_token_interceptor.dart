@@ -6,8 +6,13 @@ import 'api_failure.dart';
 /// The server verifies bearer credentials before running any mutation. Only
 /// that explicit authorization failure is replayed; timeouts are never retried.
 class BearerTokenInterceptor extends Interceptor {
-  BearerTokenInterceptor(this._dio, this._tokens,
-      {required this.refresh, required this.invalidate, this.sessionScope});
+  BearerTokenInterceptor(
+    this._dio,
+    this._tokens, {
+    required this.refresh,
+    required this.invalidate,
+    this.sessionScope,
+  });
   final Dio _dio;
   final TokenStore _tokens;
   final Future<void> Function() refresh;
@@ -66,7 +71,7 @@ class BearerTokenInterceptor extends Interceptor {
       final retry = request.copyWith(
         headers: {
           ...request.headers,
-          'Authorization': 'Bearer ${_tokens.accessToken}'
+          'Authorization': 'Bearer ${_tokens.accessToken}',
         },
         extra: {...request.extra, 'authRetried': true},
         data: request.data is FormData

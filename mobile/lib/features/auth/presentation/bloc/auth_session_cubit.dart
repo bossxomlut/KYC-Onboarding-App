@@ -47,7 +47,7 @@ final class AuthConnectionFailure extends AuthSessionState {
 /// routing and the authenticated KYC flow.
 class AuthSessionCubit extends Cubit<AuthSessionState> {
   AuthSessionCubit(this._restore, this._logout)
-      : super(const AuthInitializing());
+    : super(const AuthInitializing());
   final RestoreSession _restore;
   final Logout _logout;
   bool _restoring = false;

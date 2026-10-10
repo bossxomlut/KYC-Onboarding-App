@@ -2,18 +2,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 abstract interface class TokenStore {
   Future<String?> readRefreshToken();
-  Future<void> saveTokens(
-      {required String accessToken, required String refreshToken});
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  });
   Future<void> clear();
   String? get accessToken;
 }
 
 /// Rotation must not overwrite a later login or resurrect a cleared session.
 abstract interface class RotatingTokenStore implements TokenStore {
-  Future<bool> rotateTokens(
-      {required String expectedRefreshToken,
-      required String accessToken,
-      required String refreshToken});
+  Future<bool> rotateTokens({
+    required String expectedRefreshToken,
+    required String accessToken,
+    required String refreshToken,
+  });
 }
 
 final class SecureTokenStore implements RotatingTokenStore {
@@ -25,8 +28,10 @@ final class SecureTokenStore implements RotatingTokenStore {
 
   Future<T> _serialize<T>(Future<T> Function() action) {
     final next = _pending.then((_) => action());
-    _pending =
-        next.then<void>((_) {}, onError: (Object error, StackTrace stack) {});
+    _pending = next.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stack) {},
+    );
     return next;
   }
 
@@ -36,30 +41,31 @@ final class SecureTokenStore implements RotatingTokenStore {
   Future<String?> readRefreshToken() =>
       _serialize(() => _storage.read(key: _key));
   @override
-  Future<void> saveTokens(
-          {required String accessToken, required String refreshToken}) =>
-      _serialize(() async {
-        await _storage.write(key: _key, value: refreshToken);
-        _accessToken = accessToken;
-      });
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) => _serialize(() async {
+    await _storage.write(key: _key, value: refreshToken);
+    _accessToken = accessToken;
+  });
 
   @override
-  Future<bool> rotateTokens(
-          {required String expectedRefreshToken,
-          required String accessToken,
-          required String refreshToken}) =>
-      _serialize(() async {
-        if (await _storage.read(key: _key) != expectedRefreshToken) {
-          return false;
-        }
-        await _storage.write(key: _key, value: refreshToken);
-        _accessToken = accessToken;
-        return true;
-      });
+  Future<bool> rotateTokens({
+    required String expectedRefreshToken,
+    required String accessToken,
+    required String refreshToken,
+  }) => _serialize(() async {
+    if (await _storage.read(key: _key) != expectedRefreshToken) {
+      return false;
+    }
+    await _storage.write(key: _key, value: refreshToken);
+    _accessToken = accessToken;
+    return true;
+  });
 
   @override
   Future<void> clear() => _serialize(() async {
-        await _storage.delete(key: _key);
-        _accessToken = null;
-      });
+    await _storage.delete(key: _key);
+    _accessToken = null;
+  });
 }

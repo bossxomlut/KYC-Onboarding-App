@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import '../bloc/auth_form_state.dart';
 
 class AuthLayout extends StatelessWidget {
-  const AuthLayout(
-      {super.key,
-      required this.title,
-      required this.subtitle,
-      required this.children});
+  const AuthLayout({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.children,
+  });
   final String title;
   final String subtitle;
   final List<Widget> children;
@@ -30,20 +31,30 @@ class AuthLayout extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(20)),
-                      child: Icon(Icons.verified_user_outlined,
-                          size: 34, color: theme.colorScheme.primary),
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(
+                        Icons.verified_user_outlined,
+                        size: 34,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 28),
-                  Text(title,
-                      style: theme.textTheme.headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(
+                    title,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(subtitle,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant)),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 32),
                   ...children,
                 ],
@@ -72,15 +83,19 @@ class AuthFeedback extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
+            color: state.error != null
+                ? scheme.errorContainer
+                : scheme.primaryContainer,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            message,
+            style: TextStyle(
               color: state.error != null
-                  ? scheme.errorContainer
-                  : scheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12)),
-          child: Text(message,
-              style: TextStyle(
-                  color: state.error != null
-                      ? scheme.onErrorContainer
-                      : scheme.onPrimaryContainer)),
+                  ? scheme.onErrorContainer
+                  : scheme.onPrimaryContainer,
+            ),
+          ),
         ),
       ),
     );
@@ -88,25 +103,27 @@ class AuthFeedback extends StatelessWidget {
 }
 
 class AuthSubmitButton extends StatelessWidget {
-  const AuthSubmitButton(
-      {super.key,
-      required this.label,
-      required this.isLoading,
-      required this.onPressed});
+  const AuthSubmitButton({
+    super.key,
+    required this.label,
+    required this.isLoading,
+    required this.onPressed,
+  });
   final String label;
   final bool isLoading;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) => FilledButton(
-        onPressed: isLoading ? null : onPressed,
-        child: isLoading
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2))
-            : Text(label),
-      );
+    onPressed: isLoading ? null : onPressed,
+    child: isLoading
+        ? const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Text(label),
+  );
 }
 
 String? validateEmail(String? value) {

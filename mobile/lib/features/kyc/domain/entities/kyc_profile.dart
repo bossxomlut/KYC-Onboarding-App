@@ -55,7 +55,8 @@ class PersonalDetails {
       errors['fullName'] = 'Enter your full name (2–120 characters).';
     }
     final date = DateTime.tryParse(dateOfBirth);
-    final validDate = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateOfBirth) &&
+    final validDate =
+        RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(dateOfBirth) &&
         date != null &&
         date.toIso8601String().substring(0, 10) == dateOfBirth &&
         date.isBefore(DateTime(now.year, now.month, now.day)) &&

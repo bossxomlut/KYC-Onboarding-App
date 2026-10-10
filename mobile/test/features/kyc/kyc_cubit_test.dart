@@ -100,18 +100,19 @@ void main() {
   test(
     'adult-only validation rejects an underage applicant before remote save',
     () async {
-      final result = await SavePersonalDetails(
-        repository,
-        now: () => DateTime(2026, 10, 10),
-      )(
-        const PersonalDetails(
-          fullName: 'Demo User',
-          dateOfBirth: '2015-04-15',
-          nationality: 'Vietnamese',
-          address: 'Short',
-          documentNumber: 'ABC',
-        ),
-      );
+      final result =
+          await SavePersonalDetails(
+            repository,
+            now: () => DateTime(2026, 10, 10),
+          )(
+            const PersonalDetails(
+              fullName: 'Demo User',
+              dateOfBirth: '2015-04-15',
+              nationality: 'Vietnamese',
+              address: 'Short',
+              documentNumber: 'ABC',
+            ),
+          );
       expect(result, isA<Failure<KycProfile>>());
       expect(repository.saved, isFalse);
     },
@@ -138,8 +139,7 @@ void main() {
 KycProfile profile({
   KycStatus status = KycStatus.inProgress,
   KycStep step = KycStep.document,
-}) =>
-    KycProfile(id: 'profile-demo', status: status, nextStep: step);
+}) => KycProfile(id: 'profile-demo', status: status, nextStep: step);
 
 final captured = CapturedMedia(
   kind: MediaKind.document,
@@ -207,8 +207,7 @@ class FakeKycRepository implements KycRepository {
     MediaKind kind,
     String profileId, {
     String? confirmedCaptureId,
-  }) async =>
-      Success(kind == MediaKind.document ? recovered : null);
+  }) async => Success(kind == MediaKind.document ? recovered : null);
   @override
   Future<Result<Uint8List>> privateMedia(MediaKind kind) async =>
       Success(Uint8List(0));

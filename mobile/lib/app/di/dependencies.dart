@@ -33,11 +33,15 @@ import '../../features/kyc/presentation/bloc/kyc_cubit.dart';
 
 /// Composition root; a fresh container lets tests replace platform capture while
 /// still exercising the production HTTP repositories against the real API.
-GetIt configureDependencies(
-    {String? baseUrl, TokenStore? tokens, CameraDataSource? camera}) {
+GetIt configureDependencies({
+  String? baseUrl,
+  TokenStore? tokens,
+  CameraDataSource? camera,
+}) {
   final di = GetIt.asNewInstance();
   const configured = String.fromEnvironment('API_BASE_URL');
-  final url = baseUrl ??
+  final url =
+      baseUrl ??
       (configured.isNotEmpty
           ? configured
           : 'http://${Platform.isAndroid ? '10.0.2.2' : '127.0.0.1'}:3000/api/v1');
@@ -45,16 +49,24 @@ GetIt configureDependencies(
   if (uri.scheme != 'https' && !kDebugMode) {
     throw StateError('Release builds require an HTTPS API_BASE_URL.');
   }
-  final dio = Dio(BaseOptions(
+  final dio = Dio(
+    BaseOptions(
       baseUrl: url,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 60),
-      headers: {'Accept': 'application/json'}));
-  final store = tokens ??
-      SecureTokenStore(const FlutterSecureStorage(
+      headers: {'Accept': 'application/json'},
+    ),
+  );
+  final store =
+      tokens ??
+      SecureTokenStore(
+        const FlutterSecureStorage(
           iOptions: IOSOptions(
-              accessibility: KeychainAccessibility.unlocked_this_device)));
+            accessibility: KeychainAccessibility.unlocked_this_device,
+          ),
+        ),
+      );
   final api = ApiClient(dio);
   final remote = AuthRemoteDataSource(api);
   final refresher = SessionRefresher(remote, store);
@@ -65,17 +77,24 @@ GetIt configureDependencies(
   di.registerSingleton<AuthRepository>(auth);
   di.registerSingleton<SessionRefresher>(refresher);
   di.registerFactory(
-      () => AuthSessionCubit(RestoreSession(auth), Logout(auth)));
+    () => AuthSessionCubit(RestoreSession(auth), Logout(auth)),
+  );
   di.registerFactory(() => LoginCubit(Login(auth)));
   di.registerFactory(() => RegisterCubit(Register(auth)));
-  di.registerFactory(() =>
-      EmailVerificationCubit(VerifyEmail(auth), ResendVerificationCode(auth)));
-  di.registerFactory(() =>
-      PasswordResetCubit(RequestPasswordReset(auth), ResetPassword(auth)));
+  di.registerFactory(
+    () =>
+        EmailVerificationCubit(VerifyEmail(auth), ResendVerificationCode(auth)),
+  );
+  di.registerFactory(
+    () => PasswordResetCubit(RequestPasswordReset(auth), ResetPassword(auth)),
+  );
   final kyc = KycRepositoryImpl(
-      KycRemoteDataSource(api), camera ?? ImagePickerCameraDataSource());
+    KycRemoteDataSource(api),
+    camera ?? ImagePickerCameraDataSource(),
+  );
   di.registerSingleton<KycRepository>(kyc);
-  di.registerFactory(() => KycCubit(
+  di.registerFactory(
+    () => KycCubit(
       loadKyc: LoadKyc(kyc),
       savePersonalDetails: SavePersonalDetails(kyc),
       captureMedia: CaptureMedia(kyc),
@@ -84,20 +103,27 @@ GetIt configureDependencies(
       submitKyc: SubmitKyc(kyc),
       resubmitKyc: ResubmitKyc(kyc),
       recoverCapture: RecoverCapture(kyc),
-      discardLocalMedia: DiscardLocalMedia(kyc)));
+      discardLocalMedia: DiscardLocalMedia(kyc),
+    ),
+  );
   return di;
 }
 
 void connectSession(GetIt di, AuthSessionCubit session) {
-  di<Dio>()
-      .interceptors
-      .removeWhere((interceptor) => interceptor is BearerTokenInterceptor);
-  di<Dio>().interceptors.add(BearerTokenInterceptor(di<Dio>(), di<TokenStore>(),
+  di<Dio>().interceptors.removeWhere(
+    (interceptor) => interceptor is BearerTokenInterceptor,
+  );
+  di<Dio>().interceptors.add(
+    BearerTokenInterceptor(
+      di<Dio>(),
+      di<TokenStore>(),
       refresh: di<SessionRefresher>().refreshCredentials,
       invalidate: () async {
         final scope = session.sessionScope;
         await di<TokenStore>().clear();
         if (scope == session.sessionScope) await session.sessionInvalidated();
       },
-      sessionScope: () => session.sessionScope));
+      sessionScope: () => session.sessionScope,
+    ),
+  );
 }

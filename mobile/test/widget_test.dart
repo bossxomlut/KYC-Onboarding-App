@@ -10,15 +10,18 @@ class EmptyTokenStore implements TokenStore {
   @override
   Future<String?> readRefreshToken() async => null;
   @override
-  Future<void> saveTokens(
-      {required String accessToken, required String refreshToken}) async {}
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {}
   @override
   Future<void> clear() async {}
 }
 
 void main() {
-  testWidgets('signed-out startup composes login and registration routes',
-      (tester) async {
+  testWidgets('signed-out startup composes login and registration routes', (
+    tester,
+  ) async {
     final di = configureDependencies(tokens: EmptyTokenStore());
     await tester.pumpWidget(KycApp(dependencies: di));
     await tester.pumpAndSettle();
@@ -27,7 +30,9 @@ void main() {
     await tester.tap(find.text('New here? Create an account'));
     await tester.pumpAndSettle();
     expect(
-        find.widgetWithText(TextFormField, 'Confirm password'), findsOneWidget);
+      find.widgetWithText(TextFormField, 'Confirm password'),
+      findsOneWidget,
+    );
     await tester.pumpWidget(const SizedBox());
     await di.reset();
   });

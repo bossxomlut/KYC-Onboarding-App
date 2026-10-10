@@ -6,14 +6,15 @@ import '../../domain/entities/user.dart';
 enum AuthFormStatus { initial, loading, success, failure, verificationRequired }
 
 final class AuthFormState extends Equatable {
-  const AuthFormState(
-      {this.status = AuthFormStatus.initial,
-      this.user,
-      this.email,
-      this.error,
-      this.message,
-      this.resendSeconds = 0,
-      this.isResending = false});
+  const AuthFormState({
+    this.status = AuthFormStatus.initial,
+    this.user,
+    this.email,
+    this.error,
+    this.message,
+    this.resendSeconds = 0,
+    this.isResending = false,
+  });
   final AuthFormStatus status;
   final User? user;
   final String? email;
@@ -23,6 +24,13 @@ final class AuthFormState extends Equatable {
   final bool isResending;
   bool get isLoading => status == AuthFormStatus.loading;
   @override
-  List<Object?> get props =>
-      [status, user, email, error, message, resendSeconds, isResending];
+  List<Object?> get props => [
+    status,
+    user,
+    email,
+    error,
+    message,
+    resendSeconds,
+    isResending,
+  ];
 }

@@ -60,115 +60,142 @@ class _KycAppState extends State<KycApp> {
       },
       routes: [
         GoRoute(
-            path: '/session',
-            builder: (context, state) => const _SessionPage()),
+          path: '/session',
+          builder: (context, state) => const _SessionPage(),
+        ),
         GoRoute(
-            path: '/login',
-            builder: (context, state) => BlocProvider(
-                create: (_) => di<LoginCubit>(),
-                child: LoginPage(
-                    onSignedIn: _session.signedIn,
-                    onVerificationRequired: _session.verificationRequired))),
+          path: '/login',
+          builder: (context, state) => BlocProvider(
+            create: (_) => di<LoginCubit>(),
+            child: LoginPage(
+              onSignedIn: _session.signedIn,
+              onVerificationRequired: _session.verificationRequired,
+            ),
+          ),
+        ),
         GoRoute(
-            path: '/register',
-            builder: (context, state) => BlocProvider(
-                create: (_) => di<RegisterCubit>(),
-                child: RegisterPage(
-                    onVerificationRequired: _session.verificationRequired))),
+          path: '/register',
+          builder: (context, state) => BlocProvider(
+            create: (_) => di<RegisterCubit>(),
+            child: RegisterPage(
+              onVerificationRequired: _session.verificationRequired,
+            ),
+          ),
+        ),
         GoRoute(
-            path: '/verify-email',
-            builder: (context, state) {
-              final auth = _session.state;
-              final email = auth is AuthEmailVerificationRequired
-                  ? auth.email
-                  : state.uri.queryParameters['email'] ?? '';
-              return BlocProvider(
-                  create: (_) => di<EmailVerificationCubit>(),
-                  child: VerifyEmailPage(
-                      email: email,
-                      onSignedIn: _session.signedIn,
-                      onChangeEmail: () {
-                        _session.cancelVerification();
-                        context.go('/register');
-                      }));
-            }),
+          path: '/verify-email',
+          builder: (context, state) {
+            final auth = _session.state;
+            final email = auth is AuthEmailVerificationRequired
+                ? auth.email
+                : state.uri.queryParameters['email'] ?? '';
+            return BlocProvider(
+              create: (_) => di<EmailVerificationCubit>(),
+              child: VerifyEmailPage(
+                email: email,
+                onSignedIn: _session.signedIn,
+                onChangeEmail: () {
+                  _session.cancelVerification();
+                  context.go('/register');
+                },
+              ),
+            );
+          },
+        ),
         GoRoute(
-            path: '/forgot-password',
-            builder: (context, state) => BlocProvider(
-                create: (_) => di<PasswordResetCubit>(),
-                child: const ForgotPasswordPage())),
+          path: '/forgot-password',
+          builder: (context, state) => BlocProvider(
+            create: (_) => di<PasswordResetCubit>(),
+            child: const ForgotPasswordPage(),
+          ),
+        ),
         GoRoute(
-            path: '/reset-password',
-            builder: (context, state) => BlocProvider(
-                create: (_) => di<PasswordResetCubit>(),
-                child: BlocListener<PasswordResetCubit, AuthFormState>(
-                    listenWhen: (previous, current) =>
-                        previous.status != current.status,
-                    listener: (context, form) {
-                      if (form.status == AuthFormStatus.success) {
-                        unawaited(_session.sessionInvalidated());
-                      }
-                    },
-                    child: ResetPasswordPage(
-                        token: state.uri.queryParameters['token'] ?? '')))),
+          path: '/reset-password',
+          builder: (context, state) => BlocProvider(
+            create: (_) => di<PasswordResetCubit>(),
+            child: BlocListener<PasswordResetCubit, AuthFormState>(
+              listenWhen: (previous, current) =>
+                  previous.status != current.status,
+              listener: (context, form) {
+                if (form.status == AuthFormStatus.success) {
+                  unawaited(_session.sessionInvalidated());
+                }
+              },
+              child: ResetPasswordPage(
+                token: state.uri.queryParameters['token'] ?? '',
+              ),
+            ),
+          ),
+        ),
         ShellRoute(
-            builder: (context, state, child) {
-              final auth = _session.state;
-              if (auth is! AuthAuthenticated) return const _SessionPage();
-              return BlocProvider(
-                key: ValueKey(auth.user.id),
-                create: (_) => di<KycCubit>()..load(),
-                child: _KycFlowGuard(location: state.uri.path, child: child),
-              );
-            },
-            routes: [
-              GoRoute(
-                  path: '/',
-                  builder: (context, state) {
-                    final user = (_session.state as AuthAuthenticated).user;
-                    return HomePage(
-                        email: user.email,
-                        onLogout: () async {
-                          final flow = context.read<KycCubit>();
-                          await _session.signOut();
-                          if (_session.state is AuthSignedOut) {
-                            await flow.discardLocalMedia();
-                          }
-                          if (context.mounted) {
-                            final auth = _session.state;
-                            if (auth is AuthAuthenticated &&
-                                auth.error != null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(auth.error!.message)));
-                            }
-                          }
-                        });
-                  }),
-              GoRoute(
-                  path: '/kyc/details',
-                  builder: (context, state) => const PersonalDetailsPage()),
-              GoRoute(
-                  path: '/kyc/document',
-                  builder: (context, state) =>
-                      const CapturePage(kind: MediaKind.document)),
-              GoRoute(
-                  path: '/kyc/selfie',
-                  builder: (context, state) =>
-                      const CapturePage(kind: MediaKind.selfie)),
-              GoRoute(
-                  path: '/kyc/review',
-                  builder: (context, state) => const ReviewPage()),
-              GoRoute(
-                  path: '/kyc/status',
-                  builder: (context, state) => const VerificationPage()),
-            ]),
+          builder: (context, state, child) {
+            final auth = _session.state;
+            if (auth is! AuthAuthenticated) return const _SessionPage();
+            return BlocProvider(
+              key: ValueKey(auth.user.id),
+              create: (_) => di<KycCubit>()..load(),
+              child: _KycFlowGuard(location: state.uri.path, child: child),
+            );
+          },
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) {
+                final user = (_session.state as AuthAuthenticated).user;
+                return HomePage(
+                  email: user.email,
+                  onLogout: () async {
+                    final flow = context.read<KycCubit>();
+                    await _session.signOut();
+                    if (_session.state is AuthSignedOut) {
+                      await flow.discardLocalMedia();
+                    }
+                    if (context.mounted) {
+                      final auth = _session.state;
+                      if (auth is AuthAuthenticated && auth.error != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(auth.error!.message)),
+                        );
+                      }
+                    }
+                  },
+                );
+              },
+            ),
+            GoRoute(
+              path: '/kyc/details',
+              builder: (context, state) => const PersonalDetailsPage(),
+            ),
+            GoRoute(
+              path: '/kyc/document',
+              builder: (context, state) =>
+                  const CapturePage(kind: MediaKind.document),
+            ),
+            GoRoute(
+              path: '/kyc/selfie',
+              builder: (context, state) =>
+                  const CapturePage(kind: MediaKind.selfie),
+            ),
+            GoRoute(
+              path: '/kyc/review',
+              builder: (context, state) => const ReviewPage(),
+            ),
+            GoRoute(
+              path: '/kyc/status',
+              builder: (context, state) => const VerificationPage(),
+            ),
+          ],
+        ),
       ],
       errorBuilder: (context, state) => Scaffold(
-          appBar: AppBar(title: const Text('Page unavailable')),
-          body: Center(
-              child: FilledButton(
-                  onPressed: () => context.go('/'),
-                  child: const Text('Go home')))),
+        appBar: AppBar(title: const Text('Page unavailable')),
+        body: Center(
+          child: FilledButton(
+            onPressed: () => context.go('/'),
+            child: const Text('Go home'),
+          ),
+        ),
+      ),
     );
     unawaited(_session.restore());
   }
@@ -183,12 +210,14 @@ class _KycAppState extends State<KycApp> {
 
   @override
   Widget build(BuildContext context) => BlocProvider.value(
-      value: _session,
-      child: MaterialApp.router(
-          title: 'Identity',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          routerConfig: _router));
+    value: _session,
+    child: MaterialApp.router(
+      title: 'Identity',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      routerConfig: _router,
+    ),
+  );
 }
 
 class _RouterRefresh extends ChangeNotifier {
@@ -207,28 +236,39 @@ class _SessionPage extends StatelessWidget {
   const _SessionPage();
   @override
   Widget build(BuildContext context) => Scaffold(
-      body: SafeArea(
-          child: Center(
-              child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: BlocBuilder<AuthSessionCubit, AuthSessionState>(
-                      builder: (context, state) {
-                    if (state is! AuthConnectionFailure) {
-                      return const CircularProgressIndicator();
-                    }
-                    return Column(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.cloud_off_outlined, size: 56),
-                      const SizedBox(height: 20),
-                      Text('Let’s reconnect',
-                          style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 12),
-                      Text(state.error.message, textAlign: TextAlign.center),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                          onPressed: context.read<AuthSessionCubit>().restore,
-                          child: const Text('Retry connection'))
-                    ]);
-                  })))));
+    body: SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: BlocBuilder<AuthSessionCubit, AuthSessionState>(
+            builder: (context, state) {
+              if (state is! AuthConnectionFailure) {
+                return const CircularProgressIndicator();
+              }
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off_outlined, size: 56),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Let’s reconnect',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(state.error.message, textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: context.read<AuthSessionCubit>().restore,
+                    child: const Text('Retry connection'),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Authenticated-flow owner. Its provider closes the Cubit when auth changes.
@@ -262,53 +302,61 @@ class _KycFlowGuardState extends State<_KycFlowGuard>
   }
 
   String? _redirect(KycProfile profile) => RoutePolicy.redirect(
-      access: SessionAccess.authenticated,
-      location: widget.location,
-      kycStatus: switch (profile.status) {
-        KycStatus.notStarted => 'not_started',
-        KycStatus.inProgress => 'in_progress',
-        KycStatus.pendingReview => 'pending_review',
-        KycStatus.verified => 'verified',
-        KycStatus.rejected => 'rejected',
-      },
-      nextStep: switch (profile.nextStep) {
-        KycStep.personalDetails => 'personal_details',
-        KycStep.document => 'document',
-        KycStep.selfie => 'selfie',
-        KycStep.review => 'review',
-        KycStep.result => 'result',
-      });
+    access: SessionAccess.authenticated,
+    location: widget.location,
+    kycStatus: switch (profile.status) {
+      KycStatus.notStarted => 'not_started',
+      KycStatus.inProgress => 'in_progress',
+      KycStatus.pendingReview => 'pending_review',
+      KycStatus.verified => 'verified',
+      KycStatus.rejected => 'rejected',
+    },
+    nextStep: switch (profile.nextStep) {
+      KycStep.personalDetails => 'personal_details',
+      KycStep.document => 'document',
+      KycStep.selfie => 'selfie',
+      KycStep.review => 'review',
+      KycStep.result => 'result',
+    },
+  );
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<KycCubit, KycState>(builder: (context, state) {
-        if (state.profile == null) {
-          return Scaffold(
-              body: SafeArea(
-                  child: Center(
-                      child: state.error == null
-                          ? const CircularProgressIndicator()
-                          : Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(state.error!.message,
-                                        textAlign: TextAlign.center),
-                                    const SizedBox(height: 20),
-                                    FilledButton(
-                                        onPressed:
-                                            context.read<KycCubit>().load,
-                                        child: const Text('Retry'))
-                                  ])))));
-        }
-        final redirect = _redirect(state.profile!);
-        if (redirect != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) context.go(redirect);
-          });
-          return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
-        }
-        return widget.child;
-      });
+  Widget build(BuildContext context) => BlocBuilder<KycCubit, KycState>(
+    builder: (context, state) {
+      if (state.profile == null) {
+        return Scaffold(
+          body: SafeArea(
+            child: Center(
+              child: state.error == null
+                  ? const CircularProgressIndicator()
+                  : Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            state.error!.message,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+                          FilledButton(
+                            onPressed: context.read<KycCubit>().load,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+        );
+      }
+      final redirect = _redirect(state.profile!);
+      if (redirect != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) context.go(redirect);
+        });
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
+      return widget.child;
+    },
+  );
 }

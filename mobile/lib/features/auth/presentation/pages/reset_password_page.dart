@@ -28,75 +28,82 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
-      context
-          .read<PasswordResetCubit>()
-          .reset(token: _token.text, newPassword: _password.text);
+      context.read<PasswordResetCubit>().reset(
+        token: _token.text,
+        newPassword: _password.text,
+      );
     }
   }
 
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<PasswordResetCubit, AuthFormState>(
-        builder: (context, state) => AuthLayout(
-            title: 'Choose a new password',
-            subtitle:
-                'Paste the token from your reset email and set a new password.',
-            children: [
-              AuthFeedback(state: state),
-              if (state.status != AuthFormStatus.success) ...[
-                Form(
-                    key: _formKey,
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextFormField(
-                              controller: _token,
-                              enabled: !state.isLoading,
-                              obscureText: true,
-                              autocorrect: false,
-                              enableSuggestions: false,
-                              textInputAction: TextInputAction.next,
-                              validator: (value) =>
-                                  value == null || value.trim().isEmpty
-                                      ? 'Enter the reset token from your email.'
-                                      : null,
-                              decoration: const InputDecoration(
-                                  labelText: 'Reset token')),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                              controller: _password,
-                              enabled: !state.isLoading,
-                              obscureText: true,
-                              textInputAction: TextInputAction.next,
-                              validator: validateNewPassword,
-                              autofillHints: const [AutofillHints.newPassword],
-                              decoration: const InputDecoration(
-                                  labelText: 'New password',
-                                  helperText:
-                                      '12–128 characters, uppercase, lowercase and a number')),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                              controller: _confirm,
-                              enabled: !state.isLoading,
-                              obscureText: true,
-                              onFieldSubmitted: (_) => _submit(),
-                              validator: (value) => value != _password.text
-                                  ? 'Passwords must match.'
-                                  : null,
-                              decoration: const InputDecoration(
-                                  labelText: 'Confirm new password')),
-                          const SizedBox(height: 24),
-                          AuthSubmitButton(
-                              label: 'Change password',
-                              isLoading: state.isLoading,
-                              onPressed: _submit),
-                        ])),
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<PasswordResetCubit, AuthFormState>(
+    builder: (context, state) => AuthLayout(
+      title: 'Choose a new password',
+      subtitle: 'Paste the token from your reset email and set a new password.',
+      children: [
+        AuthFeedback(state: state),
+        if (state.status != AuthFormStatus.success) ...[
+          Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  controller: _token,
+                  enabled: !state.isLoading,
+                  obscureText: true,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  textInputAction: TextInputAction.next,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Enter the reset token from your email.'
+                      : null,
+                  decoration: const InputDecoration(labelText: 'Reset token'),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _password,
+                  enabled: !state.isLoading,
+                  obscureText: true,
+                  textInputAction: TextInputAction.next,
+                  validator: validateNewPassword,
+                  autofillHints: const [AutofillHints.newPassword],
+                  decoration: const InputDecoration(
+                    labelText: 'New password',
+                    helperText:
+                        '12–128 characters, uppercase, lowercase and a number',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _confirm,
+                  enabled: !state.isLoading,
+                  obscureText: true,
+                  onFieldSubmitted: (_) => _submit(),
+                  validator: (value) =>
+                      value != _password.text ? 'Passwords must match.' : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirm new password',
+                  ),
+                ),
+                const SizedBox(height: 24),
+                AuthSubmitButton(
+                  label: 'Change password',
+                  isLoading: state.isLoading,
+                  onPressed: _submit,
+                ),
               ],
-              const SizedBox(height: 20),
-              TextButton(
-                  onPressed:
-                      state.isLoading ? null : () => context.go('/login'),
-                  child: const Text('Back to sign in')),
-            ]),
-      );
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
+        TextButton(
+          onPressed: state.isLoading ? null : () => context.go('/login'),
+          child: const Text('Back to sign in'),
+        ),
+      ],
+    ),
+  );
 }

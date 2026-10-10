@@ -11,7 +11,7 @@ class LoadKyc {
 
 class SavePersonalDetails {
   SavePersonalDetails(this.repository, {DateTime Function()? now})
-      : _now = now ?? DateTime.now;
+    : _now = now ?? DateTime.now;
   final KycRepository repository;
   final DateTime Function() _now;
   Future<Result<KycProfile>> call(PersonalDetails details) {
@@ -32,8 +32,7 @@ class CaptureMedia {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-  }) =>
-      repository.capture(kind, profileId, documentType: documentType);
+  }) => repository.capture(kind, profileId, documentType: documentType);
 }
 
 class RecoverCapture {
@@ -43,12 +42,11 @@ class RecoverCapture {
     MediaKind kind,
     String profileId, {
     String? confirmedCaptureId,
-  }) =>
-      repository.recover(
-        kind,
-        profileId,
-        confirmedCaptureId: confirmedCaptureId,
-      );
+  }) => repository.recover(
+    kind,
+    profileId,
+    confirmedCaptureId: confirmedCaptureId,
+  );
 }
 
 class UploadMedia {
@@ -57,8 +55,7 @@ class UploadMedia {
   Future<Result<KycProfile>> call(
     CapturedMedia media, {
     void Function(int, int)? onProgress,
-  }) =>
-      repository.upload(media, onProgress: onProgress);
+  }) => repository.upload(media, onProgress: onProgress);
 }
 
 class LoadPrivateMedia {

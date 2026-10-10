@@ -13,18 +13,18 @@ class PersonalDetailsFormState extends Equatable {
 /// Page-scoped form draft; backend progress remains owned by the KYC flow.
 class PersonalDetailsFormCubit extends Cubit<PersonalDetailsFormState> {
   PersonalDetailsFormCubit(PersonalDetails? initial)
-      : super(
-          PersonalDetailsFormState(
-            initial ??
-                const PersonalDetails(
-                  fullName: '',
-                  dateOfBirth: '',
-                  nationality: '',
-                  address: '',
-                  documentNumber: '',
-                ),
-          ),
-        );
+    : super(
+        PersonalDetailsFormState(
+          initial ??
+              const PersonalDetails(
+                fullName: '',
+                dateOfBirth: '',
+                nationality: '',
+                address: '',
+                documentNumber: '',
+              ),
+        ),
+      );
   void update(String field, String value) {
     final d = state.details;
     emit(

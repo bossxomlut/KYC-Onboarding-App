@@ -15,17 +15,24 @@ class RegisterCubit extends Cubit<AuthFormState> {
     if (isClosed) return;
     switch (result) {
       case Success<User>(:final value):
-        emit(AuthFormState(
-            status: AuthFormStatus.verificationRequired, email: value.email));
+        emit(
+          AuthFormState(
+            status: AuthFormStatus.verificationRequired,
+            email: value.email,
+          ),
+        );
       case Failure<User>(:final error):
         // Registration survives delivery failure on the server; resend is
         // available on the verification screen.
-        emit(AuthFormState(
+        emit(
+          AuthFormState(
             status: error.code == 'EMAIL_DELIVERY_FAILED'
                 ? AuthFormStatus.verificationRequired
                 : AuthFormStatus.failure,
             email: email.trim().toLowerCase(),
-            error: error));
+            error: error,
+          ),
+        );
     }
   }
 }

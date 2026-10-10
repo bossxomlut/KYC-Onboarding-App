@@ -7,5 +7,7 @@ final class VerifyEmail {
   final AuthRepository _repository;
   Future<Result<User>> call({required String email, required String code}) =>
       _repository.verifyEmail(
-          email: email.trim().toLowerCase(), code: code.trim());
+        email: email.trim().toLowerCase(),
+        code: code.trim(),
+      );
 }

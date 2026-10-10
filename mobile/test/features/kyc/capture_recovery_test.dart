@@ -64,8 +64,7 @@ class RecoveryCamera implements CameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-  }) async =>
-      null;
+  }) async => null;
   @override
   Future<void> remove(CapturedMedia media) async {
     removed = true;

@@ -31,36 +31,41 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   Widget build(BuildContext context) =>
       BlocBuilder<PasswordResetCubit, AuthFormState>(
         builder: (context, state) => AuthLayout(
-            title: 'Reset your password',
-            subtitle: 'We will email instructions to help you regain access.',
-            children: [
-              AuthFeedback(state: state),
-              if (state.status != AuthFormStatus.success) ...[
-                Form(
-                    key: _formKey,
-                    child: TextFormField(
-                        controller: _email,
-                        enabled: !state.isLoading,
-                        validator: validateEmail,
-                        keyboardType: TextInputType.emailAddress,
-                        onFieldSubmitted: (_) => _submit(),
-                        decoration: const InputDecoration(labelText: 'Email'))),
-                const SizedBox(height: 24),
-                AuthSubmitButton(
-                    label: 'Send reset instructions',
-                    isLoading: state.isLoading,
-                    onPressed: _submit),
-              ],
-              const SizedBox(height: 12),
-              TextButton(
-                  onPressed: state.isLoading
-                      ? null
-                      : () => context.go('/reset-password'),
-                  child: const Text('I have a reset token')),
-              TextButton(
-                  onPressed:
-                      state.isLoading ? null : () => context.go('/login'),
-                  child: const Text('Back to sign in')),
-            ]),
+          title: 'Reset your password',
+          subtitle: 'We will email instructions to help you regain access.',
+          children: [
+            AuthFeedback(state: state),
+            if (state.status != AuthFormStatus.success) ...[
+              Form(
+                key: _formKey,
+                child: TextFormField(
+                  controller: _email,
+                  enabled: !state.isLoading,
+                  validator: validateEmail,
+                  keyboardType: TextInputType.emailAddress,
+                  onFieldSubmitted: (_) => _submit(),
+                  decoration: const InputDecoration(labelText: 'Email'),
+                ),
+              ),
+              const SizedBox(height: 24),
+              AuthSubmitButton(
+                label: 'Send reset instructions',
+                isLoading: state.isLoading,
+                onPressed: _submit,
+              ),
+            ],
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: state.isLoading
+                  ? null
+                  : () => context.go('/reset-password'),
+              child: const Text('I have a reset token'),
+            ),
+            TextButton(
+              onPressed: state.isLoading ? null : () => context.go('/login'),
+              child: const Text('Back to sign in'),
+            ),
+          ],
+        ),
       );
 }

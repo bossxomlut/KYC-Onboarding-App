@@ -4,7 +4,7 @@ enum SessionAccess {
   signedOut,
   verifyEmail,
   authenticated,
-  connectionFailure
+  connectionFailure,
 }
 
 abstract final class RoutePolicy {
@@ -12,23 +12,24 @@ abstract final class RoutePolicy {
     '/login',
     '/register',
     '/forgot-password',
-    '/reset-password'
+    '/reset-password',
   };
   static const _steps = ['personal_details', 'document', 'selfie', 'review'];
 
   static String routeForStep(String step) => switch (step) {
-        'personal_details' => '/kyc/details',
-        'document' => '/kyc/document',
-        'selfie' => '/kyc/selfie',
-        'review' => '/kyc/review',
-        _ => '/kyc/status',
-      };
+    'personal_details' => '/kyc/details',
+    'document' => '/kyc/document',
+    'selfie' => '/kyc/selfie',
+    'review' => '/kyc/review',
+    _ => '/kyc/status',
+  };
 
-  static String? redirect(
-      {required SessionAccess access,
-      required String location,
-      String? kycStatus,
-      String? nextStep}) {
+  static String? redirect({
+    required SessionAccess access,
+    required String location,
+    String? kycStatus,
+    String? nextStep,
+  }) {
     switch (access) {
       case SessionAccess.initializing:
         if (location == '/reset-password') return null;
@@ -53,8 +54,9 @@ abstract final class RoutePolicy {
         return '/kyc/status';
       }
       if (nextStep != null) {
-        final requested =
-            _steps.indexWhere((step) => routeForStep(step) == location);
+        final requested = _steps.indexWhere(
+          (step) => routeForStep(step) == location,
+        );
         final available = _steps.indexOf(nextStep);
         if (available >= 0 && requested > available) {
           return routeForStep(nextStep);

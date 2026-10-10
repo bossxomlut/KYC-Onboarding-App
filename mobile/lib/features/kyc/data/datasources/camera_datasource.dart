@@ -29,9 +29,9 @@ class ImagePickerCameraDataSource implements CameraDataSource {
     ImagePicker? picker,
     Future<Directory> Function()? directory,
     bool? isAndroid,
-  })  : _picker = picker ?? ImagePicker(),
-        _directory = directory ?? getTemporaryDirectory,
-        _isAndroid = isAndroid ?? Platform.isAndroid;
+  }) : _picker = picker ?? ImagePicker(),
+       _directory = directory ?? getTemporaryDirectory,
+       _isAndroid = isAndroid ?? Platform.isAndroid;
   final ImagePicker _picker;
   final Future<Directory> Function() _directory;
   final bool _isAndroid;
@@ -73,8 +73,9 @@ class ImagePickerCameraDataSource implements CameraDataSource {
     try {
       final file = await _picker.pickImage(
         source: ImageSource.camera,
-        preferredCameraDevice:
-            kind == MediaKind.selfie ? CameraDevice.front : CameraDevice.rear,
+        preferredCameraDevice: kind == MediaKind.selfie
+            ? CameraDevice.front
+            : CameraDevice.rear,
         maxWidth: 1800,
         maxHeight: 1800,
         imageQuality: 85,
@@ -122,8 +123,9 @@ class ImagePickerCameraDataSource implements CameraDataSource {
         await file.delete();
       }
     }
-    final extension =
-        source.path.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+    final extension = source.path.toLowerCase().endsWith('.png')
+        ? 'png'
+        : 'jpg';
     final file = File(
       '${directory.path}/${kind.name}_${documentType?.apiValue ?? 'photo'}_$captureId.$extension',
     );
