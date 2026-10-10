@@ -1,0 +1,14 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+node_modules/
+coverage/
+dist/
+*.log
+backend/storage/
+backend/.postgres/
+.tmp/
+tmp/
+.dart_tool/
+build/
