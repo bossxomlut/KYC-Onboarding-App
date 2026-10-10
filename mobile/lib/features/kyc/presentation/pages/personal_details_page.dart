@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/current_route.dart';
 import '../bloc/kyc_cubit.dart';
 import '../bloc/personal_details_form_cubit.dart';
 import '../widgets/date_of_birth_field.dart';
@@ -102,7 +103,9 @@ class _PersonalDetailsForm extends StatelessWidget {
                             final success = await cubit.saveDetails(
                               formCubit.state.details,
                             );
-                            if (success && context.mounted) {
+                            if (success &&
+                                context.mounted &&
+                                isCurrentRoute(context)) {
                               context.go(
                                 cubit.state.profile!.nextStep.routePath,
                               );

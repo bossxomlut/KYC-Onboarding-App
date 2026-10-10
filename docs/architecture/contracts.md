@@ -21,6 +21,8 @@ AuthSessionCubit is app-scoped; KycCubit is authenticated applicant-flow scoped 
 
 Document/selfie capture uploads automatically but stays on the capture page with an in-memory photo preview. Only the user's Continue action navigates to the server-derived `nextStep`; it requires an editable profile, confirmed uploaded media, no pending replacement for that kind, no operation in progress, and a next step beyond the current page. A successful upload retry also stays on the current page. Retaking remains available before continuing.
 
+System Back from authenticated KYC, account-access, admin and reviewer pages returns Home, including KYC loading/error screens. Open dialogs and bottom sheets consume Back first; Home lets the operating system handle Back. The shell always keeps its Navigator mounted and owns the KYC Cubit; page guards handle profile availability and redirects inside each route. Async page actions navigate on completion only while their original route is still current, so completing a save/submission/review after Back does not leave Home.
+
 ## Access and reviewer APIs
 
 Public registration accepts only email/password and always creates `user`. One operator-only bootstrap creates the initial `super_admin`; management APIs permit only `user`/`reviewer` assignments and protect the owner. See [admin guide](../admin-access.md).

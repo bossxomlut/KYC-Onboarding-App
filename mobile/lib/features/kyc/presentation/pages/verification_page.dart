@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/current_route.dart';
 import '../../domain/entities/kyc_profile.dart';
 import '../bloc/kyc_cubit.dart';
 import '../widgets/kyc_scaffold.dart';
@@ -127,7 +128,9 @@ class _VerificationPageState extends State<VerificationPage>
                     : () async {
                         final cubit = context.read<KycCubit>();
                         final success = await cubit.resubmit();
-                        if (success && context.mounted) {
+                        if (success &&
+                            context.mounted &&
+                            isCurrentRoute(context)) {
                           context.go(cubit.state.profile!.nextStep.routePath);
                         }
                       },

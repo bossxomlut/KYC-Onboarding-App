@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/current_route.dart';
 import '../../../kyc/domain/entities/kyc_profile.dart';
 import '../../domain/entities/access_entities.dart';
 import '../bloc/access_cubit.dart';
@@ -150,7 +151,9 @@ class ReviewerDetailPage extends StatelessWidget {
       ReviewDecision.verified,
       actorId: actorId,
     );
-    if (saved && context.mounted) context.go('/reviews');
+    if (saved && context.mounted && isCurrentRoute(context)) {
+      context.go('/reviews');
+    }
   }
 
   Future<void> _reject(BuildContext context) async {
@@ -166,7 +169,9 @@ class ReviewerDetailPage extends StatelessWidget {
       reason: result.reason,
       requiredSteps: result.steps,
     );
-    if (saved && context.mounted) context.go('/reviews');
+    if (saved && context.mounted && isCurrentRoute(context)) {
+      context.go('/reviews');
+    }
   }
 }
 

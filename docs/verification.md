@@ -111,3 +111,18 @@ Verified on 10 October 2026. Document and selfie uploads now keep the user on th
 | Bundled Dart format check on the six affected Dart files; `git diff --check` | Passed |
 
 Nine new widget cases cover both media kinds, explicit continuation after success, disabled controls before/during upload, photo preview, capture cancellation, failed replacement/retry, canceled retakes and returning from an edited document to the server-selected review step. The full KYC widget flow still submits successfully after document retry and selfie continuation. The real-API integration source now taps Continue for document, selfie and rejected-selfie resubmission. Device integration, native camera checks, platform builds and the demo recording were not rerun for this update.
+
+## Device Back navigation
+
+Verified on 10 October 2026. System Back from authenticated feature pages now returns Home. Dialogs and bottom sheets close before leaving their page, and Home still delegates Back to the operating system. KYC loading/error screens retain the shell Navigator, and returning Home preserves the flow Cubit. Saves, submissions, resubmissions and reviewer decisions completing immediately after Back no longer navigate away from Home.
+
+| Check | Actual result |
+| --- | --- |
+| `flutter test --no-pub test/app/system_back_test.dart test/app/predictive_back_test.dart --reporter expanded` | 20/20 passed; original system-Back failure and post-Back submission navigation observed failing before their fixes |
+| `flutter test test/app/back_pending_operations_test.dart` | 3/3 passed for saving details, resubmission and reviewer approval finishing immediately after Back |
+| `flutter test --no-pub --reporter expanded` | 146/146 passed, including architecture boundaries and existing KYC flows |
+| `flutter analyze --no-pub` | No issues found |
+| Bundled Dart format check on ten affected Dart files; `git diff --check` | Passed |
+| `flutter build apk --debug --no-pub --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1` | Passed; `mobile/build/app/outputs/flutter-apk/app-debug.apk` |
+
+The new tests exercise the production app/router with synthetic HTTP/platform substitutes. They cover all nine feature routes, modal dismissal, Home system exit, profile loading/failure, KYC provider lifetime and completion races before the previous page is disposed. Android navigation-channel tests verify that Flutter advertises Back handling across KYC steps and after modal dismissal, then releases it at Home. Physical-device/emulator Back button presses, real-API device integration, iOS builds and the recording were not rerun for this update.

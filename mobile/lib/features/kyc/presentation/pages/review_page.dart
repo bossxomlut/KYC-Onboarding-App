@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/current_route.dart';
 import '../bloc/kyc_cubit.dart';
 import '../widgets/kyc_profile_summary.dart';
 import '../widgets/kyc_scaffold.dart';
@@ -56,7 +57,9 @@ class _ReviewPageState extends State<ReviewPage> {
                   : () async {
                       final cubit = context.read<KycCubit>();
                       final success = await cubit.submit();
-                      if (success && context.mounted) {
+                      if (success &&
+                          context.mounted &&
+                          isCurrentRoute(context)) {
                         context.go('/kyc/status');
                       }
                     },

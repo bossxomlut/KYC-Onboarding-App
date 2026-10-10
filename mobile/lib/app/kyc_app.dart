@@ -31,6 +31,7 @@ import '../features/kyc/presentation/pages/capture_page.dart';
 import '../features/kyc/presentation/pages/review_page.dart';
 import '../features/kyc/presentation/pages/verification_page.dart';
 import 'di/dependencies.dart';
+import 'router/back_to_home_scope.dart';
 import 'router/route_policy.dart';
 
 class KycApp extends StatefulWidget {
@@ -141,27 +142,33 @@ class _KycAppState extends State<KycApp> {
         ),
         GoRoute(
           path: '/access',
-          builder: (context, state) => BlocProvider(
-            create: (_) => di<AccessCubit>()..loadAccess(),
-            child: AccessPage(
-              user: (_session.state as AuthAuthenticated).user,
-              onUserUpdated: _session.updateUser,
+          builder: (context, state) => BackToHomeScope(
+            child: BlocProvider(
+              create: (_) => di<AccessCubit>()..loadAccess(),
+              child: AccessPage(
+                user: (_session.state as AuthAuthenticated).user,
+                onUserUpdated: _session.updateUser,
+              ),
             ),
           ),
         ),
         GoRoute(
           path: '/admin',
-          builder: (context, state) => BlocProvider(
-            create: (_) => di<AccessCubit>()..loadAdmin(),
-            child: const AdminPage(),
+          builder: (context, state) => BackToHomeScope(
+            child: BlocProvider(
+              create: (_) => di<AccessCubit>()..loadAdmin(),
+              child: const AdminPage(),
+            ),
           ),
         ),
         GoRoute(
           path: '/reviews',
-          builder: (context, state) => BlocProvider(
-            create: (_) => di<AccessCubit>()..loadQueue(),
-            child: ReviewerQueuePage(
-              actorId: (_session.state as AuthAuthenticated).user.id,
+          builder: (context, state) => BackToHomeScope(
+            child: BlocProvider(
+              create: (_) => di<AccessCubit>()..loadQueue(),
+              child: ReviewerQueuePage(
+                actorId: (_session.state as AuthAuthenticated).user.id,
+              ),
             ),
           ),
         ),
@@ -169,11 +176,13 @@ class _KycAppState extends State<KycApp> {
           path: '/reviews/:userId',
           builder: (context, state) {
             final userId = state.pathParameters['userId']!;
-            return BlocProvider(
-              create: (_) => di<AccessCubit>()..loadDetail(userId),
-              child: ReviewerDetailPage(
-                userId: userId,
-                actorId: (_session.state as AuthAuthenticated).user.id,
+            return BackToHomeScope(
+              child: BlocProvider(
+                create: (_) => di<AccessCubit>()..loadDetail(userId),
+                child: ReviewerDetailPage(
+                  userId: userId,
+                  actorId: (_session.state as AuthAuthenticated).user.id,
+                ),
               ),
             );
           },
@@ -186,7 +195,7 @@ class _KycAppState extends State<KycApp> {
             return BlocProvider(
               key: ValueKey(auth.user.id),
               create: (_) => di<KycCubit>()..load(),
-              child: _KycFlowGuard(location: state.uri.path, child: child),
+              child: child,
             );
           },
           routes: [
@@ -211,48 +220,53 @@ class _KycAppState extends State<KycApp> {
                     },
                   );
                 }
-                return HomePage(
-                  email: user.email,
-                  canReview: user.canReview,
-                  onLogout: () async {
-                    final flow = context.read<KycCubit>();
-                    await _session.signOut();
-                    if (_session.state is AuthSignedOut) {
-                      await flow.discardLocalMedia();
-                    }
-                    if (context.mounted) {
-                      final auth = _session.state;
-                      if (auth is AuthAuthenticated && auth.error != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(auth.error!.message)),
-                        );
+                return _kycPage(
+                  state,
+                  HomePage(
+                    email: user.email,
+                    canReview: user.canReview,
+                    onLogout: () async {
+                      final flow = context.read<KycCubit>();
+                      await _session.signOut();
+                      if (_session.state is AuthSignedOut) {
+                        await flow.discardLocalMedia();
                       }
-                    }
-                  },
+                      if (context.mounted) {
+                        final auth = _session.state;
+                        if (auth is AuthAuthenticated && auth.error != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(auth.error!.message)),
+                          );
+                        }
+                      }
+                    },
+                  ),
                 );
               },
             ),
             GoRoute(
               path: '/kyc/details',
-              builder: (context, state) => const PersonalDetailsPage(),
+              builder: (context, state) =>
+                  _kycPage(state, const PersonalDetailsPage()),
             ),
             GoRoute(
               path: '/kyc/document',
               builder: (context, state) =>
-                  const CapturePage(kind: MediaKind.document),
+                  _kycPage(state, const CapturePage(kind: MediaKind.document)),
             ),
             GoRoute(
               path: '/kyc/selfie',
               builder: (context, state) =>
-                  const CapturePage(kind: MediaKind.selfie),
+                  _kycPage(state, const CapturePage(kind: MediaKind.selfie)),
             ),
             GoRoute(
               path: '/kyc/review',
-              builder: (context, state) => const ReviewPage(),
+              builder: (context, state) => _kycPage(state, const ReviewPage()),
             ),
             GoRoute(
               path: '/kyc/status',
-              builder: (context, state) => const VerificationPage(),
+              builder: (context, state) =>
+                  _kycPage(state, const VerificationPage()),
             ),
           ],
         ),
@@ -302,6 +316,11 @@ class _RouterRefresh extends ChangeNotifier {
   }
 }
 
+Widget _kycPage(GoRouterState state, Widget child) => BackToHomeScope(
+  enabled: state.uri.path != '/',
+  child: _KycFlowGuard(location: state.uri.path, child: child),
+);
+
 class _SessionPage extends StatelessWidget {
   const _SessionPage();
   @override
@@ -341,7 +360,7 @@ class _SessionPage extends StatelessWidget {
   );
 }
 
-/// Authenticated-flow owner. Its provider closes the Cubit when auth changes.
+/// Guards one page while the authenticated shell owns the flow's Cubit.
 class _KycFlowGuard extends StatefulWidget {
   const _KycFlowGuard({required this.location, required this.child});
   final String location;
@@ -422,7 +441,11 @@ class _KycFlowGuardState extends State<_KycFlowGuard>
       final redirect = _redirect(state.profile!);
       if (redirect != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) context.go(redirect);
+          if (mounted &&
+              GoRouter.of(context).routeInformationProvider.value.uri.path ==
+                  widget.location) {
+            context.go(redirect);
+          }
         });
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
