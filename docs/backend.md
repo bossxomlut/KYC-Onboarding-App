@@ -4,27 +4,22 @@ The mobile app uses this real NestJS 12.1.2 API (Express adapter) and PostgreSQL
 
 ## Run locally
 
+For first-time tool installation, separate service terminals, OTP access and restart instructions, see the [complete macOS setup guide in Vietnamese](local-setup.md).
+
 Use Node.js **22.12 or newer**; Node 22 LTS is recommended and selected by root `.nvmrc`. Use npm and Docker with Compose, or the real embedded PostgreSQL alternative below. From the repository root (run `nvm use` first if using nvm):
 
 ```sh
+node scripts/init-env.mjs
 docker compose up -d
+docker compose ps
+# Wait until postgres shows healthy before continuing.
 cd backend
 npm ci
-cp .env.example .env
-```
-
-Replace each of `JWT_SECRET`, `TOKEN_PEPPER`, and `MEDIA_ENCRYPTION_KEY` in `.env` with a separate random 32-byte base64 value. Generate one value at a time:
-
-```sh
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-```
-
-Then:
-
-```sh
 npm run migrate
 npm run dev
 ```
+
+The environment initializer creates the ignored `backend/.env` only when it is absent, generates three distinct random secrets without printing them, and preserves existing configuration. Keep the data-encryption key across restarts to read existing encrypted drafts and images. Wait for Docker PostgreSQL to become healthy before running migrations.
 
 Open Mailpit at <http://localhost:8025> to read OTP and reset emails. Email does not leave the machine. Register a synthetic email address in the mobile app, read its six-digit code in Mailpit, and verify it. The reset link is `kycapp://app/reset-password?token=...`; open it on the simulator or device, or paste the reset token into the app's reset form. OTPs and reset links are secrets: do not include them in screenshots or logs.
 
@@ -35,6 +30,7 @@ For a phone on the same Wi-Fi, use `http://<MAC_LAN_IP>:3000/api/v1` as the Flut
 The optional development command launches a real bundled PostgreSQL process, persists its data under ignored `backend/.local/postgres`, and applies migrations. It does not replace the database with an in-memory mock:
 
 ```sh
+node scripts/init-env.mjs
 cd backend
 npm ci
 npm run db:local

@@ -2,6 +2,8 @@
 
 Flutter iOS/Android onboarding with a real TypeScript/NestJS 12.1.2 API (Express adapter) and PostgreSQL. Material 3, primary green `#026220`. Registration and email OTP, login, secure session restore, password reset, personal details, camera document/selfie upload, review/edit, submission, rejection/resubmission and saved progress are implemented. There is no production mock API or unrelated dashboard.
 
+**Hướng dẫn tiếng Việt:** [Cài đặt và khởi động từ đầu trên macOS](docs/local-setup.md) — cài công cụ, PostgreSQL/Mailpit, các terminal cần chạy, lấy OTP, dừng và khởi động lại.
+
 ## Run locally
 
 Prerequisites: Flutter **3.44.6** / its bundled Dart **3.12.2**, Node **22 LTS** (minimum **22.12**), npm, Docker Compose, Xcode for iOS or Android SDK/JDK17 for Android. Put the Flutter SDK's `bin` directory first in `PATH` if you also installed standalone Dart. Lockfiles are committed. Docker is optional if you use the embedded PostgreSQL alternative below.
@@ -12,6 +14,8 @@ From the repository root (`.nvmrc` selects Node 22; run `nvm use` if you use nvm
 node scripts/init-env.mjs
 # Creates ignored backend/.env with three distinct random secrets; never prints them.
 docker compose up -d
+docker compose ps
+# Wait until postgres shows healthy before continuing.
 cd backend
 npm ci
 npm run migrate
