@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../domain/entities/kyc_profile.dart';
 import '../bloc/kyc_cubit.dart';
 import '../widgets/kyc_scaffold.dart';
+import '../widgets/submitted_profile_sheet.dart';
 
 class VerificationPage extends StatefulWidget {
   const VerificationPage({super.key});
@@ -34,6 +35,17 @@ class _VerificationPageState extends State<VerificationPage>
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
+
+  Future<void> _viewSubmittedProfile() => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useRootNavigator: false,
+    useSafeArea: true,
+    builder: (_) => BlocProvider.value(
+      value: context.read<KycCubit>(),
+      child: const SubmittedProfileSheet(),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => BlocBuilder<KycCubit, KycState>(
@@ -105,6 +117,15 @@ class _VerificationPageState extends State<VerificationPage>
               ),
             ],
             const SizedBox(height: 20),
+            if (status == KycStatus.pendingReview || rejected || verified) ...[
+              OutlinedButton.icon(
+                key: const Key('view-submitted-profile'),
+                onPressed: state.busy ? null : _viewSubmittedProfile,
+                icon: const Icon(Icons.visibility_outlined),
+                label: const Text('View submitted profile'),
+              ),
+              const SizedBox(height: 12),
+            ],
             OutlinedButton.icon(
               key: const Key('refresh-status'),
               onPressed: state.busy

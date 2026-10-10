@@ -45,3 +45,16 @@ Verified on 10 October 2026 after the migration evidence above. Auth password an
 | Flutter bundled Dart format check | 72 files checked, no changes required |
 
 Focused behavior tests were observed failing before their fixes. New cases cover password masking/toggles, confirmation validation, disabled loading controls, date selection/prefill/cancel/validation and age bounds, OTP leading zeroes, filtering, backspace, rapid cell selection, replacement paste, keyboard submission, validation and narrow screens with large text. The backend regressions cover OTP delivery on unverified login, wrong-password/disabled-account restrictions, cooldown, successful verification/login and SMTP outage recovery. The real-API integration source was updated for the new input controls; platform builds, the recorded demo and device integration were not rerun for this update.
+
+## Submitted profile preview
+
+Verified on 10 October 2026. Verification status now opens a scrollable, read-only preview for pending, verified and rejected submissions. It shows personal details, document type, private document/selfie photos and submission time, with loading/error/retry and a close control. The preview borrows the existing authenticated-flow Cubit and uses its private-media use case. Review and submission reuse the same summary while retaining their editing controls.
+
+| Check | Actual result |
+|---|---|
+| `flutter test --no-pub test/features/kyc/verification_page_test.dart` | 11/11 passed; original missing-preview behavior observed failing before implementation |
+| `flutter test --no-pub test/app test/architecture test/features/auth test/features/kyc test/widget_test.dart --reporter expanded` | 68/68 passed |
+| Bundled Dart `analyze lib/features/kyc test/features/kyc/verification_page_test.dart` | No issues found |
+| Bundled Dart format check on the six affected Dart files | No changes required |
+
+The preview tests cover all submitted statuses, absence for incomplete/unloaded profiles, unchanged submitted data, authenticated in-memory images, loading and media retry, closing during image IO, refresh/resubmit after closing, and scrolling at 320px width with text scale 2. The whole-project analyzer was also attempted, but concurrent work in the new access feature had unresolved test imports/API definitions; those unrelated files were not modified by this change. Device builds and the real-API recording were not rerun for this presentation-only update.

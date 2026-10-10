@@ -44,8 +44,9 @@ class KycScaffold extends StatelessWidget {
 }
 
 class KycError extends StatelessWidget {
-  const KycError({super.key, this.onRetry});
+  const KycError({super.key, this.onRetry, this.retryKey});
   final VoidCallback? onRetry;
+  final Key? retryKey;
   @override
   Widget build(BuildContext context) => BlocBuilder<KycCubit, KycState>(
     builder: (context, state) {
@@ -69,6 +70,7 @@ class KycError extends StatelessWidget {
             ),
             if (onRetry != null)
               TextButton(
+                key: retryKey,
                 onPressed: state.busy ? null : onRetry,
                 child: const Text('Retry'),
               ),

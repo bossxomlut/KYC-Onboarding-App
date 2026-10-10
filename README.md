@@ -1,6 +1,6 @@
 # Identity — KYC Onboarding
 
-Flutter iOS/Android onboarding with a real TypeScript/NestJS 12.1.2 API (Express adapter) and PostgreSQL. Material 3, primary green `#026220`. Registration and email OTP, login, secure session restore, password reset, personal details, camera document/selfie upload, review/edit, submission, rejection/resubmission and saved progress are implemented. There is no production mock API or unrelated dashboard.
+Flutter iOS/Android onboarding with a real TypeScript/NestJS 12.1.2 API (Express adapter) and PostgreSQL. Material 3, primary green `#026220`. Registration and email OTP, login, secure session restore, password reset, personal details, camera document/selfie upload, review/edit, submission with a read-only profile preview, rejection/resubmission and saved progress are implemented. There is no production mock API or unrelated dashboard.
 
 **Hướng dẫn tiếng Việt:** [Cài đặt và khởi động từ đầu trên macOS](docs/local-setup.md) — cài công cụ, PostgreSQL/Mailpit, các terminal cần chạy, lấy OTP, dừng và khởi động lại.
 
