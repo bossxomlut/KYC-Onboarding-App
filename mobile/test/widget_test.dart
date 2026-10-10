@@ -1,30 +1,34 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kyc_onboarding/app/di/dependencies.dart';
+import 'package:kyc_onboarding/app/kyc_app.dart';
+import 'package:kyc_onboarding/core/security/token_store.dart';
 
-import 'package:kyc_onboarding/main.dart';
+class EmptyTokenStore implements TokenStore {
+  @override
+  String? get accessToken => null;
+  @override
+  Future<String?> readRefreshToken() async => null;
+  @override
+  Future<void> saveTokens(
+      {required String accessToken, required String refreshToken}) async {}
+  @override
+  Future<void> clear() async {}
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('signed-out startup composes login and registration routes',
+      (tester) async {
+    final di = configureDependencies(tokens: EmptyTokenStore());
+    await tester.pumpWidget(KycApp(dependencies: di));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
+    await tester.tap(find.text('New here? Create an account'));
+    await tester.pumpAndSettle();
+    expect(
+        find.widgetWithText(TextFormField, 'Confirm password'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await di.reset();
   });
 }
