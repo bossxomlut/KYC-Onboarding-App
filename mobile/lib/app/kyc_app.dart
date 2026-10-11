@@ -28,6 +28,7 @@ import '../features/kyc/presentation/bloc/kyc_cubit.dart';
 import '../features/kyc/presentation/pages/home_page.dart';
 import '../features/kyc/presentation/pages/personal_details_page.dart';
 import '../features/kyc/presentation/pages/capture_page.dart';
+import '../features/kyc/presentation/widgets/capture_camera_configuration.dart';
 import '../features/kyc/presentation/pages/review_page.dart';
 import '../features/kyc/presentation/pages/verification_page.dart';
 import '../features/kyc_history/presentation/bloc/kyc_history_cubit.dart';
@@ -311,13 +312,27 @@ class _KycAppState extends State<KycApp> with WidgetsBindingObserver {
             ),
             GoRoute(
               path: '/kyc/document',
-              builder: (context, state) =>
-                  _kycPage(state, const CapturePage(kind: MediaKind.document)),
+              builder: (context, state) => _kycPage(
+                state,
+                CapturePage(
+                  kind: MediaKind.document,
+                  camera: di.isRegistered<CaptureCameraConfiguration>()
+                      ? di<CaptureCameraConfiguration>()
+                      : null,
+                ),
+              ),
             ),
             GoRoute(
               path: '/kyc/selfie',
-              builder: (context, state) =>
-                  _kycPage(state, const CapturePage(kind: MediaKind.selfie)),
+              builder: (context, state) => _kycPage(
+                state,
+                CapturePage(
+                  kind: MediaKind.selfie,
+                  camera: di.isRegistered<CaptureCameraConfiguration>()
+                      ? di<CaptureCameraConfiguration>()
+                      : null,
+                ),
+              ),
             ),
             GoRoute(
               path: '/kyc/review',

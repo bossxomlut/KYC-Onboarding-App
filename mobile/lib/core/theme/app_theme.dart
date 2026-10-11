@@ -14,6 +14,8 @@ abstract final class AppTheme {
   static const muted = Color(0xFF617169);
   static const border = Color(0xFFD8E2DC);
   static const mint = Color(0xFFE8F3EA);
+  static const cameraBackdrop = Color(0xFF091B14);
+  static const cameraGuide = Color(0xFFB2F5CF);
   static const disabledSurface = Color(0xFFE9EEEB);
   static const controlRadius = 8.0;
   static const panelRadius = 16.0;

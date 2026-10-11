@@ -296,3 +296,23 @@ Five new queue widget regressions and one shared-scaffold regression first expos
 Verified on 11 October 2026 (Asia/Ho_Chi_Minh). Sign in now shows a white spinner beside “Signing in…” inside the primary-colored button while the request is pending. The shared auth submit button reserves both content sizes, retains disabled interaction during loading and announces the busy label. Failed requests restore the action for retry; authentication and email-verification callbacks are unchanged.
 
 The focused command `flutter test --no-pub test/features/auth/presentation/login_loading_test.dart --reporter expanded` first failed for the missing loading label. All three new cases then passed as part of `flutter test --no-pub test/features/auth test/architecture test/widget_test.dart --reporter expanded` (54/54). They cover button/form bounds at 320px with normal and doubled text, inline progress, accessible state, duplicate-tap prevention, success, failure/retry and email verification. `flutter analyze --no-pub`, bundled Dart formatting of the three touched Dart files and `git diff --check` passed. An additional widget-engine render of the actual Login page passed and its ready/loading PNGs were inspected in `output/login-loading/`. Tests and previews use synthetic credentials with pending repository responses; native builds and installed-device keyboard transitions were not rerun.
+
+## In-app camera capture
+
+Verified on 11 October 2026 (Asia/Ho_Chi_Minh). The running capture flow now uses a Flutter camera page with a live preview, a document frame or selfie oval, lens badge, clear shutter, document light control, and permission/unavailable-camera Retry. Documents require the rear lens; selfies require the front lens. Captures request 1080p with audio disabled. The page releases camera resources before returning to the preparation page, where private photo preview, upload retry and explicit Continue retain their existing behavior. Legacy Android image-picker recovery remains available for older interrupted captures.
+
+| Check | Actual result |
+| --- | --- |
+| `flutter analyze --no-pub` | No issues found |
+| `flutter test --no-pub --reporter expanded` | 385/385 passed, including architecture, new camera/data/Cubit/widget tests and existing navigation/session/KYC tests |
+| Flutter bundled Dart format check | 165 files checked; no changes required |
+| `flutter test --no-pub tool/render_in_app_camera_test.dart` | Six production layouts rendered and inspected: both capture kinds at 390×844, 320×568 with doubled text, and 844×390 |
+| `flutter build ios --simulator --debug` | Built Runner.app successfully |
+| `flutter build apk --debug --no-pub` | Built app-debug.apk successfully; normal app restored and launched on `emulator-5554` after the camera-only harness |
+| Actual camera SDK smoke on Android `emulator-5554` | 2/2 passed with both actual lens descriptions checked before and after native Home → reopen; shutter, private persistence, capture IDs, recovery and cleanup passed |
+
+Focused tests first reproduced missing deferred-capture behavior, duplicate camera opening, unavailable required lenses, camera errors, absent overlays, and lifecycle/disposal races before their fixes. The new camera integration harness uses the actual platform SDK, verifies the selected lens before and after resume, saves/reloads private captures with their IDs, and removes its own test files without contacting the API.
+
+Android runtime screenshots were inspected in `output/in-app-camera/runtime/`: the rear camera shows the emulator's virtual room and the front camera its synthetic texture, both beneath the production framing UI. The initial camera permission dialog was captured and allowed on the emulator; final repeat tests pre-granted camera permission. The smoke harness's route-exit assertion was corrected to wait for Flutter's exit animation, then both tests passed together. Native-background mode uses a host watcher to send Home/reopen after each `CAMERA_SMOKE_BACKGROUND_READY` marker. The default integration command instead exercises lifecycle notifications without that watcher.
+
+Physical Android/iPhone camera quality, OS force-kill during capture and real-device denied permission → Settings → Retry still require device checks. The backend and stored applicant records are unchanged; no new real-API submission or identity-provider request was made for this camera update.

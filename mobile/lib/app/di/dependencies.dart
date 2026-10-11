@@ -31,11 +31,16 @@ import '../../features/access/domain/repositories/access_repository.dart';
 import '../../features/access/domain/usecases/access_usecases.dart';
 import '../../features/access/presentation/bloc/access_cubit.dart';
 import '../../features/kyc/data/datasources/camera_datasource.dart';
+import '../../features/kyc/data/datasources/in_app_camera_driver.dart';
 import '../../features/kyc/data/datasources/kyc_remote_datasource.dart';
+import '../../features/kyc/data/repositories/capture_camera_repository_impl.dart';
 import '../../features/kyc/data/repositories/kyc_repository_impl.dart';
 import '../../features/kyc/domain/repositories/kyc_repository.dart';
 import '../../features/kyc/domain/usecases/kyc_usecases.dart';
+import '../../features/kyc/domain/usecases/capture_camera_usecases.dart';
+import '../../features/kyc/presentation/bloc/capture_camera_cubit.dart';
 import '../../features/kyc/presentation/bloc/kyc_cubit.dart';
+import '../../features/kyc/presentation/widgets/capture_camera_configuration.dart';
 import '../../features/kyc_history/data/datasources/kyc_history_remote_datasource.dart';
 import '../../features/kyc_history/data/repositories/kyc_history_repository_impl.dart';
 import '../../features/kyc_history/domain/repositories/kyc_history_repository.dart';
@@ -114,10 +119,32 @@ GetIt configureDependencies({
       loadMedia: LoadKycHistoryMedia(history),
     ),
   );
-  final kyc = KycRepositoryImpl(
-    KycRemoteDataSource(api),
-    camera ?? ImagePickerCameraDataSource(),
-  );
+  CameraDataSource captureSource;
+  if (camera != null) {
+    captureSource = camera;
+  } else {
+    final driver = InAppCameraDriver();
+    final captureCamera = CaptureCameraRepositoryImpl(driver);
+    di.registerSingleton<InAppCameraDriver>(
+      driver,
+      dispose: (value) => value.close(),
+    );
+    di.registerFactory(
+      () => CaptureCameraCubit(
+        initializeCamera: InitializeCaptureCamera(captureCamera),
+        setFlash: SetCaptureCameraFlash(captureCamera),
+        closeCamera: CloseCaptureCamera(captureCamera),
+      ),
+    );
+    di.registerSingleton(
+      CaptureCameraConfiguration(
+        createCubit: () => di<CaptureCameraCubit>(),
+        previewBuilder: driver.buildPreview,
+      ),
+    );
+    captureSource = InAppCameraDataSource(driver: driver);
+  }
+  final kyc = KycRepositoryImpl(KycRemoteDataSource(api), captureSource);
   di.registerSingleton<KycRepository>(kyc);
   di.registerFactory(
     () => KycCubit(

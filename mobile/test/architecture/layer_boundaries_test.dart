@@ -29,7 +29,7 @@ void main() {
                 dependency.contains('/network/') ||
                 dependency.contains('/security/') ||
                 RegExp(
-                  r'^package:(dio|image_picker|flutter_secure_storage|path_provider)/',
+                  r'^package:(camera|dio|image_picker|flutter_secure_storage|path_provider)/',
                 ).hasMatch(dependency))) {
           violations.add('$path imports $dependency');
         }

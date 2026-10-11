@@ -5,12 +5,15 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/form_field_label.dart';
 import '../../domain/entities/kyc_profile.dart';
 import '../bloc/kyc_cubit.dart';
+import '../widgets/capture_camera_configuration.dart';
 import '../widgets/capture_preparation.dart';
 import '../widgets/kyc_scaffold.dart';
+import 'in_app_camera_page.dart';
 
 class CapturePage extends StatelessWidget {
-  const CapturePage({super.key, required this.kind});
+  const CapturePage({super.key, required this.kind, this.camera});
   final MediaKind kind;
+  final CaptureCameraConfiguration? camera;
   @override
   Widget build(BuildContext context) {
     final state = context.read<KycCubit>().state;
@@ -20,7 +23,7 @@ class CapturePage extends StatelessWidget {
             state.profile?.document?.documentType ??
             DocumentType.passport,
       ),
-      child: _CaptureView(kind: kind),
+      child: _CaptureView(kind: kind, camera: camera),
     );
   }
 }
@@ -31,21 +34,54 @@ class CaptureSettingsCubit extends Cubit<DocumentType> {
 }
 
 class _CaptureView extends StatefulWidget {
-  const _CaptureView({required this.kind});
+  const _CaptureView({required this.kind, this.camera});
   final MediaKind kind;
+  final CaptureCameraConfiguration? camera;
   @override
   State<_CaptureView> createState() => _CapturePageState();
 }
 
 class _CapturePageState extends State<_CaptureView> {
+  bool _cameraOpen = false;
+
   Future<void> _capture() async {
+    if (_cameraOpen) return;
     final cubit = context.read<KycCubit>();
-    await cubit.capture(
-      widget.kind,
-      documentType: widget.kind == MediaKind.document
-          ? context.read<CaptureSettingsCubit>().state
-          : null,
-    );
+    final documentType = widget.kind == MediaKind.document
+        ? context.read<CaptureSettingsCubit>().state
+        : null;
+    final camera = widget.camera;
+    // Synthetic platform boundaries can capture without opening a device UI.
+    if (camera == null) {
+      await cubit.capture(widget.kind, documentType: documentType);
+      return;
+    }
+    setState(() => _cameraOpen = true);
+    try {
+      final captured = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => BlocProvider(
+            create: (_) => camera.createCubit(),
+            child: InAppCameraPage(
+              kind: widget.kind,
+              documentType: documentType,
+              previewBuilder: camera.previewBuilder,
+              onCapture: () => cubit.capture(
+                widget.kind,
+                documentType: documentType,
+                uploadImmediately: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      if (captured == true && !cubit.isClosed) {
+        await cubit.retryUpload(widget.kind);
+      }
+    } finally {
+      if (mounted) setState(() => _cameraOpen = false);
+    }
   }
 
   Future<void> _retry() async {
@@ -64,6 +100,7 @@ class _CapturePageState extends State<_CaptureView> {
       final step = isDocument ? KycStep.document : KycStep.selfie;
       final canContinue =
           !state.busy &&
+          !_cameraOpen &&
           canEdit &&
           draft == null &&
           uploaded != null &&
@@ -91,7 +128,9 @@ class _CapturePageState extends State<_CaptureView> {
             ],
             FilledButton.icon(
               key: Key('capture-${widget.kind.name}'),
-              onPressed: state.busy || !canEdit ? null : _capture,
+              onPressed: state.busy || _cameraOpen || !canEdit
+                  ? null
+                  : _capture,
               icon: const Icon(Icons.camera_alt_outlined, size: 22),
               label: Text(
                 draft != null || uploaded != null

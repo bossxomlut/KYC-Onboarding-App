@@ -5,6 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../domain/entities/kyc_profile.dart';
+import 'camera_capture_exception.dart';
+import 'in_app_camera_driver.dart';
+
+export 'camera_capture_exception.dart';
 
 /// The only boundary that knows the camera plugin and private temporary files.
 abstract interface class CameraDataSource {
@@ -16,12 +20,6 @@ abstract interface class CameraDataSource {
   Future<CapturedMedia?> recover(MediaKind kind, String profileId);
   Future<void> remove(CapturedMedia media);
   Future<void> discard(String profileId);
-}
-
-class CameraCaptureException implements Exception {
-  const CameraCaptureException(this.code, this.message);
-  final String code;
-  final String message;
 }
 
 class ImagePickerCameraDataSource implements CameraDataSource {
@@ -213,5 +211,29 @@ class ImagePickerCameraDataSource implements CameraDataSource {
   Future<void> discard(String profileId) async {
     final directory = await _profileDirectory(profileId);
     if (await directory.exists()) await directory.delete(recursive: true);
+  }
+}
+
+/// Uses the in-app camera while retaining existing private file/recovery rules.
+/// ImagePicker is used only to recover captures interrupted by the old flow.
+class InAppCameraDataSource extends ImagePickerCameraDataSource {
+  InAppCameraDataSource({
+    required this.driver,
+    super.picker,
+    super.directory,
+    super.isAndroid,
+  });
+  final InAppCameraDriver driver;
+
+  @override
+  Future<CapturedMedia?> capture(
+    MediaKind kind,
+    String profileId, {
+    DocumentType? documentType,
+  }) async {
+    // Validate scope before taking the photo, then persist before upload.
+    await _profileDirectory(profileId);
+    final source = await driver.takePicture(kind);
+    return _persist(source, kind, profileId, documentType, _newCaptureId());
   }
 }

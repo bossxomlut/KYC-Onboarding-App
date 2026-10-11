@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,81 @@ void main() {
       expect(cubit.state.reviewMedia[MediaKind.document], captured.bytes);
     },
   );
+
+  test('deferred capture retains draft until an explicit upload', () async {
+    await cubit.load();
+
+    final saved = await cubit.capture(
+      MediaKind.document,
+      documentType: DocumentType.passport,
+      uploadImmediately: false,
+    );
+
+    expect(saved, isTrue);
+    expect(repository.captureCount, 1);
+    expect(repository.observedUploads, 0);
+    expect(repository.deleted, isFalse);
+    expect(cubit.state.pendingCaptures[MediaKind.document], captured);
+    expect(cubit.state.profile!.nextStep, KycStep.document);
+    expect(cubit.state.busy, isFalse);
+    expect(cubit.state.operation, KycOperation.none);
+
+    expect(await cubit.retryUpload(MediaKind.document), isTrue);
+    expect(repository.observedUploads, 1);
+    expect(cubit.state.pendingCaptures, isEmpty);
+    expect(cubit.state.reviewMedia[MediaKind.document], captured.bytes);
+    expect(cubit.state.profile!.nextStep, KycStep.selfie);
+    expect(await cubit.retryUpload(MediaKind.document), isFalse);
+    expect(repository.observedUploads, 1);
+  });
+
+  test(
+    'canceling deferred capture never uploads or changes progress',
+    () async {
+      await cubit.load();
+      repository.captureCancelled = true;
+
+      expect(
+        await cubit.capture(MediaKind.document, uploadImmediately: false),
+        isFalse,
+      );
+      expect(repository.observedUploads, 0);
+      expect(cubit.state.pendingCaptures, isEmpty);
+      expect(cubit.state.profile!.nextStep, KycStep.document);
+      expect(cubit.state.busy, isFalse);
+      expect(cubit.state.operation, KycOperation.none);
+    },
+  );
+
+  test('deferred capture drains the refresh queued during capture', () async {
+    await cubit.load();
+    repository.captureGate = Completer<void>();
+    final capture = cubit.capture(MediaKind.document, uploadImmediately: false);
+    final refresh = cubit.refresh();
+    expect(repository.observedLoads, 1);
+
+    repository.captureGate!.complete();
+    expect(await capture, isTrue);
+    await refresh;
+
+    expect(repository.observedLoads, 2);
+    expect(repository.observedUploads, 0);
+    expect(cubit.state.pendingCaptures[MediaKind.document], captured);
+    expect(cubit.state.busy, isFalse);
+    expect(cubit.state.refreshing, isFalse);
+  });
+
+  test('capture completing after flow disposal never uploads', () async {
+    await cubit.load();
+    repository.captureGate = Completer<void>();
+    final capture = cubit.capture(MediaKind.document, uploadImmediately: false);
+    await cubit.close();
+    repository.captureGate!.complete();
+
+    expect(await capture, isFalse);
+    expect(repository.observedUploads, 0);
+    expect(cubit.state.pendingCaptures, isEmpty);
+  });
 
   test(
     'cold restart recovers private pending media belonging to current profile',
@@ -161,13 +237,24 @@ class FakeKycRepository implements KycRepository {
   bool deleted = false;
   bool saved = false;
   int captureCount = 0;
+  int observedLoads = 0;
+  int observedUploads = 0;
+  bool captureCancelled = false;
+  Completer<void>? captureGate;
   CapturedMedia? recovered;
   @override
-  Future<Result<KycProfile>> load() async => loadFailure
-      ? const Failure(
-          AppFailure(code: 'NETWORK_ERROR', message: 'Connection interrupted.'),
-        )
-      : Success(profile);
+  Future<Result<KycProfile>> load() async {
+    observedLoads++;
+    return loadFailure
+        ? const Failure(
+            AppFailure(
+              code: 'NETWORK_ERROR',
+              message: 'Connection interrupted.',
+            ),
+          )
+        : Success(profile);
+  }
+
   @override
   Future<Result<KycProfile>> saveDetails(PersonalDetails details) async {
     saved = true;
@@ -181,7 +268,8 @@ class FakeKycRepository implements KycRepository {
     DocumentType? documentType,
   }) async {
     captureCount++;
-    return Success(captured);
+    if (captureGate != null) await captureGate!.future;
+    return Success(captureCancelled ? null : captured);
   }
 
   @override
@@ -189,6 +277,7 @@ class FakeKycRepository implements KycRepository {
     CapturedMedia media, {
     void Function(int, int)? onProgress,
   }) async {
+    observedUploads++;
     if (uploadFailure) {
       return const Failure(
         AppFailure(code: 'NETWORK_ERROR', message: 'Connection interrupted.'),

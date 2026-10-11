@@ -416,7 +416,11 @@ class KycCubit extends Cubit<KycState> {
     }
   }
 
-  Future<bool> capture(MediaKind kind, {DocumentType? documentType}) async {
+  Future<bool> capture(
+    MediaKind kind, {
+    DocumentType? documentType,
+    bool uploadImmediately = true,
+  }) async {
     if (_profileRead != null) await _waitForProfileReads();
     if (!_canEdit()) return false;
     _update(state.copyWith(busy: true, operation: KycOperation.capturing));
@@ -452,6 +456,10 @@ class KycCubit extends Cubit<KycState> {
             }),
           ),
         );
+        if (!uploadImmediately) {
+          _drainRefresh();
+          return true;
+        }
         return retryUpload(kind);
     }
   }
