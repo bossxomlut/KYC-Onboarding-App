@@ -11,6 +11,7 @@ class AccessScaffold extends StatelessWidget {
     this.revalidating = false,
     this.error,
     this.message,
+    this.onBack,
     this.onRefresh,
     super.key,
   });
@@ -20,6 +21,7 @@ class AccessScaffold extends StatelessWidget {
   final bool revalidating;
   final AppFailure? error;
   final String? message;
+  final VoidCallback? onBack;
   final VoidCallback? onRefresh;
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -27,7 +29,7 @@ class AccessScaffold extends StatelessWidget {
       title: Text(title),
       leading: IconButton(
         tooltip: 'Back',
-        onPressed: () => popOrGo(context),
+        onPressed: onBack ?? () => popOrGo(context),
         icon: const Icon(Icons.arrow_back),
       ),
       actions: [

@@ -156,6 +156,8 @@ void main() {
     expect(router.state.uri.path, '/reviews/applicant');
     final detail = tester.element(find.byType(ReviewerDetailPage));
     final detailCubit = detail.read<AccessCubit>();
+    expect(find.text('Back to review queue'), findsNothing);
+    expect(find.byTooltip('Back'), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('view-applicant-history')));
     await tester.tap(find.byKey(const Key('view-applicant-history')));
     await tester.pumpAndSettle();
@@ -167,8 +169,7 @@ void main() {
       tester.element(find.byType(ReviewerDetailPage)).read<AccessCubit>(),
       same(detailCubit),
     );
-    await tester.ensureVisible(find.text('Back to review queue'));
-    await tester.tap(find.text('Back to review queue'));
+    await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
     expect(router.state.uri.path, '/reviews');
     expect(
@@ -248,8 +249,7 @@ void main() {
         role: UserRole.reviewer,
       );
       expect(router.canPop(), isFalse);
-      await tester.ensureVisible(find.text('Back to review queue'));
-      await tester.tap(find.text('Back to review queue'));
+      await tester.tap(find.byTooltip('Back'));
       await tester.pumpAndSettle();
       expect(router.state.uri.path, '/reviews');
       expect(find.byType(ReviewerQueuePage), findsOneWidget);

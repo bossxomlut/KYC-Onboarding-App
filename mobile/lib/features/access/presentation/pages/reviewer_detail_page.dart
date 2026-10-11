@@ -40,13 +40,9 @@ class ReviewerDetailPage extends StatelessWidget {
         busy: state.busy,
         revalidating: state.needsRevalidation,
         error: state.error,
+        onBack: () => popOrGo(context, fallback: '/reviews'),
         onRefresh: () => context.read<AccessCubit>().loadDetail(userId),
         children: [
-          TextButton.icon(
-            onPressed: () => popOrGo(context, fallback: '/reviews'),
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Back to review queue'),
-          ),
           if (detail != null) ...[
             Text(detail.email, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
