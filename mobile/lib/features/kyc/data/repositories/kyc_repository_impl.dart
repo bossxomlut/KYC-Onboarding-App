@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import '../../../../core/domain/result.dart';
 import '../../../../core/network/api_failure.dart';
 import '../../domain/entities/kyc_profile.dart';
-import '../../domain/entities/document_capture_crop.dart';
+import '../../domain/entities/camera_capture_crop.dart';
 import '../../domain/repositories/kyc_repository.dart';
 import '../datasources/camera_datasource.dart';
 import '../datasources/kyc_remote_datasource.dart';
@@ -32,7 +32,7 @@ class KycRepositoryImpl implements KycRepository {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
   }) => _guard(
     () =>
         camera.capture(kind, profileId, documentType: documentType, crop: crop),

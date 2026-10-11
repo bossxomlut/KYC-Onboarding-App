@@ -4,7 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
 import 'package:kyc_onboarding/core/domain/result.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_datasource.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/in_app_camera_driver.dart';
@@ -44,6 +44,7 @@ void main() {
       expect(controllers.single.description, rear);
       expect(document.aspectRatio, .75);
       expect(document.canToggleFlash, isTrue);
+      expect(document.isPreviewMirrored, isFalse);
       expect(controllers.single.flashModes, [FlashMode.off]);
       expect(controllers.single.orientation, DeviceOrientation.portraitUp);
       await driver.setFlash(true);
@@ -52,6 +53,7 @@ void main() {
       expect(controllers.first.disposed, isTrue);
       expect(controllers.last.description, front);
       expect(selfie.canToggleFlash, isFalse);
+      expect(selfie.isPreviewMirrored, isTrue);
       expect(selfie.flashEnabled, isFalse);
       await expectLater(
         driver.setFlash(true),
@@ -235,7 +237,7 @@ void main() {
         MediaKind.document,
         'profile_a',
         documentType: DocumentType.nationalId,
-        crop: DocumentCaptureCrop.fromViewport(
+        crop: CameraCaptureCrop.fromViewport(
           viewportWidth: 30,
           viewportHeight: 40,
           frameLeft: 3,

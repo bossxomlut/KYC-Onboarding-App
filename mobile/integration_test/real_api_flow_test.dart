@@ -10,7 +10,7 @@ import 'package:kyc_onboarding/app/di/dependencies.dart';
 import 'package:kyc_onboarding/app/kyc_app.dart';
 import 'package:kyc_onboarding/core/security/token_store.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_datasource.dart';
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 import 'demo_fixtures.dart';
 
@@ -22,7 +22,7 @@ class SyntheticCamera implements CameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
   }) async {
     final bytes = kind == MediaKind.document ? documentFixture : selfieFixture;
     final file = File(

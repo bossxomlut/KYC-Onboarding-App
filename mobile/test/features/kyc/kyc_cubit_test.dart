@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kyc_onboarding/core/domain/result.dart';
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 import 'package:kyc_onboarding/features/kyc/domain/repositories/kyc_repository.dart';
 import 'package:kyc_onboarding/features/kyc/domain/usecases/kyc_usecases.dart';
@@ -65,7 +65,7 @@ void main() {
 
   test('deferred capture retains draft until an explicit upload', () async {
     await cubit.load();
-    final crop = DocumentCaptureCrop.fromViewport(
+    final crop = CameraCaptureCrop.fromViewport(
       viewportWidth: 390,
       viewportHeight: 844,
       frameLeft: 24,
@@ -100,6 +100,45 @@ void main() {
     expect(await cubit.retryUpload(MediaKind.document), isFalse);
     expect(repository.observedUploads, 1);
   });
+
+  test(
+    'selfie forwards its mirrored guide and retains cropped bytes for upload',
+    () async {
+      repository.profile = profile(step: KycStep.selfie);
+      final selfie = CapturedMedia(
+        kind: MediaKind.selfie,
+        filePath: '/private/cropped-selfie.jpg',
+        bytes: Uint8List.fromList([7, 8]),
+      );
+      repository.captureResult = selfie;
+      await cubit.load();
+      final crop = CameraCaptureCrop.fromViewport(
+        viewportWidth: 390,
+        viewportHeight: 844,
+        frameLeft: 95,
+        frameTop: 220,
+        frameWidth: 200,
+        frameHeight: 200 / .74,
+        previewAspectRatio: 9 / 16,
+        isPreviewMirrored: true,
+      );
+      expect(
+        await cubit.capture(
+          MediaKind.selfie,
+          crop: crop,
+          uploadImmediately: false,
+        ),
+        isTrue,
+      );
+      expect(repository.receivedCrop, same(crop));
+      expect(cubit.state.pendingCaptures[MediaKind.selfie], same(selfie));
+      expect(repository.observedUploads, 0);
+      expect(await cubit.retryUpload(MediaKind.selfie), isTrue);
+      expect(repository.observedUploads, 1);
+      expect(cubit.state.pendingCaptures, isEmpty);
+      expect(cubit.state.reviewMedia[MediaKind.selfie], selfie.bytes);
+    },
+  );
 
   test(
     'canceling deferred capture never uploads or changes progress',
@@ -254,7 +293,8 @@ class FakeKycRepository implements KycRepository {
   bool captureCancelled = false;
   Completer<void>? captureGate;
   CapturedMedia? recovered;
-  DocumentCaptureCrop? receivedCrop;
+  CapturedMedia captureResult = captured;
+  CameraCaptureCrop? receivedCrop;
   @override
   Future<Result<KycProfile>> load() async {
     observedLoads++;
@@ -279,12 +319,12 @@ class FakeKycRepository implements KycRepository {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
   }) async {
     captureCount++;
     receivedCrop = crop;
     if (captureGate != null) await captureGate!.future;
-    return Success(captureCancelled ? null : captured);
+    return Success(captureCancelled ? null : captureResult);
   }
 
   @override

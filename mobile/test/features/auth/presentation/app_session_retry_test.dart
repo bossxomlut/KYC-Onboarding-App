@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kyc_onboarding/app/di/dependencies.dart';
 import 'package:kyc_onboarding/app/kyc_app.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_datasource.dart';
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 
 import '../data/session_restore_test.dart'
@@ -16,7 +16,7 @@ class NoCaptureCamera implements CameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
   }) async => null;
   @override
   Future<CapturedMedia?> recover(MediaKind kind, String profileId) async =>

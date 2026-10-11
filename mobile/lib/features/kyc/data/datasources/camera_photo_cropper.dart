@@ -3,40 +3,47 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:image/image.dart' as image;
 
-import '../../domain/entities/document_capture_crop.dart';
+import '../../domain/entities/camera_capture_crop.dart';
+import '../../domain/entities/kyc_profile.dart';
 import 'camera_capture_exception.dart';
 
 /// Crops original camera pixels before private persistence or upload.
-class DocumentPhotoCropper {
-  const DocumentPhotoCropper();
+class CameraPhotoCropper {
+  const CameraPhotoCropper();
 
-  Future<Uint8List> crop(Uint8List source, DocumentCaptureCrop crop) async {
+  Future<Uint8List> crop(
+    Uint8List source,
+    CameraCaptureCrop crop, {
+    MediaKind kind = MediaKind.document,
+  }) async {
     try {
       return await compute(
-        _cropDocumentPhoto,
-        _DocumentCropRequest(source, crop),
-        debugLabel: 'document_photo_crop',
+        _cropCameraPhoto,
+        _PhotoCropRequest(source, crop),
+        debugLabel: 'camera_photo_crop',
       );
     } catch (_) {
-      throw const CameraCaptureException(
-        'DOCUMENT_CROP_FAILED',
-        'The document photo could not be prepared. Please take it again.',
+      throw CameraCaptureException(
+        kind == MediaKind.document
+            ? 'DOCUMENT_CROP_FAILED'
+            : 'SELFIE_CROP_FAILED',
+        'The ${kind == MediaKind.document ? 'document photo' : 'selfie'} could not be prepared. Please take it again.',
       );
     }
   }
 }
 
-class _DocumentCropRequest {
-  const _DocumentCropRequest(this.source, this.crop);
+class _PhotoCropRequest {
+  const _PhotoCropRequest(this.source, this.crop);
 
   final Uint8List source;
-  final DocumentCaptureCrop crop;
+  final CameraCaptureCrop crop;
 }
 
-Uint8List _cropDocumentPhoto(_DocumentCropRequest request) {
+Uint8List _cropCameraPhoto(_PhotoCropRequest request) {
   final decoded = image.decodeImage(request.source);
   if (decoded == null) {
-    throw const FormatException('Document photo could not be decoded');
+    throw const FormatException('Camera photo could not be decoded');
   }
   // Some decoders bake EXIF automatically; this also covers formats that do not.
   final upright = image.bakeOrientation(decoded);

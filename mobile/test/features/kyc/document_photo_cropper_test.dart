@@ -3,11 +3,88 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_capture_exception.dart';
-import 'package:kyc_onboarding/features/kyc/data/datasources/document_photo_cropper.dart';
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/data/datasources/camera_photo_cropper.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 
 void main() {
-  const cropper = DocumentPhotoCropper();
+  const cropper = CameraPhotoCropper();
+
+  for (final orientation in [1, 6, 8]) {
+    test(
+      'selfie mirrored guide crops upright source pixels with EXIF $orientation',
+      () async {
+        final upright = image.Image(width: 800, height: 1200);
+        image.fill(upright, color: image.ColorRgb8(200, 20, 200));
+        image.fillRect(
+          upright,
+          x1: 500,
+          y1: 200,
+          x2: 699,
+          y2: 469,
+          color: image.ColorRgb8(20, 200, 40),
+        );
+        image.fillRect(
+          upright,
+          x1: 520,
+          y1: 220,
+          x2: 549,
+          y2: 249,
+          color: image.ColorRgb8(20, 40, 220),
+        );
+        final stored = image.copyRotate(
+          upright,
+          angle: switch (orientation) {
+            6 => -90,
+            8 => 90,
+            _ => 0,
+          },
+        )..exif.imageIfd.orientation = orientation;
+        final selfieCrop = CameraCaptureCrop.fromViewport(
+          viewportWidth: 400,
+          viewportHeight: 600,
+          frameLeft: 50,
+          frameTop: 100,
+          frameWidth: 100,
+          frameHeight: 135,
+          previewAspectRatio: 2 / 3,
+          marginFraction: 0,
+          isPreviewMirrored: true,
+        );
+        final result = image.decodeJpg(
+          await cropper.crop(
+            image.encodeJpg(stored, quality: 100),
+            selfieCrop,
+            kind: MediaKind.selfie,
+          ),
+        )!;
+        expect((result.width, result.height), (200, 270));
+        expect(result.exif.imageIfd.orientation, isNull);
+        _expectRgb(result.getPixel(30, 30), (20, 40, 220));
+        _expectRgb(result.getPixel(170, 240), (20, 200, 40));
+      },
+    );
+  }
+
+  test(
+    'corrupt selfie returns a selfie crop error without full-image fallback',
+    () async {
+      await expectLater(
+        cropper.crop(
+          Uint8List.fromList([1, 2, 3]),
+          _crop(),
+          kind: MediaKind.selfie,
+        ),
+        throwsA(
+          isA<CameraCaptureException>().having(
+            (error) => error.code,
+            'code',
+            'SELFIE_CROP_FAILED',
+          ),
+        ),
+      );
+    },
+  );
 
   test(
     'encodes only the rectangular guide region at source resolution',
@@ -64,7 +141,7 @@ void main() {
         y2: 420,
         color: image.ColorRgb8(20, 40, 220),
       );
-      final crop = DocumentCaptureCrop.fromViewport(
+      final crop = CameraCaptureCrop.fromViewport(
         viewportWidth: 360,
         viewportHeight: 640,
         frameLeft: 72,
@@ -127,7 +204,7 @@ void main() {
         final channel = pixel.x % 8 < 4 ? 0 : 255;
         pixel.setRgb(channel, channel, channel);
       }
-      final crop = DocumentCaptureCrop.fromViewport(
+      final crop = CameraCaptureCrop.fromViewport(
         viewportWidth: 400,
         viewportHeight: 300,
         frameLeft: 100,
@@ -171,8 +248,8 @@ void main() {
   }
 }
 
-DocumentCaptureCrop _crop({double marginFraction = .03}) {
-  return DocumentCaptureCrop.fromViewport(
+CameraCaptureCrop _crop({double marginFraction = .03}) {
+  return CameraCaptureCrop.fromViewport(
     viewportWidth: 400,
     viewportHeight: 600,
     frameLeft: 100,

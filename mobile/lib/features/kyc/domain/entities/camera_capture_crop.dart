@@ -1,20 +1,21 @@
 import 'dart:math' as math;
 
-/// The document guide in normalized coordinates of the upright camera preview.
+/// The capture guide in normalized coordinates of the upright camera preview.
 ///
 /// Preview placement uses a centered cover fit. A still image with a different
 /// aspect ratio is treated as the full sensor image surrounding that preview.
-class DocumentCaptureCrop {
-  const DocumentCaptureCrop._({
+class CameraCaptureCrop {
+  const CameraCaptureCrop._({
     required this.left,
     required this.top,
     required this.width,
     required this.height,
     required this.previewAspectRatio,
     required this.marginFraction,
+    required this.isPreviewMirrored,
   });
 
-  factory DocumentCaptureCrop.fromViewport({
+  factory CameraCaptureCrop.fromViewport({
     required double viewportWidth,
     required double viewportHeight,
     required double frameLeft,
@@ -23,6 +24,7 @@ class DocumentCaptureCrop {
     required double frameHeight,
     required double previewAspectRatio,
     double marginFraction = .03,
+    bool isPreviewMirrored = false,
   }) {
     _requirePositiveFinite('viewportWidth', viewportWidth);
     _requirePositiveFinite('viewportHeight', viewportHeight);
@@ -34,9 +36,7 @@ class DocumentCaptureCrop {
     _requireNonnegativeFinite('marginFraction', marginFraction);
     if (frameLeft + frameWidth > viewportWidth ||
         frameTop + frameHeight > viewportHeight) {
-      throw ArgumentError(
-        'Document frame must be inside the preview viewport.',
-      );
+      throw ArgumentError('Capture frame must be inside the preview viewport.');
     }
 
     final displayWidth = math.max(
@@ -57,13 +57,14 @@ class DocumentCaptureCrop {
     _requirePositiveFinite('normalized width', width);
     _requirePositiveFinite('normalized height', height);
 
-    return DocumentCaptureCrop._(
+    return CameraCaptureCrop._(
       left: left,
       top: top,
       width: width,
       height: height,
       previewAspectRatio: previewAspectRatio,
       marginFraction: marginFraction,
+      isPreviewMirrored: isPreviewMirrored,
     );
   }
 
@@ -75,6 +76,9 @@ class DocumentCaptureCrop {
 
   /// Fraction of the guide width/height kept outside each corresponding edge.
   final double marginFraction;
+
+  /// Front preview is mirrored; the saved photo keeps the sensor orientation.
+  final bool isPreviewMirrored;
 
   double get right => left + width;
   double get bottom => top + height;
@@ -101,12 +105,14 @@ class DocumentCaptureCrop {
     final frameHeight = this.height * previewHeight;
     final marginWidth = frameWidth * marginFraction;
     final marginHeight = frameHeight * marginFraction;
-    final cropLeft = offsetLeft + left * previewWidth - marginWidth;
+    final sourceLeft = isPreviewMirrored ? 1 - right : left;
+    final sourceRight = isPreviewMirrored ? 1 - left : right;
+    final cropLeft = offsetLeft + sourceLeft * previewWidth - marginWidth;
     final cropTop = offsetTop + top * previewHeight - marginHeight;
-    final cropRight = offsetLeft + right * previewWidth + marginWidth;
+    final cropRight = offsetLeft + sourceRight * previewWidth + marginWidth;
     final cropBottom = offsetTop + bottom * previewHeight + marginHeight;
     if (![cropLeft, cropTop, cropRight, cropBottom].every((v) => v.isFinite)) {
-      throw ArgumentError('Document crop cannot be mapped to the still image.');
+      throw ArgumentError('Capture crop cannot be mapped to the still image.');
     }
 
     final pixelLeft = cropLeft.clamp(0, imageWidth).floor();
@@ -114,7 +120,7 @@ class DocumentCaptureCrop {
     final pixelRight = cropRight.clamp(0, imageWidth).ceil();
     final pixelBottom = cropBottom.clamp(0, imageHeight).ceil();
     if (pixelRight <= pixelLeft || pixelBottom <= pixelTop) {
-      throw ArgumentError('Document crop must contain image pixels.');
+      throw ArgumentError('Capture crop must contain image pixels.');
     }
     return PixelCropBounds(
       left: pixelLeft,
@@ -138,17 +144,25 @@ class DocumentCaptureCrop {
 
   @override
   bool operator ==(Object other) =>
-      other is DocumentCaptureCrop &&
+      other is CameraCaptureCrop &&
       left == other.left &&
       top == other.top &&
       width == other.width &&
       height == other.height &&
       previewAspectRatio == other.previewAspectRatio &&
-      marginFraction == other.marginFraction;
+      marginFraction == other.marginFraction &&
+      isPreviewMirrored == other.isPreviewMirrored;
 
   @override
-  int get hashCode =>
-      Object.hash(left, top, width, height, previewAspectRatio, marginFraction);
+  int get hashCode => Object.hash(
+    left,
+    top,
+    width,
+    height,
+    previewAspectRatio,
+    marginFraction,
+    isPreviewMirrored,
+  );
 }
 
 /// A nonempty rectangle in upright still-image pixels.

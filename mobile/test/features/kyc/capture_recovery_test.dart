@@ -6,7 +6,7 @@ import 'package:kyc_onboarding/core/network/api_client.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_datasource.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/kyc_remote_datasource.dart';
 import 'package:kyc_onboarding/features/kyc/data/repositories/kyc_repository_impl.dart';
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 
 void main() {
@@ -65,7 +65,7 @@ class RecoveryCamera implements CameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
   }) async => null;
   @override
   Future<void> remove(CapturedMedia media) async {

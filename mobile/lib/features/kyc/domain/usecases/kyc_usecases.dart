@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import '../../../../core/domain/result.dart';
 import '../entities/kyc_profile.dart';
-import '../entities/document_capture_crop.dart';
+import '../entities/camera_capture_crop.dart';
 import '../repositories/kyc_repository.dart';
 
 class LoadKyc {
@@ -33,7 +33,7 @@ class CaptureMedia {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
   }) => repository.capture(
     kind,
     profileId,

@@ -4,7 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/domain/result.dart';
 import '../../domain/entities/kyc_profile.dart';
-import '../../domain/entities/document_capture_crop.dart';
+import '../../domain/entities/camera_capture_crop.dart';
 import '../../domain/usecases/kyc_usecases.dart';
 
 enum KycOperation {
@@ -420,7 +420,7 @@ class KycCubit extends Cubit<KycState> {
   Future<bool> capture(
     MediaKind kind, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
     bool uploadImmediately = true,
   }) async {
     if (_profileRead != null) await _waitForProfileReads();

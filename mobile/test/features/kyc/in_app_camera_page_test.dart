@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kyc_onboarding/core/domain/result.dart';
 import 'package:kyc_onboarding/core/theme/app_theme.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/capture_camera.dart';
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 import 'package:kyc_onboarding/features/kyc/domain/repositories/capture_camera_repository.dart';
 import 'package:kyc_onboarding/features/kyc/domain/usecases/capture_camera_usecases.dart';
@@ -244,7 +244,7 @@ Future<void> pumpCamera(
   WidgetTester tester,
   FakeCaptureCameraRepository repository, {
   MediaKind kind = MediaKind.document,
-  Future<bool> Function(DocumentCaptureCrop? crop)? onCapture,
+  Future<bool> Function(CameraCaptureCrop? crop)? onCapture,
   ValueChanged<bool?>? onResult,
   bool settle = true,
   TextScaler textScaler = TextScaler.noScaling,

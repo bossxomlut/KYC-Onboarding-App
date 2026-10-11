@@ -4,10 +4,10 @@ import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import '../../domain/entities/document_capture_crop.dart';
+import '../../domain/entities/camera_capture_crop.dart';
 import '../../domain/entities/kyc_profile.dart';
 import 'camera_capture_exception.dart';
-import 'document_photo_cropper.dart';
+import 'camera_photo_cropper.dart';
 import 'in_app_camera_driver.dart';
 
 export 'camera_capture_exception.dart';
@@ -18,7 +18,7 @@ abstract interface class CameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
   });
   Future<CapturedMedia?> recover(MediaKind kind, String profileId);
   Future<void> remove(CapturedMedia media);
@@ -59,7 +59,7 @@ class ImagePickerCameraDataSource implements CameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
   }) async {
     final directory = await _profileDirectory(profileId);
     final intent = File('${directory.path}/capture_intent.json');
@@ -236,24 +236,25 @@ class InAppCameraDataSource extends ImagePickerCameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
-    DocumentCaptureCrop? crop,
+    CameraCaptureCrop? crop,
   }) async {
-    if (kind == MediaKind.document && crop == null) {
-      throw const CameraCaptureException(
-        'DOCUMENT_CROP_REQUIRED',
-        'The document frame is not ready. Please take the photo again.',
+    if (crop == null) {
+      throw CameraCaptureException(
+        kind == MediaKind.document
+            ? 'DOCUMENT_CROP_REQUIRED'
+            : 'SELFIE_CROP_REQUIRED',
+        'The ${kind == MediaKind.document ? 'document' : 'face'} frame is not ready. Please take the photo again.',
       );
     }
     // Validate scope before taking the photo, then persist before upload.
     await _profileDirectory(profileId);
     final source = await driver.takePicture(kind);
     try {
-      final bytes = kind == MediaKind.document
-          ? await const DocumentPhotoCropper().crop(
-              await source.readAsBytes(),
-              crop!,
-            )
-          : null;
+      final bytes = await const CameraPhotoCropper().crop(
+        await source.readAsBytes(),
+        crop,
+        kind: kind,
+      );
       return await _persist(
         source,
         kind,

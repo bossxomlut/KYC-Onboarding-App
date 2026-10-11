@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as image;
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_datasource.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/in_app_camera_driver.dart';
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 
 void main() {
@@ -15,7 +15,7 @@ void main() {
   });
   tearDown(() async => temporary.delete(recursive: true));
 
-  final crop = DocumentCaptureCrop.fromViewport(
+  final crop = CameraCaptureCrop.fromViewport(
     viewportWidth: 300,
     viewportHeight: 400,
     frameLeft: 30,
@@ -98,25 +98,120 @@ void main() {
     },
   );
 
-  test('selfie keeps its original bytes and dimensions', () async {
-    final photo = image.Image(width: 300, height: 400);
-    final originalBytes = image.encodeJpg(photo);
-    final original = File('${temporary.path}/selfie.jpg');
-    await original.writeAsBytes(originalBytes);
-    final source = InAppCameraDataSource(
-      driver: _PhotoDriver(original.path),
-      directory: () async => temporary,
-      isAndroid: false,
-    );
-    final captured = (await source.capture(
-      MediaKind.selfie,
-      'crop-profile',
-      crop: crop,
-    ))!;
-    expect(captured.bytes, originalBytes);
-    expect(image.decodeJpg(captured.bytes)!.width, 300);
-    expect(image.decodeJpg(captured.bytes)!.height, 400);
-  });
+  test(
+    'selfie saves and recovers only the oval bounding frame with a small border',
+    () async {
+      final selfieCrop = CameraCaptureCrop.fromViewport(
+        viewportWidth: 300,
+        viewportHeight: 400,
+        frameLeft: 90,
+        frameTop: 110,
+        frameWidth: 118.4,
+        frameHeight: 160,
+        previewAspectRatio: .75,
+      );
+      final photo = image.Image(width: 300, height: 400);
+      image.fill(photo, color: image.ColorRgb8(20, 20, 220));
+      image.fillRect(
+        photo,
+        x1: 90,
+        y1: 110,
+        x2: 208,
+        y2: 269,
+        color: image.ColorRgb8(220, 20, 20),
+      );
+      final originalBytes = image.encodeJpg(photo, quality: 100);
+      final original = File('${temporary.path}/selfie.jpg');
+      await original.writeAsBytes(originalBytes);
+      final source = InAppCameraDataSource(
+        driver: _PhotoDriver(original.path),
+        directory: () async => temporary,
+        isAndroid: false,
+      );
+      final captured = (await source.capture(
+        MediaKind.selfie,
+        'crop-profile',
+        crop: selfieCrop,
+      ))!;
+      final decoded = image.decodeJpg(captured.bytes)!;
+      final expected = selfieCrop.boundsForImage(width: 300, height: 400);
+      expect(
+        (decoded.width, decoded.height),
+        (expected.width, expected.height),
+      );
+      expect(decoded.width, lessThan(photo.width));
+      expect(decoded.height, lessThan(photo.height));
+      expect(decoded.width / decoded.height, closeTo(.74, .02));
+      expect(
+        decoded.getPixel(decoded.width ~/ 2, decoded.height ~/ 2).r,
+        greaterThan(180),
+      );
+      expect(decoded.getPixel(1, 1).b, greaterThan(180));
+      expect(await original.exists(), isFalse);
+      expect(await File(captured.filePath).readAsBytes(), captured.bytes);
+      final recovered = (await source.recover(
+        MediaKind.selfie,
+        'crop-profile',
+      ))!;
+      expect(recovered.bytes, captured.bytes);
+      expect(recovered.captureId, captured.captureId);
+      expect(recovered.documentType, isNull);
+    },
+  );
+
+  test(
+    'selfie without frame geometry cannot save an uncropped image',
+    () async {
+      final driver = _PhotoDriver('${temporary.path}/raw.jpg');
+      final source = InAppCameraDataSource(
+        driver: driver,
+        directory: () async => temporary,
+      );
+      await expectLater(
+        source.capture(MediaKind.selfie, 'crop-profile'),
+        throwsA(
+          isA<CameraCaptureException>().having(
+            (error) => error.code,
+            'code',
+            'SELFIE_CROP_REQUIRED',
+          ),
+        ),
+      );
+      expect(driver.pictures, 0);
+    },
+  );
+
+  test(
+    'selfie crop failure cleans raw capture and preserves the previous pending selfie',
+    () async {
+      final folder = await Directory(
+        '${temporary.path}/kyc_captures/crop-profile',
+      ).create(recursive: true);
+      final existing = File(
+        '${folder.path}/selfie_photo_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg',
+      );
+      await existing.writeAsBytes([1, 2, 3]);
+      final original = File('${temporary.path}/corrupt-selfie.jpg');
+      await original.writeAsBytes([4, 5, 6]);
+      final source = InAppCameraDataSource(
+        driver: _PhotoDriver(original.path),
+        directory: () async => temporary,
+        isAndroid: false,
+      );
+      await expectLater(
+        source.capture(MediaKind.selfie, 'crop-profile', crop: crop),
+        throwsA(
+          isA<CameraCaptureException>().having(
+            (error) => error.code,
+            'code',
+            'SELFIE_CROP_FAILED',
+          ),
+        ),
+      );
+      expect(await original.exists(), isFalse);
+      expect(await existing.readAsBytes(), [1, 2, 3]);
+    },
+  );
 
   test(
     'crop failure cleans raw capture and preserves the previous pending document',

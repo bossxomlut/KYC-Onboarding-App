@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
 
-DocumentCaptureCrop crop({
+CameraCaptureCrop crop({
   double viewportWidth = 390,
   double viewportHeight = 844,
   double frameLeft = 35,
@@ -10,7 +10,8 @@ DocumentCaptureCrop crop({
   double frameHeight = 200,
   double previewAspectRatio = .75,
   double marginFraction = .03,
-}) => DocumentCaptureCrop.fromViewport(
+  bool isPreviewMirrored = false,
+}) => CameraCaptureCrop.fromViewport(
   viewportWidth: viewportWidth,
   viewportHeight: viewportHeight,
   frameLeft: frameLeft,
@@ -19,6 +20,7 @@ DocumentCaptureCrop crop({
   frameHeight: frameHeight,
   previewAspectRatio: previewAspectRatio,
   marginFraction: marginFraction,
+  isPreviewMirrored: isPreviewMirrored,
 );
 
 void expectBounds(
@@ -37,6 +39,80 @@ void expectBounds(
 }
 
 void main() {
+  test(
+    'mirrored front guide selects the opposite raw region without flipping pixels',
+    () {
+      final selfie = crop(
+        viewportWidth: 400,
+        viewportHeight: 600,
+        frameLeft: 50,
+        frameTop: 100,
+        frameWidth: 100,
+        frameHeight: 135,
+        previewAspectRatio: 2 / 3,
+        marginFraction: 0,
+        isPreviewMirrored: true,
+      );
+      expect(selfie.left, .125);
+      expectBounds(
+        selfie.boundsForImage(width: 800, height: 1200),
+        left: 500,
+        top: 200,
+        right: 700,
+        bottom: 470,
+      );
+    },
+  );
+
+  test(
+    'mirrored front margin maps into a different still aspect and clamps at edges',
+    () {
+      final selfie = crop(
+        viewportWidth: 400,
+        viewportHeight: 600,
+        frameLeft: 50,
+        frameTop: 100,
+        frameWidth: 100,
+        frameHeight: 135,
+        previewAspectRatio: 2 / 3,
+        isPreviewMirrored: true,
+      );
+      expectBounds(
+        selfie.boundsForImage(width: 1200, height: 1200),
+        left: 694,
+        top: 191,
+        right: 906,
+        bottom: 479,
+      );
+      final edge = crop(
+        viewportWidth: 1000,
+        viewportHeight: 1000,
+        frameLeft: 0,
+        frameTop: 20,
+        frameWidth: 100,
+        frameHeight: 200,
+        previewAspectRatio: 1,
+        isPreviewMirrored: true,
+      );
+      expectBounds(
+        edge.boundsForImage(width: 1000, height: 1000),
+        left: 897,
+        top: 14,
+        right: 1000,
+        bottom: 226,
+      );
+    },
+  );
+
+  test('mirror metadata is part of capture crop equality', () {
+    final normal = crop();
+    final mirrored = crop(isPreviewMirrored: true);
+    expect(normal, crop());
+    expect(normal.hashCode, crop().hashCode);
+    expect(mirrored, isNot(normal));
+    expect(mirrored, crop(isPreviewMirrored: true));
+  });
+
   test('portrait cover maps the offset frame instead of image centre', () {
     final document = crop(marginFraction: 0);
 

@@ -93,6 +93,7 @@ class InAppCameraDriver {
         kind: kind,
         aspectRatio: 1 / controller.value.aspectRatio,
         canToggleFlash: flashSupported,
+        isPreviewMirrored: requiredLens == CameraLensDirection.front,
       );
       return _session!;
     } catch (_) {
@@ -131,6 +132,7 @@ class InAppCameraDriver {
       aspectRatio: session.aspectRatio,
       flashEnabled: enabled,
       canToggleFlash: session.canToggleFlash,
+      isPreviewMirrored: session.isPreviewMirrored,
     );
     return _session!;
   });

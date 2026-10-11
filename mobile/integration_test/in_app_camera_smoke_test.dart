@@ -12,7 +12,7 @@ import 'package:kyc_onboarding/core/theme/app_theme.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_datasource.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/in_app_camera_driver.dart';
 import 'package:kyc_onboarding/features/kyc/data/repositories/capture_camera_repository_impl.dart';
-import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/camera_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 import 'package:kyc_onboarding/features/kyc/domain/usecases/capture_camera_usecases.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/bloc/capture_camera_cubit.dart';
@@ -40,7 +40,7 @@ void main() {
         final profileId = 'camera-smoke-${kind.name}';
         CaptureCameraCubit? camera;
         CapturedMedia? captured;
-        DocumentCaptureCrop? captureCrop;
+        CameraCaptureCrop? captureCrop;
         bool? routeResult;
 
         await source.discard(profileId);
@@ -148,6 +148,18 @@ void main() {
           for (var second = 0; second < previewSeconds; second++) {
             await tester.pump(const Duration(seconds: 1));
           }
+          final viewport = tester.getRect(
+            find.byKey(const Key('capture-camera-preview-viewport')),
+          );
+          final guide = tester.getRect(
+            find.byKey(
+              Key(
+                kind == MediaKind.document
+                    ? 'document-camera-guide'
+                    : 'selfie-camera-guide',
+              ),
+            ),
+          );
           await tester.tap(find.byKey(const Key('camera-shutter')));
           await _waitUntil(tester, () => routeResult != null);
           expect(routeResult, isTrue);
@@ -172,6 +184,11 @@ void main() {
             photo,
             driver.originalBytes!,
             captureCrop,
+            {
+              'devicePixelRatio': tester.view.devicePixelRatio,
+              'viewport': _rectMetadata(viewport),
+              'guide': _rectMetadata(guide),
+            },
           );
 
           await driver.close();
@@ -212,7 +229,8 @@ class _AuditedCameraDriver extends InAppCameraDriver {
 Future<void> _expectCaptureFraming(
   CapturedMedia photo,
   Uint8List originalBytes,
-  DocumentCaptureCrop? crop,
+  CameraCaptureCrop? crop,
+  Map<String, Object?> previewGeometry,
 ) async {
   final decodedOriginal = image.decodeImage(originalBytes);
   final decodedOutput = image.decodeImage(photo.bytes);
@@ -220,45 +238,48 @@ Future<void> _expectCaptureFraming(
   expect(decodedOutput, isNotNull);
   final original = image.bakeOrientation(decodedOriginal!);
   final output = image.bakeOrientation(decodedOutput!);
-  if (photo.kind == MediaKind.document) {
-    expect(crop, isNotNull);
-    final framing = crop!;
-    final imageAspect = original.width / original.height;
-    // The preview and still can use different sensor aspect ratios. Find the
-    // centered still-image region visible in the preview independently here.
-    final previewWidth = imageAspect > framing.previewAspectRatio
-        ? original.height * framing.previewAspectRatio
-        : original.width.toDouble();
-    final previewHeight = imageAspect > framing.previewAspectRatio
-        ? original.height.toDouble()
-        : original.width / framing.previewAspectRatio;
-    final frameLeft =
-        (original.width - previewWidth) / 2 + framing.left * previewWidth;
-    final frameTop =
-        (original.height - previewHeight) / 2 + framing.top * previewHeight;
-    final frameWidth = framing.width * previewWidth;
-    final frameHeight = framing.height * previewHeight;
-    final borderX = frameWidth * framing.marginFraction;
-    final borderY = frameHeight * framing.marginFraction;
-    final left = (frameLeft - borderX).clamp(0, original.width).floor();
-    final top = (frameTop - borderY).clamp(0, original.height).floor();
-    final right = (frameLeft + frameWidth + borderX)
-        .clamp(0, original.width)
-        .ceil();
-    final bottom = (frameTop + frameHeight + borderY)
-        .clamp(0, original.height)
-        .ceil();
-    expect(output.width, right - left);
-    expect(output.height, bottom - top);
-    expect(output.width, lessThan(original.width));
-    expect(output.height, lessThan(original.height));
-    expect(output.width / output.height, closeTo(1.42, .006));
-  } else {
-    expect(crop, isNull);
-    expect(output.width, original.width);
-    expect(output.height, original.height);
-    expect(photo.bytes, originalBytes);
-  }
+  expect(crop, isNotNull);
+  final framing = crop!;
+  expect(framing.marginFraction, .03);
+  expect(framing.isPreviewMirrored, photo.kind == MediaKind.selfie);
+  final imageAspect = original.width / original.height;
+  // The preview and still can use different sensor aspect ratios. Find the
+  // centered still-image region visible in the preview independently here.
+  final previewWidth = imageAspect > framing.previewAspectRatio
+      ? original.height * framing.previewAspectRatio
+      : original.width.toDouble();
+  final previewHeight = imageAspect > framing.previewAspectRatio
+      ? original.height.toDouble()
+      : original.width / framing.previewAspectRatio;
+  // The front viewfinder is mirrored, while the upright original JPEG is not.
+  // An off-center guide therefore refers to the opposite side of the sensor.
+  final sourceLeft = framing.isPreviewMirrored
+      ? 1 - framing.left - framing.width
+      : framing.left;
+  final frameLeft =
+      (original.width - previewWidth) / 2 + sourceLeft * previewWidth;
+  final frameTop =
+      (original.height - previewHeight) / 2 + framing.top * previewHeight;
+  final frameWidth = framing.width * previewWidth;
+  final frameHeight = framing.height * previewHeight;
+  final borderX = frameWidth * framing.marginFraction;
+  final borderY = frameHeight * framing.marginFraction;
+  final left = (frameLeft - borderX).clamp(0, original.width).floor();
+  final top = (frameTop - borderY).clamp(0, original.height).floor();
+  final right = (frameLeft + frameWidth + borderX)
+      .clamp(0, original.width)
+      .ceil();
+  final bottom = (frameTop + frameHeight + borderY)
+      .clamp(0, original.height)
+      .ceil();
+  expect(output.width, right - left);
+  expect(output.height, bottom - top);
+  expect(output.width, lessThan(original.width));
+  expect(output.height, lessThan(original.height));
+  expect(
+    output.width / output.height,
+    closeTo(photo.kind == MediaKind.document ? 1.42 : .74, .006),
+  );
 
   debugPrint(
     'CAMERA_SMOKE_CAPTURE_RESULT ${photo.kind.name} '
@@ -283,15 +304,16 @@ Future<void> _expectCaptureFraming(
       'originalHeight': original.height,
       'outputWidth': output.width,
       'outputHeight': output.height,
-      if (crop != null)
-        'crop': {
-          'left': crop.left,
-          'top': crop.top,
-          'width': crop.width,
-          'height': crop.height,
-          'previewAspectRatio': crop.previewAspectRatio,
-          'marginFraction': crop.marginFraction,
-        },
+      'previewGeometry': previewGeometry,
+      'crop': {
+        'left': framing.left,
+        'top': framing.top,
+        'width': framing.width,
+        'height': framing.height,
+        'previewAspectRatio': framing.previewAspectRatio,
+        'marginFraction': framing.marginFraction,
+        'isPreviewMirrored': framing.isPreviewMirrored,
+      },
     }),
   );
   debugPrint('CAMERA_SMOKE_EVIDENCE ${evidence.path}');
@@ -299,6 +321,13 @@ Future<void> _expectCaptureFraming(
   // opt-in window for the host to collect the synthetic camera artifacts.
   await Future<void>.delayed(const Duration(seconds: 5));
 }
+
+Map<String, double> _rectMetadata(Rect rect) => {
+  'left': rect.left,
+  'top': rect.top,
+  'width': rect.width,
+  'height': rect.height,
+};
 
 void _expectLens(WidgetTester tester, MediaKind kind) {
   expect(find.byType(CameraPreview), findsOneWidget);
@@ -316,6 +345,37 @@ void _expectLens(WidgetTester tester, MediaKind kind) {
         .onPressed,
     isNotNull,
   );
+  if (const bool.fromEnvironment('CAMERA_SMOKE_SAVE_EVIDENCE')) {
+    final rotations = tester
+        .widgetList<RotatedBox>(
+          find.descendant(
+            of: find.byType(CameraPreview),
+            matching: find.byType(RotatedBox),
+          ),
+        )
+        .map((rotation) => rotation.quarterTurns)
+        .toList();
+    final transforms = tester
+        .widgetList<Transform>(
+          find.descendant(
+            of: find.byType(CameraPreview),
+            matching: find.byType(Transform),
+          ),
+        )
+        .map(
+          (transform) => [
+            transform.transform.storage[0],
+            transform.transform.storage[1],
+            transform.transform.storage[4],
+            transform.transform.storage[5],
+          ],
+        )
+        .toList();
+    debugPrint(
+      'CAMERA_SMOKE_PREVIEW_TRANSFORMS ${kind.name} '
+      '${jsonEncode({'deviceOrientation': preview.controller.value.deviceOrientation.name, 'lockedOrientation': preview.controller.value.lockedCaptureOrientation?.name, 'previewSize': preview.controller.value.previewSize.toString(), 'quarterTurns': rotations, 'transforms': transforms})}',
+    );
+  }
 }
 
 Future<void> _waitUntil(

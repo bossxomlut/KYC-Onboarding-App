@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/kyc_profile.dart';
-import '../../domain/entities/document_capture_crop.dart';
+import '../../domain/entities/camera_capture_crop.dart';
 import '../bloc/capture_camera_cubit.dart';
 import '../widgets/capture_camera_overlay.dart';
 
@@ -22,7 +22,7 @@ class InAppCameraPage extends StatefulWidget {
   final MediaKind kind;
   final DocumentType? documentType;
   final WidgetBuilder previewBuilder;
-  final Future<bool> Function(DocumentCaptureCrop? crop) onCapture;
+  final Future<bool> Function(CameraCaptureCrop? crop) onCapture;
 
   @override
   State<InAppCameraPage> createState() => _InAppCameraPageState();
@@ -32,7 +32,7 @@ class _InAppCameraPageState extends State<InAppCameraPage>
     with WidgetsBindingObserver {
   late final CaptureCameraCubit _camera;
   final _previewKey = GlobalKey();
-  final _documentGuideKey = GlobalKey();
+  final _captureGuideKey = GlobalKey();
   bool _capturing = false;
   bool _closing = false;
   bool _captureFailed = false;
@@ -72,7 +72,7 @@ class _InAppCameraPageState extends State<InAppCameraPage>
     });
     var success = false;
     try {
-      success = await widget.onCapture(_documentCrop());
+      success = await widget.onCapture(_captureCrop());
       if (success) await _camera.pause();
     } catch (_) {
       success = false;
@@ -89,21 +89,20 @@ class _InAppCameraPageState extends State<InAppCameraPage>
     }
   }
 
-  DocumentCaptureCrop? _documentCrop() {
-    if (!_isDocument) return null;
+  CameraCaptureCrop _captureCrop() {
     final preview = _previewKey.currentContext?.findRenderObject();
-    final guide = _documentGuideKey.currentContext?.findRenderObject();
+    final guide = _captureGuideKey.currentContext?.findRenderObject();
     final session = _camera.state.session;
     if (preview is! RenderBox ||
         guide is! RenderBox ||
         !preview.hasSize ||
         !guide.hasSize ||
         session == null) {
-      throw StateError('Document frame is not ready.');
+      throw StateError('Capture frame is not ready.');
     }
     final offset =
         guide.localToGlobal(Offset.zero) - preview.localToGlobal(Offset.zero);
-    return DocumentCaptureCrop.fromViewport(
+    return CameraCaptureCrop.fromViewport(
       viewportWidth: preview.size.width,
       viewportHeight: preview.size.height,
       frameLeft: offset.dx,
@@ -111,6 +110,7 @@ class _InAppCameraPageState extends State<InAppCameraPage>
       frameWidth: guide.size.width,
       frameHeight: guide.size.height,
       previewAspectRatio: session.aspectRatio,
+      isPreviewMirrored: session.isPreviewMirrored,
     );
   }
 
@@ -345,7 +345,7 @@ class _InAppCameraPageState extends State<InAppCameraPage>
       return CaptureCameraOverlay(
         kind: widget.kind,
         documentType: widget.documentType,
-        frameKey: _isDocument ? _documentGuideKey : null,
+        frameKey: _captureGuideKey,
       );
     }
     if (state.failure != null) {
