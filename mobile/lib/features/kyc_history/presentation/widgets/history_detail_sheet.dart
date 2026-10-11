@@ -5,7 +5,8 @@ import '../bloc/kyc_history_cubit.dart';
 import 'history_review_info.dart';
 
 class HistoryDetailSheet extends StatelessWidget {
-  const HistoryDetailSheet({super.key});
+  const HistoryDetailSheet({this.showVerification = false, super.key});
+  final bool showVerification;
   @override
   Widget build(BuildContext context) => FractionallySizedBox(
     heightFactor: .92,
@@ -87,6 +88,7 @@ class HistoryDetailSheet extends StatelessWidget {
                             KycProfileSummary(
                               profile: submission.profile,
                               media: state.media,
+                              showVerification: showVerification,
                             ),
                           ],
                         ),

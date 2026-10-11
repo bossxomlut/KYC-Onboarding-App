@@ -18,7 +18,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(_loadFonts);
 
-  testWidgets('render completed production identity checks at 390px', (
+  testWidgets('render reviewer completed production identity checks at 390px', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -39,7 +39,7 @@ void main() {
           debugShowCheckedModeBanner: false,
           theme: _renderTheme(),
           home: Scaffold(
-            appBar: AppBar(title: const Text('Review & submit')),
+            appBar: AppBar(title: const Text('Review identity')),
             body: SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -50,6 +50,9 @@ void main() {
                     documentId: 'synthetic-document',
                     selfieId: 'synthetic-selfie',
                     checkedAt: DateTime(2026, 10, 11, 10, 30),
+                    selfieFace: const SelfieFaceVerification(
+                      status: SelfieFaceStatus.detected,
+                    ),
                     ocr: const OcrVerification(
                       status: OcrStatus.succeeded,
                       text: _recognizedText,
@@ -76,14 +79,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('Maya Nguyen'), findsOneWidget);
-    expect(find.text('Similarity score: 97.4 / 100'), findsOneWidget);
+    expect(find.text('Identity checks'), findsOneWidget);
+    expect(find.text('Face detected'), findsOneWidget);
+    expect(find.text('Local identity checks'), findsNothing);
+    expect(find.text('Score 97.4 / 100 · threshold 90'), findsOneWidget);
     expect(find.text(_recognizedText), findsNothing);
     expect(
-      tester
-          .getBottomLeft(
-            find.textContaining('reviewer makes the final decision'),
-          )
-          .dy,
+      tester.getBottomLeft(find.textContaining('No liveness check')).dy,
       lessThanOrEqualTo(820),
     );
 
@@ -96,7 +98,7 @@ void main() {
         final bytes = await rendered.toByteData(format: ui.ImageByteFormat.png);
         if (bytes == null) throw StateError('PNG encoding returned no bytes.');
         final output = File(
-          '../output/identity-verification/completed-checks.png',
+          '../output/identity-verification/reviewer-synthetic-checks.png',
         );
         await output.parent.create(recursive: true);
         await output.writeAsBytes(

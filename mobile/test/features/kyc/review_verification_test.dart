@@ -12,165 +12,93 @@ import 'package:kyc_onboarding/features/kyc/data/models/kyc_profile_model.dart';
 import 'package:kyc_onboarding/features/kyc/domain/usecases/kyc_usecases.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/bloc/kyc_cubit.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/pages/review_page.dart';
+import 'package:kyc_onboarding/features/kyc/presentation/widgets/verification_summary.dart';
 
 import 'kyc_cubit_test.dart' show FakeKycRepository;
 import 'kyc_verification_test.dart'
     show readyProfile, completedJson, profileJson;
 
 void main() {
-  for (final sources in [
-    {'documentId': 'older-document', 'selfieId': 'selfie'},
-    {'documentId': 'document', 'selfieId': 'older-selfie'},
-    {'documentId': null, 'selfieId': null},
-  ]) {
-    testWidgets(
-      'changed or unknown sources $sources hide evidence and allow a fresh explicit check',
-      (tester) async {
-        final checks = completedJson()..addAll(sources);
-        final repository = _ReviewVerificationRepository()
-          ..profile = KycProfileModel.fromJson(profileJson(checks));
-        final cubit = await _pumpReview(tester, repository);
-        expect(find.text('DEMO USER'), findsNothing);
-        expect(find.textContaining('Similarity score:'), findsNothing);
-        expect(find.text('Recognized document text'), findsNothing);
-        expect(
-          find.text('Automated checks have not run for these photos yet.'),
-          findsOneWidget,
-        );
-        final run = find.byKey(const Key('run-identity-checks'));
-        expect(tester.widget<OutlinedButton>(run).onPressed, isNotNull);
-        expect(repository.verificationCalls, 0);
-        await tester.ensureVisible(run);
-        await tester.tap(run);
-        await tester.pumpAndSettle();
-        expect(repository.verificationCalls, 1);
-        expect(
-          cubit.state.profile!.verification!.status,
-          VerificationStatus.completed,
-        );
-        expect(cubit.state.profile!.personalDetails!.fullName, 'Demo User');
-      },
-    );
+  for (final provider in ['aws', 'local']) {
+    for (final status in VerificationStatus.values) {
+      testWidgets(
+        '$provider ${status.name} hides technical checks from the applicant',
+        (tester) async {
+          final checks = completedJson()
+            ..['provider'] = provider
+            ..['status'] = switch (status) {
+              VerificationStatus.disabled => 'disabled',
+              VerificationStatus.notStarted => 'not_started',
+              VerificationStatus.completed => 'completed',
+              VerificationStatus.failed => 'failed',
+            };
+          final repository = _ReviewVerificationRepository()
+            ..profile = KycProfileModel.fromJson(profileJson(checks));
+          await _pumpReview(tester, repository);
+          expect(find.byType(VerificationSummary), findsNothing);
+          expect(find.byKey(const Key('run-identity-checks')), findsNothing);
+          expect(find.textContaining('sent to AWS'), findsNothing);
+          expect(
+            find.textContaining('processed on the app server'),
+            findsNothing,
+          );
+          expect(find.text('DEMO USER'), findsNothing);
+          expect(find.text('Review & submit'), findsOneWidget);
+          expect(find.text('Personal details'), findsOneWidget);
+          expect(find.text('Demo User'), findsOneWidget);
+          expect(find.text('ID document'), findsOneWidget);
+          expect(find.text('Selfie'), findsOneWidget);
+          expect(
+            tester
+                .widget<FilledButton>(find.byKey(const Key('submit-kyc')))
+                .onPressed,
+            isNotNull,
+          );
+          expect(repository.verificationCalls, 0);
+        },
+      );
+    }
   }
 
   testWidgets(
-    'checks explain AWS transfer and run only after explicit intent',
+    'Submit runs checks without exposing a separate applicant action',
     (tester) async {
       final repository = _ReviewVerificationRepository();
-      final cubit = await _pumpReview(tester, repository);
-      expect(repository.verificationCalls, 0);
-      expect(find.textContaining('sent to AWS'), findsOneWidget);
-      final run = find.byKey(const Key('run-identity-checks'));
-      await tester.ensureVisible(run);
-      await tester.tap(run);
-      await tester.pumpAndSettle();
-      expect(repository.verificationCalls, 1);
-      expect(cubit.state.profile!.status, KycStatus.inProgress);
-      expect(find.byType(ReviewPage), findsOneWidget);
-      expect(find.byKey(const Key('submit-kyc')), findsOneWidget);
-      expect(run, findsNothing);
-    },
-  );
-
-  testWidgets(
-    'local checks explain server processing and need explicit intent',
-    (tester) async {
-      final checks = completedJson()
-        ..['provider'] = 'local'
-        ..['status'] = 'not_started';
-      final repository = _ReviewVerificationRepository()
-        ..profile = KycProfileModel.fromJson(profileJson(checks));
       await _pumpReview(tester, repository);
-      expect(repository.verificationCalls, 0);
-      expect(
-        find.textContaining('processed on the app server'),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining('No external identity service is used.'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('sent to AWS'), findsNothing);
-      expect(find.text('Local identity checks'), findsOneWidget);
-      final run = find.byKey(const Key('run-identity-checks'));
-      await tester.ensureVisible(run);
-      await tester.tap(run);
+      await tester.tap(find.byKey(const Key('submit-kyc')));
       await tester.pumpAndSettle();
       expect(repository.verificationCalls, 1);
-      expect(find.byType(ReviewPage), findsOneWidget);
+      expect(repository.submitCalls, 1);
+      expect(find.text('Status page'), findsOneWidget);
+      expect(find.text('Identity checks'), findsNothing);
     },
   );
 
   testWidgets(
-    'checking disables submission until completion and retains the page',
+    'submission stays busy while checks run and prevents duplicate taps',
     (tester) async {
       final repository = _ReviewVerificationRepository()
         ..gate = Completer<Result<KycProfile>>();
       final cubit = await _pumpReview(tester, repository);
-      final run = find.byKey(const Key('run-identity-checks'));
-      await tester.ensureVisible(run);
-      await tester.tap(run);
+      final submit = find.byKey(const Key('submit-kyc'));
+      await tester.tap(submit);
       await tester.pump();
-      expect(cubit.state.operation, KycOperation.verifying);
-      expect(
-        tester
-            .widget<FilledButton>(find.byKey(const Key('submit-kyc')))
-            .onPressed,
-        isNull,
-      );
-      expect(tester.widget<OutlinedButton>(run).onPressed, isNull);
-      expect(find.text('Running identity checks…'), findsOneWidget);
+      expect(cubit.state.operation, KycOperation.submitting);
+      expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+      expect(find.byKey(const Key('run-identity-checks')), findsNothing);
+      expect(find.byType(VerificationSummary), findsNothing);
+      expect(repository.verificationCalls, 1);
+      expect(repository.submitCalls, 0);
+      await tester.tap(submit);
+      await tester.pump();
+      expect(repository.verificationCalls, 1);
       repository.profile = readyProfile(VerificationStatus.completed);
       repository.gate!.complete(Success(repository.profile));
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<FilledButton>(find.byKey(const Key('submit-kyc')))
-            .onPressed,
-        isNotNull,
-      );
-      expect(find.byType(ReviewPage), findsOneWidget);
-      expect(repository.submitCalls, 0);
+      expect(repository.submitCalls, 1);
+      expect(find.text('Status page'), findsOneWidget);
     },
   );
-
-  testWidgets(
-    'failed checks allow explicit retry and never replace personal details',
-    (tester) async {
-      final repository = _ReviewVerificationRepository()
-        ..profile = readyProfile(VerificationStatus.failed);
-      final cubit = await _pumpReview(tester, repository);
-      final run = find.byKey(const Key('run-identity-checks'));
-      expect(find.text('Retry identity checks'), findsOneWidget);
-      await tester.ensureVisible(run);
-      await tester.tap(run);
-      await tester.pumpAndSettle();
-      expect(repository.verificationCalls, 1);
-      expect(cubit.state.profile!.personalDetails!.fullName, 'Demo User');
-    },
-  );
-
-  for (final checks in [
-    VerificationStatus.disabled,
-    VerificationStatus.completed,
-  ]) {
-    testWidgets(
-      '${checks.name} has no run action and manual submission remains enabled',
-      (tester) async {
-        final repository = _ReviewVerificationRepository()
-          ..profile = readyProfile(checks);
-        await _pumpReview(tester, repository);
-        expect(find.byKey(const Key('run-identity-checks')), findsNothing);
-        expect(
-          tester
-              .widget<FilledButton>(find.byKey(const Key('submit-kyc')))
-              .onPressed,
-          isNotNull,
-        );
-        expect(repository.verificationCalls, 0);
-      },
-    );
-  }
 }
 
 Future<KycCubit> _pumpReview(

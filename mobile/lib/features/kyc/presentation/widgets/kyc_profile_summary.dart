@@ -15,11 +15,13 @@ class KycProfileSummary extends StatelessWidget {
     required this.profile,
     required this.media,
     this.onEdit,
+    this.showVerification = false,
   });
 
   final KycProfile? profile;
   final Map<MediaKind, Uint8List> media;
   final ValueChanged<KycStep>? onEdit;
+  final bool showVerification;
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +101,7 @@ class KycProfileSummary extends StatelessWidget {
             ),
           ],
         ),
-        if (profile?.verification != null) ...[
+        if (showVerification && profile?.verification != null) ...[
           const SizedBox(height: 16),
           VerificationSummary(verification: profile!.verification),
         ],

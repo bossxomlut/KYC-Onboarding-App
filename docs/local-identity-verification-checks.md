@@ -77,3 +77,21 @@ Each API case also verified cache reuse, encrypted evidence, submission-history 
 Historical evidence without `selfieFace` is normalized to null and displays “Selfie face check was not recorded.” Editable profiles invalidate that legacy evidence and can run checks again; immutable history keeps the original comparison. No database migration is needed. New provider failures preserve other completed checks, and stale-photo guards also reject leftover selfie-detection evidence.
 
 The physical-device checks cover installation, startup and backend connectivity; the complete camera-to-result interaction on Samsung was not performed. The updated LAN APK remains at `output/android/app-local-lan-debug.apk`.
+
+## Reviewer-only compact results
+
+Verified on 11 October 2026 (Asia/Ho_Chi_Minh). Applicant Review, status/profile previews and submission history now hide the identity-check panel and provider details. The applicant uses the ordinary Submit action; enabled, unfinished checks run before submission under one busy operation. Completed/disabled/missing check configurations skip an extra request. Optional provider failures allow manual submission; lost authority, stale inputs, background invalidation or a closed flow stop the subsequent write. No provider calls happen just from opening a page or history.
+
+Reviewer detail and reviewer history retain real encrypted evidence in a compact **Identity checks** panel: OCR status/fields/confidence, Selfie, Face match, actual score/threshold and check time. Raw OCR is collapsed under **OCR text**. Missing extracted fields use `—`, absent historical selfie evidence uses **Not recorded**, and failures retain other available evidence. The panel has no provider branding or long explanatory paragraphs; the short **No liveness check** note remains.
+
+| Check | Actual result |
+| --- | --- |
+| Submission, verification, Cubit, refresh and architecture focused tests | 81/81 passed; new sequence/failure/race cases were observed failing first |
+| Applicant/reviewer summary, history and navigation focused tests | 20/20 passed; four applicant evidence leaks were observed before the visibility fix |
+| Compact summary, both reviewer renderers and architecture | 28/28 passed; missing-component failure regression observed first, then fixed |
+| Final full `flutter test --no-pub` | 494/494 passed; includes concurrent camera cropping and password-reset work in this shared checkout |
+| Final `flutter analyze --no-pub` | No issues found |
+| Reviewer preview from actual local API evidence | Rendered and inspected `output/identity-verification/reviewer-identity-checks.png`; all summary values fit 390×844, with responsive 320px/doubled-text coverage |
+| Android LAN build and Samsung installation | Debug APK built with the Mac LAN API, installed retaining data and launched; phone API health HTTP200. Compiled artifact contains the compact reviewer title and no old Local-title/Run-action strings |
+
+The backend OCR/face algorithms, authenticated endpoint and encrypted snapshot format are unchanged for this presentation/workflow update. Flutter tests cover applicant hiding for both AWS/local and every check status, ordinary Submit sequencing and duplicate taps, optional failures, stale media/details, authority loss, closure/background and reviewer-only history opt-in. The real-data preview uses the prior live local API result; a full physical-camera-to-review interaction was not rerun for this update. Unrelated shared-checkout changes were preserved separately.

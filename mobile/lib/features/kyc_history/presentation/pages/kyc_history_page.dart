@@ -42,8 +42,12 @@ class _KycHistoryPageState extends State<KycHistoryPage> {
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      builder: (_) =>
-          BlocProvider.value(value: cubit, child: const HistoryDetailSheet()),
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: HistoryDetailSheet(
+          showVerification: widget.reviewerUserId != null,
+        ),
+      ),
     );
     cubit.clearSelection();
   }

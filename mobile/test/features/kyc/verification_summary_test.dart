@@ -41,25 +41,95 @@ const _completed = KycVerification(
 );
 
 void main() {
+  testWidgets('failed attempt without component evidence shows check failure', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const VerificationSummary(
+        verification: KycVerification(
+          provider: 'local',
+          status: VerificationStatus.failed,
+        ),
+      ),
+    );
+    expect(find.text('Check failed'), findsOneWidget);
+    expect(find.text('Face detected'), findsNothing);
+    expect(find.textContaining('Score '), findsNothing);
+  });
+
+  testWidgets('no match shows actual score and checked time compactly', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      VerificationSummary(
+        verification: KycVerification(
+          provider: 'local',
+          status: VerificationStatus.completed,
+          checkedAt: DateTime(2026, 10, 11, 10, 30),
+          faceMatch: const FaceMatchVerification(
+            status: FaceMatchStatus.notMatched,
+            similarity: 8.941795557620935,
+            threshold: 36.3,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('No match'), findsOneWidget);
+    expect(find.text('Score 8.9 / 100 · threshold 36.3'), findsOneWidget);
+    expect(find.text('Checked 11 Oct 2026, 10:30'), findsOneWidget);
+    expect(find.textContaining('8.9%'), findsNothing);
+    expect(find.text('Local identity checks'), findsNothing);
+  });
+
+  testWidgets('partial failure retains actual OCR fields and detected selfie', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const VerificationSummary(
+        verification: KycVerification(
+          provider: 'local',
+          status: VerificationStatus.failed,
+          ocr: OcrVerification(
+            status: OcrStatus.failed,
+            text: 'ID SAMPLE123',
+            fields: OcrFields(documentNumber: 'SAMPLE123'),
+          ),
+          selfieFace: SelfieFaceVerification(status: SelfieFaceStatus.detected),
+        ),
+      ),
+    );
+    expect(find.text('SAMPLE123'), findsOneWidget);
+    expect(find.text('Check failed'), findsOneWidget);
+    expect(find.text('Face detected'), findsOneWidget);
+    expect(find.text('—'), findsNWidgets(2));
+    await tester.ensureVisible(find.text('OCR text'));
+    await tester.tap(find.text('OCR text'));
+    await tester.pumpAndSettle();
+    expect(find.text('ID SAMPLE123'), findsOneWidget);
+  });
+
   testWidgets('selfie presence and document comparison appear separately', (
     tester,
   ) async {
     await _pump(tester, const VerificationSummary(verification: _completed));
-    expect(find.text('Selfie face check'), findsOneWidget);
-    expect(find.text('Human face detected'), findsOneWidget);
-    expect(find.text('Face comparison'), findsOneWidget);
-    expect(find.text('Faces are similar'), findsOneWidget);
+    expect(find.text('Selfie'), findsOneWidget);
+    expect(find.text('Face detected'), findsOneWidget);
+    expect(find.text('Face match'), findsOneWidget);
+    expect(find.text('Match'), findsOneWidget);
     expect(
-      tester.getTopLeft(find.text('Selfie face check')).dy,
-      lessThan(tester.getTopLeft(find.text('Face comparison')).dy),
+      tester.getTopLeft(find.text('Selfie')).dy,
+      lessThan(tester.getTopLeft(find.text('Face match')).dy),
     );
-    expect(find.textContaining('does not check liveness'), findsOneWidget);
+    expect(find.textContaining('No liveness check'), findsOneWidget);
   });
 
   for (final entry in {
-    SelfieFaceStatus.noFace: 'No human face detected',
-    SelfieFaceStatus.multipleFaces: 'Multiple human faces detected',
-    SelfieFaceStatus.failed: 'Selfie face check could not complete.',
+    SelfieFaceStatus.noFace: 'No face',
+    SelfieFaceStatus.multipleFaces: 'Multiple faces',
+    SelfieFaceStatus.failed: 'Check failed',
   }.entries) {
     testWidgets('${entry.key.name} selfie result is explicit', (tester) async {
       await _pump(
@@ -82,12 +152,12 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Selfie face check'), findsOneWidget);
-      expect(find.text(entry.value), findsOneWidget);
-      expect(find.text('Human face detected'), findsNothing);
-      expect(find.text('Faces are similar'), findsNothing);
-      expect(find.textContaining('Similarity score:'), findsNothing);
-      expect(find.textContaining('does not check liveness'), findsOneWidget);
+      expect(find.text('Selfie'), findsOneWidget);
+      expect(find.text(entry.value), findsNWidgets(2));
+      expect(find.text('Face detected'), findsNothing);
+      expect(find.text('Match'), findsNothing);
+      expect(find.textContaining('Score '), findsNothing);
+      expect(find.textContaining('No liveness check'), findsOneWidget);
     });
   }
 
@@ -108,13 +178,10 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Human face detected'), findsOneWidget);
-    expect(
-      find.text('A face could not be detected in one or both photos.'),
-      findsOneWidget,
-    );
-    expect(find.text('Faces are similar'), findsNothing);
-    expect(find.textContaining('Similarity score:'), findsNothing);
+    expect(find.text('Face detected'), findsOneWidget);
+    expect(find.text('No face'), findsOneWidget);
+    expect(find.text('Match'), findsNothing);
+    expect(find.textContaining('Score '), findsNothing);
   });
 
   testWidgets('legacy checks never infer recorded selfie face evidence', (
@@ -134,20 +201,20 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Selfie face check was not recorded.'), findsOneWidget);
-    expect(find.text('Human face detected'), findsNothing);
-    expect(find.text('Faces are similar'), findsOneWidget);
+    expect(find.text('Not recorded'), findsOneWidget);
+    expect(find.text('Face detected'), findsNothing);
+    expect(find.text('Match'), findsOneWidget);
   });
 
   testWidgets('legacy profiles do not show an empty automated checks panel', (
     tester,
   ) async {
     await _pump(tester, const VerificationSummary(verification: null));
-    expect(find.text('Automated checks'), findsNothing);
-    expect(find.text('Document text (OCR)'), findsNothing);
+    expect(find.text('Identity checks'), findsNothing);
+    expect(find.text('OCR'), findsNothing);
   });
 
-  testWidgets('disabled checks explain manual review without empty results', (
+  testWidgets('disabled checks show a compact unavailable status', (
     tester,
   ) async {
     await _pump(
@@ -159,13 +226,10 @@ void main() {
         ),
       ),
     );
-    expect(
-      find.textContaining('Automated checks are unavailable.'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('reviewer'), findsOneWidget);
-    expect(find.text('Document text (OCR)'), findsNothing);
-    expect(find.text('Face comparison'), findsNothing);
+    expect(find.textContaining('Unavailable'), findsOneWidget);
+    expect(find.textContaining('reviewer'), findsNothing);
+    expect(find.text('OCR'), findsNothing);
+    expect(find.text('Face match'), findsNothing);
   });
 
   testWidgets(
@@ -180,11 +244,8 @@ void main() {
           ),
         ),
       );
-      expect(
-        find.text('Automated checks have not run for these photos yet.'),
-        findsOneWidget,
-      );
-      expect(find.text('Faces are similar'), findsNothing);
+      expect(find.text('Not run'), findsOneWidget);
+      expect(find.text('Match'), findsNothing);
     },
   );
 
@@ -195,62 +256,58 @@ void main() {
     expect(find.text('SAMPLE PERSON'), findsOneWidget);
     expect(find.text('1994-02-10'), findsOneWidget);
     expect(find.text('SAMPLE123'), findsOneWidget);
-    expect(find.text('OCR confidence: 96.4%'), findsOneWidget);
-    expect(find.text('Similarity score: 97.2 / 100'), findsOneWidget);
-    expect(find.text('Match threshold: 90 / 100'), findsOneWidget);
-    expect(find.textContaining('does not check liveness'), findsOneWidget);
+    expect(find.text('Extracted · 96.4% confidence'), findsOneWidget);
+    expect(find.text('Score 97.2 / 100 · threshold 90'), findsOneWidget);
+    expect(find.text('97.2%'), findsNothing);
+    expect(find.textContaining('No liveness check'), findsOneWidget);
     expect(
       find.textContaining('reviewer makes the final decision'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(find.byType(TextField), findsNothing);
     expect(find.text(_recognizedText), findsNothing);
-    await tester.ensureVisible(find.text('Recognized document text'));
-    await tester.tap(find.text('Recognized document text'));
+    await tester.ensureVisible(find.text('OCR text'));
+    await tester.tap(find.text('OCR text'));
     await tester.pumpAndSettle();
     expect(find.text(_recognizedText), findsOneWidget);
   });
 
-  testWidgets(
-    'local results identify their source without identity confidence',
-    (tester) async {
-      await _pump(
-        tester,
-        const VerificationSummary(
-          verification: KycVerification(
-            provider: 'local',
-            status: VerificationStatus.completed,
-            ocr: OcrVerification(
-              status: OcrStatus.succeeded,
-              text: 'Họ và tên: NGUYỄN VĂN AN',
-              fields: OcrFields(fullName: 'NGUYỄN VĂN AN'),
-              confidence: 87.5,
-            ),
-            faceMatch: FaceMatchVerification(
-              status: FaceMatchStatus.matched,
-              similarity: 62.8,
-              threshold: 45,
-            ),
+  testWidgets('local results show actual data without provider branding', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const VerificationSummary(
+        verification: KycVerification(
+          provider: 'local',
+          status: VerificationStatus.completed,
+          ocr: OcrVerification(
+            status: OcrStatus.succeeded,
+            text: 'Họ và tên: NGUYỄN VĂN AN',
+            fields: OcrFields(fullName: 'NGUYỄN VĂN AN'),
+            confidence: 87.5,
+          ),
+          faceMatch: FaceMatchVerification(
+            status: FaceMatchStatus.matched,
+            similarity: 62.8,
+            threshold: 45,
           ),
         ),
-      );
-      expect(find.text('Local identity checks'), findsOneWidget);
-      expect(find.text('NGUYỄN VĂN AN'), findsOneWidget);
-      expect(find.text('OCR confidence: 87.5%'), findsOneWidget);
-      expect(find.text('Similarity score: 62.8 / 100'), findsOneWidget);
-      expect(find.text('Match threshold: 45 / 100'), findsOneWidget);
-      expect(
-        find.textContaining('not a probability of identity'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('does not check liveness'), findsOneWidget);
-      expect(
-        find.textContaining('reviewer makes the final decision'),
-        findsOneWidget,
-      );
-      expect(find.byType(TextField), findsNothing);
-    },
-  );
+      ),
+    );
+    expect(find.text('Identity checks'), findsOneWidget);
+    expect(find.text('NGUYỄN VĂN AN'), findsOneWidget);
+    expect(find.text('Extracted · 87.5% confidence'), findsOneWidget);
+    expect(find.text('Score 62.8 / 100 · threshold 45'), findsOneWidget);
+    expect(find.text('62.8%'), findsNothing);
+    expect(find.textContaining('not a probability of identity'), findsNothing);
+    expect(find.textContaining('No liveness check'), findsOneWidget);
+    expect(
+      find.textContaining('reviewer makes the final decision'),
+      findsNothing,
+    );
+    expect(find.byType(TextField), findsNothing);
+  });
 
   testWidgets(
     'partial OCR keeps the extracted value without inventing others',
@@ -270,16 +327,17 @@ void main() {
         ),
       );
       expect(find.text('SAMPLE123'), findsOneWidget);
-      expect(find.text('Extracted full name'), findsNothing);
-      expect(find.text('Extracted date of birth'), findsNothing);
-      expect(find.textContaining('OCR confidence:'), findsNothing);
-      expect(find.text('Face comparison unavailable.'), findsOneWidget);
+      expect(find.text('Name'), findsOneWidget);
+      expect(find.text('—'), findsNWidgets(2));
+      expect(find.text('Date of birth'), findsOneWidget);
+      expect(find.textContaining('confidence'), findsNothing);
+      expect(find.text('Unavailable'), findsOneWidget);
     },
   );
 
   for (final entry in {
-    OcrStatus.noText: 'No document text was recognized.',
-    OcrStatus.failed: 'Document text recognition could not complete.',
+    OcrStatus.noText: 'No text',
+    OcrStatus.failed: 'Check failed',
   }.entries) {
     testWidgets('${entry.key.name} OCR does not display successful evidence', (
       tester,
@@ -299,22 +357,17 @@ void main() {
         ),
       );
       expect(find.text(entry.value), findsOneWidget);
-      expect(
-        find.textContaining('Automated checks could not complete.'),
-        findsOneWidget,
-      );
-      expect(find.text('Recognized document text'), findsNothing);
-      expect(find.textContaining('OCR confidence:'), findsNothing);
+      expect(find.text('—'), findsNWidgets(3));
+      expect(find.text('OCR text'), findsNothing);
+      expect(find.textContaining('confidence'), findsNothing);
     });
   }
 
   for (final entry in {
-    FaceMatchStatus.notMatched: 'Faces are below the match threshold',
-    FaceMatchStatus.noFace:
-        'A face could not be detected in one or both photos.',
-    FaceMatchStatus.multipleFaces:
-        'Multiple faces were detected. Review the photos manually.',
-    FaceMatchStatus.failed: 'Face comparison could not complete.',
+    FaceMatchStatus.notMatched: 'No match',
+    FaceMatchStatus.noFace: 'No face',
+    FaceMatchStatus.multipleFaces: 'Multiple faces',
+    FaceMatchStatus.failed: 'Check failed',
   }.entries) {
     testWidgets(
       '${entry.key.name} requires review without a fabricated score',
@@ -333,16 +386,16 @@ void main() {
           ),
         );
         expect(find.text(entry.value), findsOneWidget);
-        expect(find.textContaining('Similarity score:'), findsNothing);
+        expect(find.textContaining('Score '), findsNothing);
         expect(
           find.textContaining('reviewer makes the final decision'),
-          findsOneWidget,
+          findsNothing,
         );
       },
     );
   }
 
-  testWidgets('applicant summary preserves its existing manual edit action', (
+  testWidgets('applicant summary hides checks and preserves its edit action', (
     tester,
   ) async {
     KycStep? edited;
@@ -361,8 +414,8 @@ void main() {
         onEdit: (step) => edited = step,
       ),
     );
-    expect(find.text('Automated checks'), findsOneWidget);
-    expect(find.text('Faces are similar'), findsOneWidget);
+    expect(find.text('Identity checks'), findsNothing);
+    expect(find.text('Match'), findsNothing);
     await tester.tap(find.widgetWithText(TextButton, 'Edit').first);
     expect(edited, KycStep.personalDetails);
   });
@@ -391,7 +444,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Automated checks'), findsOneWidget);
+        expect(find.text('Identity checks'), findsOneWidget);
         expect(
           tester
               .widget<FilledButton>(find.byKey(const Key('review-approve')))
@@ -424,13 +477,11 @@ void main() {
         textScale: 2,
       );
       expect(tester.takeException(), isNull);
-      await tester.ensureVisible(find.text('Recognized document text'));
-      await tester.tap(find.text('Recognized document text'));
+      await tester.ensureVisible(find.text('OCR text'));
+      await tester.tap(find.text('OCR text'));
       await tester.pumpAndSettle();
       expect(find.text(_recognizedText), findsOneWidget);
-      await tester.ensureVisible(
-        find.textContaining('does not check liveness'),
-      );
+      await tester.ensureVisible(find.textContaining('No liveness check'));
       expect(tester.takeException(), isNull);
     },
   );

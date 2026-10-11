@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kyc_onboarding/features/kyc/presentation/widgets/verification_summary.dart';
 import 'package:kyc_onboarding/features/kyc_history/presentation/bloc/kyc_history_cubit.dart';
 import 'package:kyc_onboarding/features/kyc_history/presentation/pages/kyc_history_page.dart';
 import 'kyc_history_cubit_test.dart'
@@ -9,6 +10,71 @@ import 'kyc_history_cubit_test.dart'
 import 'kyc_history_data_test.dart' show submissionJson;
 
 void main() {
+  for (final status in ['completed', 'failed']) {
+    testWidgets('applicant history hides $status identity evidence', (
+      tester,
+    ) async {
+      final repository = FakeHistoryRepository()
+        ..submissionOverride = _submissionWithChecks(status);
+      await pumpHistory(tester, repository);
+      await tester.tap(
+        find.byKey(const Key('history-submission-submission-1')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VerificationSummary), findsNothing);
+      expect(find.text('OCR NAME ONLY'), findsNothing);
+      expect(find.text('OCR123456'), findsNothing);
+      expect(find.textContaining('62.8'), findsNothing);
+      expect(find.text('Original Applicant'), findsOneWidget);
+      expect(find.text('OLD1234'), findsOneWidget);
+      expect(repository.reviewerUserIds, everyElement(isNull));
+      await tester.tap(find.byKey(const Key('history-detail-close')));
+      await tester.pumpAndSettle();
+      expect(find.text('Submission history'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('reviewer history displays the recorded identity values', (
+    tester,
+  ) async {
+    final repository = FakeHistoryRepository()
+      ..submissionOverride = _submissionWithChecks('completed');
+    await pumpHistory(tester, repository, reviewerUserId: 'applicant');
+    await tester.tap(find.byKey(const Key('history-submission-submission-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(VerificationSummary), findsOneWidget);
+    expect(find.text('OCR NAME ONLY'), findsOneWidget);
+    expect(find.text('OCR123456'), findsOneWidget);
+    expect(find.textContaining('62.8'), findsOneWidget);
+    expect(find.text('Original Applicant'), findsOneWidget);
+    expect(find.text('Edit'), findsNothing);
+    expect(repository.reviewerUserIds, everyElement('applicant'));
+    await tester.tap(find.byKey(const Key('history-detail-close')));
+    await tester.pumpAndSettle();
+    expect(find.text('Submission history'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reviewer history never manufactures missing identity evidence', (
+    tester,
+  ) async {
+    await pumpHistory(
+      tester,
+      FakeHistoryRepository(),
+      reviewerUserId: 'applicant',
+    );
+    await tester.tap(find.byKey(const Key('history-submission-submission-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(VerificationSummary), findsNothing);
+    expect(find.textContaining('62.8'), findsNothing);
+    expect(find.text('Original Applicant'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'history and its detail remain usable at narrow width and double text size',
     (tester) async {
@@ -140,6 +206,7 @@ Future<void> pumpHistory(
   WidgetTester tester,
   FakeHistoryRepository repository, {
   double textScale = 1,
+  String? reviewerUserId,
 }) async {
   final cubit = historyCubit(repository);
   addTearDown(() async {
@@ -156,9 +223,35 @@ Future<void> pumpHistory(
           ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        home: const KycHistoryPage(),
+        home: KycHistoryPage(reviewerUserId: reviewerUserId),
       ),
     ),
   );
   await tester.pumpAndSettle();
 }
+
+Map<String, dynamic> _submissionWithChecks(String status) => {
+  ...submissionJson,
+  'profile': {
+    ...Map<String, dynamic>.from(submissionJson['profile'] as Map),
+    'verification': {
+      'provider': 'local',
+      'status': status,
+      'documentId': 'original-document',
+      'selfieId': 'original-selfie',
+      'checkedAt': '2026-10-09T07:59:00.000Z',
+      'selfieFace': {'status': 'detected'},
+      'ocr': {
+        'status': 'succeeded',
+        'text': 'OCR NAME ONLY OCR123456',
+        'fields': {
+          'fullName': 'OCR NAME ONLY',
+          'dateOfBirth': '1994-05-16',
+          'documentNumber': 'OCR123456',
+        },
+        'confidence': 87.5,
+      },
+      'faceMatch': {'status': 'matched', 'similarity': 62.8, 'threshold': 36.3},
+    },
+  },
+};

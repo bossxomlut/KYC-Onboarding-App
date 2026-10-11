@@ -1,6 +1,6 @@
 # OCR và đối chiếu khuôn mặt
 
-Ứng dụng có hai chế độ kiểm tra thật: **local** dùng Tesseract và OpenCV ngay trên server của app; **aws** dùng Textract và Rekognition. Người dùng chọn **Run identity checks** ở **Review & submit** để kiểm tra hai ảnh đã tải lên. Kết quả hiển thị trong hồ sơ, màn hình duyệt và lịch sử lần nộp. OCR không ghi đè thông tin đã nhập; người dùng sửa qua **Edit**. KYC vẫn do người duyệt quyết định.
+Ứng dụng có hai chế độ kiểm tra thật: **local** dùng Tesseract và OpenCV ngay trên server của app; **aws** dùng Textract và Rekognition. User chỉ nhập thông tin, tải ảnh và chọn **Submit for verification**. Nếu provider đã bật và hai ảnh chưa có kết quả hoàn tất phù hợp, app chạy kiểm tra trước khi nộp. Kết quả chỉ hiển thị cho **reviewer** ở màn hình duyệt và lịch sử hồ sơ reviewer; User không thấy bảng kết quả, tên provider hay nút chạy riêng. OCR không ghi đè thông tin đã nhập; KYC vẫn do người duyệt quyết định.
 
 Selfie có **hai kết quả riêng**:
 
@@ -60,7 +60,7 @@ npm run migrate
 npm run dev
 ```
 
-Nếu API đang chạy, dừng phiên API đó rồi chạy lại `npm run dev`. Nếu dùng bản biên dịch, chạy `npm run build` rồi `npm start`. Khi mã Flutter thay đổi, build/chạy lại app theo [local setup](local-setup.md). Tại Review, thông báo local nói rõ ảnh xử lý trên server của app; nút **Run identity checks** chỉ chạy khi đã có cả giấy tờ và selfie được tải lên.
+Nếu API đang chạy, dừng phiên API đó rồi chạy lại `npm run dev`. Nếu dùng bản biên dịch, chạy `npm run build` rồi `npm start`. Khi mã Flutter thay đổi, build/chạy lại app theo [local setup](local-setup.md). Tại Review phía User chỉ có hành động nộp hồ sơ. Kiểm tra chỉ chạy theo lần bấm Submit khi đã có đủ ảnh được tải lên; không tự chạy khi mở trang hoặc đọc lịch sử.
 
 ## Bật AWS khi có tài khoản
 
@@ -78,6 +78,17 @@ IAM principal cần các quyền `textract:DetectDocumentText`, `rekognition:Det
 
 `KYC_VERIFICATION_PROVIDER=none` tắt các kiểm tra mới. Đây là mặc định an toàn cho cài đặt chưa chuẩn bị engine. Bằng chứng đã lưu vẫn đọc được khi tắt provider.
 
+## Kết quả dành cho reviewer
+
+Bảng **Identity checks** dùng dữ liệu thật đã trả về và lưu với hồ sơ:
+
+- OCR: trạng thái, tên, ngày sinh, số giấy tờ và confidence khi có.
+- Selfie: phát hiện khuôn mặt, không có, nhiều khuôn mặt hoặc lỗi.
+- Face match: khớp/không khớp, điểm tương đồng và ngưỡng khi có.
+- Thời điểm kiểm tra; **OCR text** chỉ mở khi reviewer cần đọc toàn bộ văn bản.
+
+Trường chưa được trích xuất hiển thị **—**; bằng chứng chưa chạy/không có báo trạng thái ngắn, không tạo kết quả thay thế. User vẫn thấy thông tin cá nhân, ảnh, trạng thái KYC và kết quả duyệt; reviewer mới thấy chi tiết kiểm tra trong lịch sử. **No liveness check** là ghi chú ngắn về phạm vi kiểm tra khuôn mặt.
+
 ## Kết quả và giới hạn
 
 - **Local OCR:** Tesseract đọc tiếng Việt mặc định, có thể đổi sang English hoặc phối hợp hai ngôn ngữ. Trường tên/ngày sinh/số giấy tờ chỉ được gợi ý từ nhãn rõ ràng như `Họ và tên`, `Ngày sinh`, `Số CCCD` hoặc nhãn English tương ứng. Không suy đoán thông tin thiếu; không tự sửa chính tả tên. Ngày theo nhãn giấy tờ Việt Nam dùng `dd/mm/yyyy`; ISO cũng được hỗ trợ. Đây là OCR chữ in chung, chưa phải engine kiểm tra tính thật hoặc cấu trúc của mọi mẫu CCCD.
@@ -90,9 +101,9 @@ IAM principal cần các quyền `textract:DetectDocumentText`, `rekognition:Det
 
 Backend lấy ảnh riêng tư đã xác thực chủ sở hữu, giải mã trong bộ nhớ và giao cho provider. Local truyền ảnh qua stdin của tiến trình Python; Tesseract cũng đọc stdin, không tạo file ảnh plaintext tạm. Embeddings chỉ tồn tại trong bộ nhớ của lượt kiểm tra, không lưu vào database. Không log ảnh, OCR, lỗi provider hay credentials. Kết quả OCR/đối chiếu được mã hóa AES-256-GCM bằng khóa bảo vệ hồ sơ hiện có.
 
-Chỉ chạy khi người dùng chọn nút và hồ sơ đang chỉnh sửa. Kết quả hoàn tất được dùng lại cho đúng hai media IDs, provider, ngưỡng và ngôn ngữ OCR local hiện tại. Đổi provider/ngưỡng/ngôn ngữ OCR local khiến hồ sơ đang chỉnh sửa cần kiểm tra lại; snapshot của lần nộp cũ vẫn giữ bằng chứng gốc. Kết quả local cũ chưa ghi ngôn ngữ cần chạy lại một lần. Chụp lại ảnh xóa kết quả đang làm việc; retry cùng capture ID giữ kết quả.
+App gọi `POST /kyc/verification` trong lượt bấm Submit khi hồ sơ còn chỉnh sửa được, rồi mới gọi `POST /kyc/submit`. Hai bước giữ chung trạng thái đang nộp để ngăn bấm trùng. Kết quả đã hoàn tất hoặc provider bị tắt/không có cấu hình không tạo lượt kiểm tra mới. Lỗi dịch vụ kiểm tra không ngăn nộp cho reviewer; lỗi phiên/quyền hoặc ảnh/hồ sơ đã thay đổi dừng nộp và yêu cầu làm mới. Kết quả hoàn tất được dùng lại cho đúng hai media IDs, provider, ngưỡng và ngôn ngữ OCR local hiện tại. Đổi provider/ngưỡng/ngôn ngữ OCR local khiến hồ sơ đang chỉnh sửa cần kiểm tra lại; snapshot của lần nộp cũ vẫn giữ bằng chứng gốc. Kết quả local cũ chưa ghi ngôn ngữ cần chạy lại một lần. Chụp lại ảnh xóa kết quả đang làm việc; retry cùng capture ID giữ kết quả.
 
-Bằng chứng cũ chưa có `selfieFace` không được suy ra là đã phát hiện khuôn mặt từ trạng thái đối chiếu chung. Hồ sơ đang chỉnh sửa cần chạy lại một lần; lịch sử cũ hiển thị **Selfie face check was not recorded** và giữ nguyên kết quả đối chiếu gốc.
+Bằng chứng cũ chưa có `selfieFace` không được suy ra là đã phát hiện khuôn mặt từ trạng thái đối chiếu chung. Hồ sơ đang chỉnh sửa cần chạy lại một lần; lịch sử reviewer cũ hiển thị **Not recorded** ở Selfie và giữ nguyên kết quả đối chiếu gốc.
 
 Provider IO chạy ngoài transaction; backend kiểm tra lại media IDs/trạng thái trước khi lưu. Lượt kiểm tra có timeout tổng thể tối đa 8 giây, cooldown 30 giây và rate limit. Local timeout hủy cả nhóm tiến trình, bao gồm Tesseract. Runtime/model thiếu hoặc OCR cấu hình sai trả kết quả lỗi an toàn. Hồ sơ vẫn có thể nộp cho người duyệt khi kiểm tra không khớp/không khả dụng.
 

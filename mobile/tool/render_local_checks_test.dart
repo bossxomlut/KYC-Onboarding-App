@@ -28,7 +28,9 @@ void main() {
     Map<String, dynamic>.from(evidence.first as Map),
   );
 
-  testWidgets('render real local identity evidence at 390px', (tester) async {
+  testWidgets('render reviewer real local identity evidence at 390px', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     const padding = FakeViewPadding(top: 44, bottom: 24);
@@ -47,7 +49,7 @@ void main() {
           debugShowCheckedModeBanner: false,
           theme: _renderTheme(),
           home: Scaffold(
-            appBar: AppBar(title: const Text('Review & submit')),
+            appBar: AppBar(title: const Text('Review identity')),
             body: SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
@@ -61,23 +63,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('NGUYỄN MINH AN'), findsOneWidget);
-    expect(find.text('Local identity checks'), findsOneWidget);
-    expect(find.text('Selfie face check'), findsOneWidget);
-    expect(find.text('Human face detected'), findsOneWidget);
-    expect(find.text('Similarity score: 90.5 / 100'), findsOneWidget);
+    expect(find.text('Identity checks'), findsOneWidget);
+    expect(find.text('Selfie'), findsOneWidget);
+    expect(find.text('Face detected'), findsOneWidget);
+    expect(find.text('Score 90.5 / 100 · threshold 36.3'), findsOneWidget);
     expect(find.text(verification.ocr!.text), findsNothing);
 
     final boundary =
         boundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
     expect(boundary.size, const Size(390, 844));
-    await _savePanel(tester, boundary, 'local-completed-checks.png');
-    await tester.ensureVisible(
-      find.textContaining('reviewer makes the final decision'),
+    expect(find.text('Face detected').hitTestable(), findsOneWidget);
+    expect(find.text('Match').hitTestable(), findsOneWidget);
+    expect(find.text('OCR text').hitTestable(), findsOneWidget);
+    expect(find.text('No liveness check').hitTestable(), findsOneWidget);
+    expect(
+      tester.getBottomLeft(find.text('No liveness check')).dy,
+      lessThanOrEqualTo(820),
     );
-    await tester.pumpAndSettle();
-    expect(find.text('Human face detected').hitTestable(), findsOneWidget);
-    expect(find.text('Faces are similar').hitTestable(), findsOneWidget);
-    await _savePanel(tester, boundary, 'local-face-checks.png');
+    await _savePanel(tester, boundary, 'reviewer-identity-checks.png');
     expect(tester.takeException(), isNull);
   });
 }

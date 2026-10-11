@@ -578,8 +578,23 @@ class KycCubit extends Cubit<KycState> {
       : loadReviewMedia();
 
   Future<bool> submit() async {
+    final reviewedProfile = state.profile;
+    final waitedForRead = _profileRead != null;
     if (_profileRead != null) await _waitForProfileReads();
     if (isClosed || state.busy) return false;
+    if (_isAuthorityFailure(state.error)) return false;
+    if (_resumeNeedsFreshRead ||
+        (waitedForRead &&
+            reviewedProfile != null &&
+            !_sameSubmissionInput(reviewedProfile, state.profile))) {
+      _update(
+        state.copyWith(
+          error: _submissionChanged,
+          errorSource: KycErrorSource.operation,
+        ),
+      );
+      return false;
+    }
     if (!(state.profile?.canSubmit ?? false) ||
         state.pendingCaptures.isNotEmpty) {
       _update(
@@ -593,7 +608,97 @@ class KycCubit extends Cubit<KycState> {
       );
       return false;
     }
-    return _profileOperation(_submit.call, KycOperation.submitting);
+    final profile = state.profile!;
+    final generation = _profileGeneration;
+    return _profileOperation(
+      () => _checkAndSubmit(profile, generation),
+      KycOperation.submitting,
+    );
+  }
+
+  static const _submissionChanged = AppFailure(
+    code: 'SUBMISSION_CHANGED',
+    message:
+        'Your profile changed. Review the latest details before submitting.',
+  );
+
+  bool _isAuthorityFailure(AppFailure? error) => const {
+    'SESSION_EXPIRED',
+    'UNAUTHORIZED',
+    'FORBIDDEN',
+    'ACCOUNT_DISABLED',
+  }.contains(error?.code);
+
+  bool _sameSubmissionInput(KycProfile expected, KycProfile? actual) =>
+      actual != null &&
+      actual.canSubmit &&
+      expected.id == actual.id &&
+      expected.document?.id == actual.document?.id &&
+      expected.selfie?.id == actual.selfie?.id &&
+      expected.personalDetails?.fullName == actual.personalDetails?.fullName &&
+      expected.personalDetails?.dateOfBirth ==
+          actual.personalDetails?.dateOfBirth &&
+      expected.personalDetails?.nationality ==
+          actual.personalDetails?.nationality &&
+      expected.personalDetails?.address == actual.personalDetails?.address &&
+      expected.personalDetails?.documentNumber ==
+          actual.personalDetails?.documentNumber;
+
+  Failure<KycProfile> _changedSubmission({bool reconcile = false}) {
+    if (reconcile && !isClosed) _queuedRefresh ??= Completer<void>();
+    return const Failure(_submissionChanged);
+  }
+
+  /// Submission is the explicit intent for advisory checks. Provider failures
+  /// allow manual review, while changed data or lost authority stop this write.
+  Future<Result<KycProfile>> _checkAndSubmit(
+    KycProfile profile,
+    int generation,
+  ) async {
+    final checks = profile.verification;
+    if (checks?.status == VerificationStatus.notStarted ||
+        checks?.status == VerificationStatus.failed) {
+      final result = await _verify();
+      if (isClosed) return _changedSubmission();
+      switch (result) {
+        case Failure<KycProfile>(:final error):
+          if (_isAuthorityFailure(error)) return Failure(error);
+          if (const {
+            'KYC_VERIFICATION_CHANGED',
+            'KYC_VERIFICATION_INCOMPLETE',
+            'PROFILE_LOCKED',
+            'KYC_LOCKED',
+          }.contains(error.code)) {
+            return _changedSubmission(reconcile: true);
+          }
+        // Optional provider/transport errors are not applicant-facing.
+        case Success<KycProfile>(:final value):
+          if (!_sameSubmissionInput(profile, value)) {
+            return _changedSubmission(reconcile: true);
+          }
+          _update(state.copyWith(profile: value));
+      }
+    }
+    if (isClosed ||
+        generation != _profileGeneration ||
+        _resumeNeedsFreshRead ||
+        state.pendingCaptures.isNotEmpty ||
+        !_sameSubmissionInput(profile, state.profile)) {
+      return _changedSubmission();
+    }
+    final result = await _submit();
+    if (result case Failure<KycProfile>(
+      :final error,
+    ) when error.code == 'KYC_VERIFICATION_IN_PROGRESS') {
+      return const Failure(
+        AppFailure(
+          code: 'KYC_VERIFICATION_IN_PROGRESS',
+          message:
+              'Your submission could not be completed yet. Please try again.',
+        ),
+      );
+    }
+    return result;
   }
 
   Future<bool> resubmit() async {
