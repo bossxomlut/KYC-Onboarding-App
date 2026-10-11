@@ -168,6 +168,7 @@ def main() -> None:
         json.dumps({"syntheticOnly": True, "engine": engine,
                     "voice": plan.get("voice", "Linh"),
                     "voiceGender": plan.get("voiceGender"),
+                    "speechRate": plan.get("speechRate"),
                     "language": "vi-VN", "video": output.name,
                     "durationSeconds": video_duration, "segments": report},
                    ensure_ascii=False, indent=2) + "\n", encoding="utf-8",

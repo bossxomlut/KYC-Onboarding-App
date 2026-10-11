@@ -1,6 +1,6 @@
 # Demo and recording
 
-The complete main-flow recording with a Vietnamese male voice is [full-flow-voiced.mp4](full-flow-voiced.mp4). The [original silent recording](full-flow.mp4) is also retained. Both use the current Flutter app and real NestJS API, PostgreSQL and Mailpit, with fictional identities from [scenario.json](scenario.json) and illustrated photos in `assets/`. Public passwords in the scenario are for this disposable local demo only.
+The complete main-flow recording with a Vietnamese male voice is [full-flow-voiced.mp4](full-flow-voiced.mp4). The [original silent recording](full-flow.mp4) is also retained. Both play for **10m55s (655.300 seconds)** with **63 chapters**. Both use the current Flutter app and real NestJS API, PostgreSQL and Mailpit, with fictional identities from [scenario.json](scenario.json) and illustrated photos in `assets/`. Public passwords in the scenario are for this disposable local demo only.
 
 The video shows registration and email OTP, login, personal details, saved session/progress restoration, document and selfie upload, private previews, editing and retaking, submission, a normal User requesting Reviewer access, super admin approval of that request, reviewer rejection requesting only a new selfie, resubmission, reviewer approval, **Verified**, both historical submissions and logout. Access grants and review decisions are made through authenticated production app screens and persisted by the real API. [Chapter timestamps](full-flow.chapters.json) and [subtitles](full-flow.srt) accompany the MP4.
 
@@ -21,6 +21,8 @@ Milestones pause for four seconds by default. Forms and photo previews remain vi
 ## Vietnamese voiceover
 
 The narrated version adds **25 passages** using **`vi-VN-NamMinhNeural`**, a Vietnamese male voice listed in [Microsoft's voice documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts), through [`edge-tts`](https://github.com/rany2/edge-tts), with speech rate **`-10%`**. It preserves the original video stream, duration and chapters, and adds an AAC Vietnamese audio track. [Vietnamese subtitles](full-flow.vi.srt), the editable [narration plan](voiceover.vi.json) and the [timing report](voiceover.vi.report.json) are included.
+
+All 25 passages fit their screen intervals at that slower rate without additional acceleration or overlap. The final narration ends at **650.727 seconds**, leaving time to view the signed-out screen. Full audio/video decoding and video-stream hash comparison passed; see the [verification evidence](../docs/verification.md#main-flow-recording) for media measurements.
 
 To rebuild the narration with Python, FFmpeg/FFprobe and internet access, run from the repository root:
 

@@ -1,207 +1,251 @@
 1
-00:00:00,000 --> 00:00:12,233
+00:00:00,000 --> 00:00:16,498
 Identity onboarding starts here
 
 2
-00:00:12,233 --> 00:00:16,242
+00:00:16,498 --> 00:00:25,445
 Create a synthetic account
 
 3
-00:00:16,242 --> 00:00:21,432
+00:00:25,445 --> 00:00:36,046
 Verify email with a local OTP
 
 4
-00:00:21,432 --> 00:00:28,046
+00:00:36,046 --> 00:00:46,497
 Email verified; profile is ready
 
 5
-00:00:28,046 --> 00:00:33,696
+00:00:46,497 --> 00:00:57,568
 Sign in as Applicant (User): applicant.demo@kyc.example
 
 6
-00:00:33,696 --> 00:00:37,392
+00:00:57,568 --> 00:01:07,946
 Current account is Applicant (User): applicant.demo@kyc.example
 
 7
-00:00:37,392 --> 00:00:51,347
+00:01:07,946 --> 00:01:30,180
 Sign in to the demo account
 
 8
-00:00:51,347 --> 00:00:55,094
+00:01:30,180 --> 00:01:38,648
 Enter fictional personal details
 
 9
-00:00:55,094 --> 00:00:58,045
+00:01:38,648 --> 00:01:43,618
 Personal details are saved
 
 10
-00:00:58,045 --> 00:01:01,726
+00:01:43,618 --> 00:01:49,995
 Session and saved progress are restored
 
 11
-00:01:01,726 --> 00:01:06,332
+00:01:49,995 --> 00:01:57,685
 Continue at the identity document step
 
 12
-00:01:06,332 --> 00:01:10,124
+00:01:57,685 --> 00:02:06,188
 Synthetic document uploaded privately
 
 13
-00:01:10,124 --> 00:01:13,946
+00:02:06,188 --> 00:02:12,696
 Continue with a synthetic selfie
 
 14
-00:01:13,946 --> 00:01:17,820
+00:02:12,696 --> 00:02:21,245
 Synthetic selfie uploaded privately
 
 15
-00:01:17,820 --> 00:01:22,926
+00:02:21,245 --> 00:02:31,612
 Review details before submitting
 
 16
-00:01:22,926 --> 00:01:26,897
+00:02:31,612 --> 00:02:40,271
 Edit the address from Review
 
 17
-00:01:26,897 --> 00:01:29,145
+00:02:40,271 --> 00:02:46,519
 Check the private document preview
 
 18
-00:01:29,145 --> 00:01:32,825
+00:02:46,519 --> 00:02:54,899
 Check the private selfie preview
 
 19
-00:01:32,825 --> 00:01:42,198
+00:02:54,899 --> 00:03:12,279
 Retake the synthetic selfie before submission
 
 20
-00:01:42,198 --> 00:01:50,397
+00:03:12,279 --> 00:03:28,949
 First submission is pending review
 
 21
-00:01:50,397 --> 00:01:56,012
-Sign in as Reviewer: reviewer.demo@kyc.example
+00:03:28,949 --> 00:03:39,987
+Sign in as Reviewer candidate (User): reviewer.demo@kyc.example
 
 22
-00:01:56,012 --> 00:01:59,695
-Current account is Reviewer: reviewer.demo@kyc.example
+00:03:39,987 --> 00:03:51,916
+Current account is Reviewer candidate (User): reviewer.demo@kyc.example
 
 23
-00:01:59,695 --> 00:02:05,161
-Sign in as the synthetic reviewer
+00:03:51,916 --> 00:04:06,561
+Ordinary User requests Reviewer access through the real API
 
 24
-00:02:05,161 --> 00:02:08,909
-Separate reviewer account selects applicant profile: applicant.demo@kyc.example
+00:04:06,561 --> 00:04:15,467
+Sign in as Super admin: admin.demo@kyc.example
 
 25
-00:02:08,909 --> 00:02:11,164
-Reviewer checks personal details
+00:04:15,467 --> 00:04:30,010
+Current account is Super admin: admin.demo@kyc.example
 
 26
-00:02:11,164 --> 00:02:13,411
-Reviewer checks the synthetic identity document
+00:04:30,010 --> 00:04:40,514
+Super admin confirms Reviewer permission for the separate demo account
 
 27
-00:02:13,411 --> 00:02:19,744
-Reviewer checks the synthetic selfie
+00:04:40,514 --> 00:04:57,264
+Server confirms the reviewer account was promoted from User to Reviewer
 
 28
-00:02:19,744 --> 00:02:23,445
-Request a selfie update with a reason
-
-29
-00:02:23,445 --> 00:02:31,607
-Reviewer saves the rejection through the app
-
-30
-00:02:31,607 --> 00:02:37,216
-Sign in as Applicant (User): applicant.demo@kyc.example
-
-31
-00:02:37,216 --> 00:02:41,132
-Current account is Applicant (User): applicant.demo@kyc.example
-
-32
-00:02:41,132 --> 00:02:44,808
-Applicant sees the selfie correction request
-
-33
-00:02:44,808 --> 00:02:48,614
-Accepted details and document remain saved
-
-34
-00:02:48,614 --> 00:02:52,457
-Replace only the requested synthetic selfie
-
-35
-00:02:52,457 --> 00:02:56,261
-Review the preserved details and replacement selfie
-
-36
-00:02:56,261 --> 00:03:04,448
-Second submission is pending review
-
-37
-00:03:04,448 --> 00:03:10,059
+00:04:57,264 --> 00:05:08,281
 Sign in as Reviewer: reviewer.demo@kyc.example
 
-38
-00:03:10,059 --> 00:03:17,145
+29
+00:05:08,281 --> 00:05:18,663
 Current account is Reviewer: reviewer.demo@kyc.example
 
-39
-00:03:17,145 --> 00:03:20,960
+30
+00:05:18,663 --> 00:05:22,796
+Sign in after the super admin grants Reviewer access
+
+31
+00:05:22,796 --> 00:05:31,219
+Reviewer can open Review profiles from Home after access is granted
+
+32
+00:05:31,219 --> 00:05:39,968
+Home Review profiles opens the real reviewer queue
+
+33
+00:05:39,968 --> 00:05:48,380
+Account access confirms Reviewer permission before opening profiles
+
+34
+00:05:48,380 --> 00:06:03,795
+Account access Review profiles also opens the real reviewer queue
+
+35
+00:06:03,795 --> 00:06:10,328
 Separate reviewer account selects applicant profile: applicant.demo@kyc.example
 
-40
-00:03:20,960 --> 00:03:23,214
+36
+00:06:10,328 --> 00:06:16,587
 Reviewer checks personal details
 
-41
-00:03:23,214 --> 00:03:25,464
+37
+00:06:16,587 --> 00:06:22,830
 Reviewer checks the synthetic identity document
 
-42
-00:03:25,464 --> 00:03:29,028
+38
+00:06:22,830 --> 00:06:35,019
 Reviewer checks the synthetic selfie
 
-43
-00:03:29,028 --> 00:03:32,731
-Confirm the checked identity submission
+39
+00:06:35,019 --> 00:06:45,429
+Request a selfie update with a reason
 
-44
-00:03:32,731 --> 00:03:40,859
-Reviewer approves through the app
+40
+00:06:45,429 --> 00:07:02,118
+Reviewer saves the rejection through the app
 
-45
-00:03:40,859 --> 00:03:46,511
+41
+00:07:02,118 --> 00:07:13,145
 Sign in as Applicant (User): applicant.demo@kyc.example
 
-46
-00:03:46,511 --> 00:03:53,426
+42
+00:07:13,145 --> 00:07:23,786
 Current account is Applicant (User): applicant.demo@kyc.example
 
+43
+00:07:23,786 --> 00:07:34,164
+Applicant sees the selfie correction request
+
+44
+00:07:34,164 --> 00:07:40,696
+Accepted details and document remain saved
+
+45
+00:07:40,696 --> 00:07:49,218
+Replace only the requested synthetic selfie
+
+46
+00:07:49,218 --> 00:07:57,711
+Review the preserved details and replacement selfie
+
 47
-00:03:53,426 --> 00:03:57,110
-Identity verified; applicant sees the result
+00:07:57,711 --> 00:08:14,394
+Second submission is pending review
 
 48
-00:03:57,110 --> 00:04:00,675
-Both submission rounds stay in history
+00:08:14,394 --> 00:08:25,398
+Sign in as Reviewer: reviewer.demo@kyc.example
 
 49
-00:04:00,675 --> 00:04:02,931
-Original rejected submission remains read only
+00:08:25,398 --> 00:08:40,414
+Current account is Reviewer: reviewer.demo@kyc.example
 
 50
-00:04:02,931 --> 00:04:05,178
-Original synthetic document remains private and readable
+00:08:40,414 --> 00:08:46,911
+Separate reviewer account selects applicant profile: applicant.demo@kyc.example
 
 51
-00:04:05,178 --> 00:04:13,411
-Original synthetic selfie remains in submission history
+00:08:46,911 --> 00:08:53,172
+Reviewer checks personal details
 
 52
-00:04:13,411 --> 00:04:16,870
+00:08:53,172 --> 00:08:59,415
+Reviewer checks the synthetic identity document
+
+53
+00:08:59,415 --> 00:09:07,694
+Reviewer checks the synthetic selfie
+
+54
+00:09:07,694 --> 00:09:16,114
+Confirm the checked identity submission
+
+55
+00:09:16,114 --> 00:09:32,721
+Reviewer approves through the app
+
+56
+00:09:32,721 --> 00:09:43,713
+Sign in as Applicant (User): applicant.demo@kyc.example
+
+57
+00:09:43,713 --> 00:09:58,713
+Current account is Applicant (User): applicant.demo@kyc.example
+
+58
+00:09:58,713 --> 00:10:09,098
+Identity verified; applicant sees the result
+
+59
+00:10:09,098 --> 00:10:19,364
+Both submission rounds stay in history
+
+60
+00:10:19,364 --> 00:10:25,610
+Original rejected submission remains read only
+
+61
+00:10:25,610 --> 00:10:31,864
+Original synthetic document remains private and readable
+
+62
+00:10:31,864 --> 00:10:46,996
+Original synthetic selfie remains in submission history
+
+63
+00:10:46,996 --> 00:10:55,285
 Signed out safely at the end of the flow

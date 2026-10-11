@@ -3,9 +3,10 @@
   "engine": "edge-tts",
   "voice": "vi-VN-NamMinhNeural",
   "voiceGender": "Male",
+  "speechRate": "-10%",
   "language": "vi-VN",
   "video": "full-flow-voiced.mp4",
-  "durationSeconds": 256.87,
+  "durationSeconds": 655.3,
   "segments": [
     {
       "id": "welcome",
@@ -21,9 +22,9 @@
       },
       "text": "Chào bạn. Đây là luồng xác minh danh tính của ứng dụng, dùng thông tin và ảnh giả lập, kết nối với máy chủ thật.",
       "startSeconds": 0.5,
-      "endSeconds": 11.933,
-      "audioDurationSeconds": 7.827,
-      "audioEndSeconds": 8.327,
+      "endSeconds": 16.198,
+      "audioDurationSeconds": 8.691,
+      "audioEndSeconds": 9.191,
       "speedFactor": 1.0
     },
     {
@@ -38,11 +39,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Đầu tiên, tạo tài khoản thử nghiệm. Mã xác thực được lấy từ hộp thư cục bộ để hoàn tất đăng ký.",
-      "startSeconds": 12.433,
-      "endSeconds": 21.132,
-      "audioDurationSeconds": 7.203,
-      "audioEndSeconds": 19.636,
+      "text": "Tạo tài khoản thử nghiệm trên máy chủ. Nhập mã xác thực từ hộp thư thử nghiệm để hoàn tất đăng ký.",
+      "startSeconds": 16.698,
+      "endSeconds": 35.746,
+      "audioDurationSeconds": 7.779,
+      "audioEndSeconds": 24.477,
       "speedFactor": 1.0
     },
     {
@@ -58,10 +59,10 @@
         "offsetSeconds": -0.3
       },
       "text": "Đăng nhập tài khoản người nộp hồ sơ vừa tạo. Màn hình tài khoản cho thấy email và vai trò người dùng trước khi bổ sung thông tin.",
-      "startSeconds": 28.246,
-      "endSeconds": 51.047,
-      "audioDurationSeconds": 8.259,
-      "audioEndSeconds": 36.505,
+      "startSeconds": 46.697,
+      "endSeconds": 89.88,
+      "audioDurationSeconds": 9.171,
+      "audioEndSeconds": 55.868,
       "speedFactor": 1.0
     },
     {
@@ -76,11 +77,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Nhập thông tin giả lập rồi lưu. Khi ứng dụng được khởi tạo lại, phiên đăng nhập và tiến độ đã lưu được khôi phục.",
-      "startSeconds": 51.547,
-      "endSeconds": 61.426,
-      "audioDurationSeconds": 7.539,
-      "audioEndSeconds": 59.086,
+      "text": "Thông tin và tiến độ được lưu trên máy chủ. Khi ứng dụng khởi tạo lại, hồ sơ được tải về với phiên đăng nhập đã khôi phục.",
+      "startSeconds": 90.38,
+      "endSeconds": 109.695,
+      "audioDurationSeconds": 9.027,
+      "audioEndSeconds": 99.407,
       "speedFactor": 1.0
     },
     {
@@ -95,11 +96,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Giấy tờ mẫu đã được tải lên. Tiếp tục với ảnh chân dung giả lập; ảnh minh họa thay thao tác camera, còn tải ảnh dùng máy chủ thật.",
-      "startSeconds": 66.532,
-      "endSeconds": 77.52,
-      "audioDurationSeconds": 8.955,
-      "audioEndSeconds": 75.487,
+      "text": "Ảnh giấy tờ mẫu đã được lưu trên máy chủ. Tiếp tục tải ảnh chân dung giả lập; bản demo dùng ảnh minh họa thay camera.",
+      "startSeconds": 117.885,
+      "endSeconds": 140.945,
+      "audioDurationSeconds": 9.435,
+      "audioEndSeconds": 127.32,
       "speedFactor": 1.0
     },
     {
@@ -114,11 +115,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Trước khi gửi, kiểm tra lại hồ sơ. Từ màn hình xem trước, có thể sửa địa chỉ và xem từng ảnh để kiểm tra.",
-      "startSeconds": 78.02,
-      "endSeconds": 92.525,
-      "audioDurationSeconds": 8.019,
-      "audioEndSeconds": 86.039,
+      "text": "Kiểm tra hồ sơ trước khi gửi. Có thể sửa địa chỉ, lưu thay đổi lên máy chủ, rồi xem lại từng ảnh.",
+      "startSeconds": 141.445,
+      "endSeconds": 174.599,
+      "audioDurationSeconds": 8.619,
+      "audioEndSeconds": 150.064,
       "speedFactor": 1.0
     },
     {
@@ -133,11 +134,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Nếu ảnh chưa phù hợp, chọn chụp lại. Trong bản trình diễn này, ứng dụng thay ảnh bằng mẫu giả lập.",
-      "startSeconds": 93.025,
-      "endSeconds": 101.898,
-      "audioDurationSeconds": 7.395,
-      "audioEndSeconds": 100.42,
+      "text": "Nếu ảnh chưa phù hợp, chọn chụp lại. Ảnh thay thế được tải lên máy chủ; bản demo vẫn dùng ảnh giả lập.",
+      "startSeconds": 175.099,
+      "endSeconds": 191.979,
+      "audioDurationSeconds": 8.835,
+      "audioEndSeconds": 183.934,
       "speedFactor": 1.0
     },
     {
@@ -148,15 +149,91 @@
         "offsetSeconds": 0.2
       },
       "end": {
+        "chapter": "reviewer-user-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Gửi hồ sơ lần đầu. Bản gửi và trạng thái chờ xét duyệt được lưu trên máy chủ, rồi hiển thị trong ứng dụng.",
+      "startSeconds": 192.479,
+      "endSeconds": 208.649,
+      "audioDurationSeconds": 8.667,
+      "audioEndSeconds": 201.146,
+      "speedFactor": 1.0
+    },
+    {
+      "id": "reviewer-requests-access",
+      "start": {
+        "chapter": "reviewer-user-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "admin-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Tài khoản này hiện vẫn là người dùng. Gửi yêu cầu cấp quyền xét duyệt; máy chủ lưu yêu cầu để quản trị viên xem xét.",
+      "startSeconds": 209.149,
+      "endSeconds": 246.261,
+      "audioDurationSeconds": 8.955,
+      "audioEndSeconds": 218.104,
+      "speedFactor": 1.0
+    },
+    {
+      "id": "admin-login-for-access-review",
+      "start": {
+        "chapter": "admin-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "admin-access-review",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Đăng nhập tài khoản quản trị viên có email riêng. Trang quản trị hiển thị email và vai trò trước khi mở yêu cầu đang chờ.",
+      "startSeconds": 246.761,
+      "endSeconds": 269.71,
+      "audioDurationSeconds": 8.955,
+      "audioEndSeconds": 255.716,
+      "speedFactor": 1.0
+    },
+    {
+      "id": "admin-confirms-reviewer-access",
+      "start": {
+        "chapter": "admin-access-review",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "admin-access-approved",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Quản trị viên xem yêu cầu và xác nhận cấp quyền xét duyệt. Quyết định được gửi lên máy chủ.",
+      "startSeconds": 270.21,
+      "endSeconds": 280.214,
+      "audioDurationSeconds": 7.131,
+      "audioEndSeconds": 277.341,
+      "speedFactor": 1.0
+    },
+    {
+      "id": "reviewer-access-saved-on-server",
+      "start": {
+        "chapter": "admin-access-approved",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
         "chapter": "reviewer-sign-in",
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Gửi hồ sơ lần đầu. Trạng thái chuyển sang chờ xét duyệt, và người dùng có thể theo dõi kết quả tại đây.",
-      "startSeconds": 102.398,
-      "endSeconds": 110.097,
-      "audioDurationSeconds": 7.203,
-      "audioEndSeconds": 109.601,
+      "text": "Máy chủ đã lưu quyết định cấp quyền và cập nhật vai trò người xét duyệt. Trong bản demo, đăng nhập lại vào tài khoản này.",
+      "startSeconds": 280.714,
+      "endSeconds": 296.964,
+      "audioDurationSeconds": 8.931,
+      "audioEndSeconds": 289.645,
       "speedFactor": 1.0
     },
     {
@@ -167,21 +244,21 @@
         "offsetSeconds": 0.2
       },
       "end": {
-        "chapter": "review-queue",
+        "chapter": "reviewer-home-entry",
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Đăng nhập tài khoản người xét duyệt, với email khác người nộp hồ sơ. Màn hình tài khoản xác nhận email và vai trò hiện tại.",
-      "startSeconds": 110.597,
-      "endSeconds": 124.861,
-      "audioDurationSeconds": 8.451,
-      "audioEndSeconds": 119.048,
+      "text": "Đăng nhập lại tài khoản đã được cấp quyền xét duyệt, với email khác người nộp hồ sơ. Màn hình tài khoản xác nhận vai trò mới.",
+      "startSeconds": 297.464,
+      "endSeconds": 322.496,
+      "audioDurationSeconds": 9.435,
+      "audioEndSeconds": 306.899,
       "speedFactor": 1.0
     },
     {
       "id": "target-applicant-and-first-review",
       "start": {
-        "chapter": "review-queue",
+        "chapter": "reviewer-home-entry",
         "occurrence": 1,
         "offsetSeconds": 0.2
       },
@@ -190,11 +267,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Email trong danh sách thuộc người nộp hồ sơ cần xét duyệt. Mở hồ sơ này để kiểm tra thông tin, giấy tờ và ảnh chân dung.",
-      "startSeconds": 125.361,
-      "endSeconds": 139.444,
-      "audioDurationSeconds": 8.427,
-      "audioEndSeconds": 133.788,
+      "text": "Mở danh sách xét duyệt từ trang chủ hoặc tài khoản. Email thuộc người nộp hồ sơ; chọn hồ sơ để kiểm tra thông tin và ảnh.",
+      "startSeconds": 322.996,
+      "endSeconds": 394.719,
+      "audioDurationSeconds": 9.555,
+      "audioEndSeconds": 332.551,
       "speedFactor": 1.0
     },
     {
@@ -209,11 +286,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Lần đầu, hồ sơ bị từ chối với yêu cầu chụp lại ảnh chân dung dưới ánh sáng tốt hơn. Quyết định được lưu ngay trong ứng dụng.",
-      "startSeconds": 139.944,
-      "endSeconds": 151.307,
-      "audioDurationSeconds": 8.307,
-      "audioEndSeconds": 148.251,
+      "text": "Yêu cầu chụp lại ảnh chân dung dưới ánh sáng tốt hơn. Máy chủ lưu quyết định từ chối, lý do và phần cần bổ sung.",
+      "startSeconds": 395.219,
+      "endSeconds": 421.818,
+      "audioDurationSeconds": 9.147,
+      "audioEndSeconds": 404.366,
       "speedFactor": 1.0
     },
     {
@@ -229,10 +306,10 @@
         "offsetSeconds": -0.3
       },
       "text": "Trở lại tài khoản người nộp hồ sơ. Email và vai trò trên màn hình tài khoản xác nhận phiên đăng nhập đã chuyển đúng người.",
-      "startSeconds": 151.807,
-      "endSeconds": 160.832,
-      "audioDurationSeconds": 7.803,
-      "audioEndSeconds": 159.61,
+      "startSeconds": 422.318,
+      "endSeconds": 443.486,
+      "audioDurationSeconds": 8.667,
+      "audioEndSeconds": 430.985,
       "speedFactor": 1.0
     },
     {
@@ -247,11 +324,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Người dùng thấy lý do cần bổ sung. Thông tin và giấy tờ đã được giữ lại, nên chỉ cần thay ảnh chân dung theo yêu cầu.",
-      "startSeconds": 161.332,
-      "endSeconds": 172.157,
-      "audioDurationSeconds": 7.947,
-      "audioEndSeconds": 169.279,
+      "text": "Ứng dụng hiển thị lý do từ chối. Máy chủ giữ thông tin và giấy tờ đã được chấp nhận, nên chỉ cần thay ảnh chân dung.",
+      "startSeconds": 443.986,
+      "endSeconds": 468.918,
+      "audioDurationSeconds": 9.171,
+      "audioEndSeconds": 453.157,
       "speedFactor": 1.0
     },
     {
@@ -266,11 +343,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Kiểm tra lại hồ sơ với ảnh mới rồi gửi lần thứ hai. Hồ sơ quay lại trạng thái chờ xét duyệt.",
-      "startSeconds": 172.657,
-      "endSeconds": 184.148,
-      "audioDurationSeconds": 6.627,
-      "audioEndSeconds": 179.284,
+      "text": "Kiểm tra hồ sơ với ảnh mới rồi gửi lại. Máy chủ lưu bản gửi thứ hai và chuyển trạng thái sang chờ xét duyệt.",
+      "startSeconds": 469.418,
+      "endSeconds": 494.094,
+      "audioDurationSeconds": 8.259,
+      "audioEndSeconds": 477.677,
       "speedFactor": 1.0
     },
     {
@@ -286,10 +363,10 @@
         "offsetSeconds": -0.3
       },
       "text": "Tiếp tục chuyển sang tài khoản xét duyệt có email riêng. Kiểm tra vai trò hiện tại trước khi mở hồ sơ được gửi lại.",
-      "startSeconds": 184.648,
-      "endSeconds": 196.845,
-      "audioDurationSeconds": 7.587,
-      "audioEndSeconds": 192.235,
+      "startSeconds": 494.594,
+      "endSeconds": 520.114,
+      "audioDurationSeconds": 8.403,
+      "audioEndSeconds": 502.997,
       "speedFactor": 1.0
     },
     {
@@ -304,11 +381,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Người xét duyệt mở hồ sơ được gửi lại, kiểm tra thông tin đã giữ nguyên cùng ảnh chân dung vừa cập nhật.",
-      "startSeconds": 197.345,
-      "endSeconds": 208.728,
-      "audioDurationSeconds": 6.099,
-      "audioEndSeconds": 203.444,
+      "text": "Người xét duyệt mở bản gửi mới từ máy chủ, kiểm tra thông tin được giữ lại và ảnh chân dung đã cập nhật.",
+      "startSeconds": 520.614,
+      "endSeconds": 547.394,
+      "audioDurationSeconds": 6.939,
+      "audioEndSeconds": 527.553,
       "speedFactor": 1.0
     },
     {
@@ -323,11 +400,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Sau khi kiểm tra, xác nhận phê duyệt hồ sơ. Quyết định này được gửi đến máy chủ thật và cập nhật cho người dùng.",
-      "startSeconds": 209.228,
-      "endSeconds": 220.559,
-      "audioDurationSeconds": 7.539,
-      "audioEndSeconds": 216.767,
+      "text": "Sau khi xác nhận phê duyệt, máy chủ lưu quyết định và trạng thái đã xác minh. Ứng dụng hiển thị kết quả cho người dùng.",
+      "startSeconds": 547.894,
+      "endSeconds": 572.421,
+      "audioDurationSeconds": 8.739,
+      "audioEndSeconds": 556.633,
       "speedFactor": 1.0
     },
     {
@@ -343,10 +420,10 @@
         "offsetSeconds": -0.3
       },
       "text": "Đăng nhập lại tài khoản người nộp hồ sơ để xem kết quả. Email trên màn hình tài khoản vẫn là email đã đăng ký ban đầu.",
-      "startSeconds": 221.059,
-      "endSeconds": 233.126,
-      "audioDurationSeconds": 7.923,
-      "audioEndSeconds": 228.982,
+      "startSeconds": 572.921,
+      "endSeconds": 598.413,
+      "audioDurationSeconds": 8.811,
+      "audioEndSeconds": 581.732,
       "speedFactor": 1.0
     },
     {
@@ -361,11 +438,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Hồ sơ đã được xác minh. Mở lịch sử để xem lại cả hai lần gửi.",
-      "startSeconds": 233.626,
-      "endSeconds": 240.375,
-      "audioDurationSeconds": 5.571,
-      "audioEndSeconds": 239.197,
+      "text": "Máy chủ đã cập nhật trạng thái xác minh. Mở lịch sử để xem lại hai lần gửi.",
+      "startSeconds": 598.913,
+      "endSeconds": 619.064,
+      "audioDurationSeconds": 6.939,
+      "audioEndSeconds": 605.852,
       "speedFactor": 1.0
     },
     {
@@ -380,11 +457,11 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Bản gửi lần đầu vẫn lưu lý do từ chối và các ảnh khi đó. Người dùng có thể xem lại hồ sơ cũ ở chế độ chỉ đọc.",
-      "startSeconds": 240.875,
-      "endSeconds": 253.111,
-      "audioDurationSeconds": 8.019,
-      "audioEndSeconds": 248.894,
+      "text": "Bản gửi đầu, lý do từ chối và ảnh được giữ trên máy chủ. Ứng dụng tải lại hồ sơ cũ ở chế độ chỉ đọc.",
+      "startSeconds": 619.564,
+      "endSeconds": 646.696,
+      "audioDurationSeconds": 8.835,
+      "audioEndSeconds": 628.399,
       "speedFactor": 1.0
     },
     {
@@ -399,11 +476,11 @@
         "offsetSeconds": -0.25
       },
       "text": "Cuối cùng, đăng xuất và kết thúc phiên.",
-      "startSeconds": 253.611,
-      "endSeconds": 256.62,
-      "audioDurationSeconds": 2.793,
-      "audioEndSeconds": 256.404,
-      "speedFactor": 1.1449
+      "startSeconds": 647.196,
+      "endSeconds": 655.05,
+      "audioDurationSeconds": 3.531,
+      "audioEndSeconds": 650.727,
+      "speedFactor": 1.0
     }
   ]
 }
