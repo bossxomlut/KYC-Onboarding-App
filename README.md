@@ -136,7 +136,7 @@ flutter build ios --simulator --debug
 flutter build apk --debug
 ```
 
-The [complete main-flow recording with Vietnamese narration](demo/full-flow-voiced.mp4) shows synthetic applicant onboarding, authenticated reviewer rejection/resubmission/approval, private submission history and logout. [Demo instructions](demo/README.md) include the silent original, editable narration/subtitles, chapter timestamps, the fictional scenario and a reproducible recorder using an isolated real API/database. Camera capture is replaced with marked illustrations on iOS Simulator. See [verification evidence](docs/verification.md) for checks and remaining physical-device coverage.
+The [complete main-flow recording with a Vietnamese male voice](demo/full-flow-voiced.mp4) lasts 4m17s with 52 chapters, showing synthetic applicant onboarding, authenticated reviewer rejection/resubmission/approval, private submission history and logout. The applicant uses `applicant.demo@kyc.example` (User); the reviewer uses `reviewer.demo@kyc.example` (Reviewer). Each account switch displays the current email and role in **Account access**. [Demo instructions](demo/README.md) include the silent original, 21 narration passages using `vi-VN-NamMinhNeural`, subtitles, chapter timestamps, the fictional scenario and reproducible recording/voiceover commands. The recorder uses an isolated real API/database, and camera capture is replaced with marked illustrations on iOS Simulator. See [verification evidence](docs/verification.md) for checks and remaining physical-device coverage.
 
 ## Assumptions and further work
 

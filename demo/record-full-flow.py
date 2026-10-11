@@ -156,6 +156,8 @@ def load_scenario() -> dict:
     for key in ("fullName", "dateOfBirth", "nationality", "address", "documentNumber"):
         if not isinstance(scenario["applicant"].get(key), str) or not scenario["applicant"][key]:
             raise RecordingError(f"Missing synthetic applicant field: {key}.")
+    if scenario["applicant"]["email"].casefold() == scenario["reviewer"]["email"].casefold():
+        raise RecordingError("Applicant and reviewer must use different email accounts.")
     return scenario
 
 

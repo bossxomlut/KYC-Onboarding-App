@@ -1,20 +1,33 @@
 # Demo and recording
 
-The complete main-flow recording with Vietnamese narration is [full-flow-voiced.mp4](full-flow-voiced.mp4). The [original silent recording](full-flow.mp4) is also retained. Both use the current Flutter app and real NestJS API, PostgreSQL and Mailpit, with fictional identities from [scenario.json](scenario.json) and illustrated photos in `assets/`. Public passwords in the scenario are for this disposable local demo only.
+The complete main-flow recording with a Vietnamese male voice is [full-flow-voiced.mp4](full-flow-voiced.mp4). The [original silent recording](full-flow.mp4) is also retained. The latest recording lasts **4m17s (256.87 seconds)** and includes **52 chapters**. Both use the current Flutter app and real NestJS API, PostgreSQL and Mailpit, with fictional identities from [scenario.json](scenario.json) and illustrated photos in `assets/`. Public passwords in the scenario are for this disposable local demo only.
 
 The video shows registration and email OTP, login, personal details, saved session/progress restoration, document and selfie upload, private previews, editing and retaking, submission, reviewer rejection requesting only a new selfie, resubmission, reviewer approval, **Verified**, both historical submissions and logout. Review decisions are made through the authenticated reviewer screens. [Chapter timestamps](full-flow.chapters.json) and [subtitles](full-flow.srt) accompany the MP4.
 
+The applicant and reviewer use separate accounts:
+
+| Account | Email | Role shown in Account access |
+| --- | --- | --- |
+| Applicant | `applicant.demo@kyc.example` | `User` |
+| Reviewer | `reviewer.demo@kyc.example` | `Reviewer` |
+
+Each account switch shows the sign-in email and the native **Account access** screen with the current email and role. The recording test and runner reject equal emails regardless of letter case. In the reviewer queue, the email on a profile row belongs to the applicant being reviewed.
+
 ## Vietnamese voiceover
 
-The narrated version adds 18 timed passages using the macOS Vietnamese **Linh** voice at its normal configured rate. Its 3m40s duration, original video bitstream and all 42 chapters are preserved. [Vietnamese subtitles](full-flow.vi.srt), the editable [narration plan](voiceover.vi.json) and the [timing report](voiceover.vi.report.json) are included.
+The narrated version adds **21 passages** using **`vi-VN-NamMinhNeural`**, a Vietnamese male voice listed in [Microsoft's voice documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts), through [`edge-tts`](https://github.com/rany2/edge-tts). It preserves the original video stream, 4m17s duration and all 52 chapters, with an AAC Vietnamese audio track. [Vietnamese subtitles](full-flow.vi.srt), the editable [narration plan](voiceover.vi.json) and the [timing report](voiceover.vi.report.json) are included.
 
-To rebuild the narration locally on macOS with `say`, the Linh voice and FFmpeg installed:
+To rebuild the narration with Python, FFmpeg/FFprobe and internet access, run from the repository root:
 
 ```sh
+python3 -m venv demo/.runtime/tts-venv
+demo/.runtime/tts-venv/bin/python -m pip install -r demo/tts-requirements.txt
 python3 demo/add-voiceover.py
 ```
 
-Edit the text and start/end times in `demo/voiceover.vi.json` to change the narration. The script checks that speech fits its screen interval, normalizes volume and exports the MP4 with an AAC Vietnamese audio track. Temporary audio stays in ignored `demo/.runtime/voiceover/`. The narration timings match the retained original video; adjust them when making a new recording.
+The requirements pin `edge-tts==7.2.8`. Speech synthesis sends the fictional narration text to Microsoft Edge's online speech service; the video, illustrated documents and app records remain local. No API key is required by this library.
+
+Edit the text and chapter anchors in `demo/voiceover.vi.json` to change the narration. Each start/end anchor specifies a chapter slug, occurrence and offset; timings resolve automatically from `demo/full-flow.chapters.json` after a new recording. The script checks that speech fits its screen interval, normalizes volume and reports any applied speed adjustment. Temporary audio stays in ignored `demo/.runtime/voiceover/`.
 
 ## Reproduce the recording
 

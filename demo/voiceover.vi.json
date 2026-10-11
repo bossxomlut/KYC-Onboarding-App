@@ -1,118 +1,306 @@
 {
   "language": "vi-VN",
-  "voice": "Linh",
-  "speakingRate": 175,
+  "engine": "edge-tts",
+  "voice": "vi-VN-NamMinhNeural",
+  "voiceGender": "Male",
+  "speechRate": "+0%",
   "syntheticOnly": true,
   "video": "full-flow.mp4",
   "outputVideo": "full-flow-voiced.mp4",
+  "timingSource": "full-flow.chapters.json",
   "segments": [
     {
       "id": "welcome",
-      "startSeconds": 0.5,
-      "endSeconds": 11.9,
+      "start": {
+        "chapter": "welcome",
+        "occurrence": 1,
+        "offsetSeconds": 0.5
+      },
+      "end": {
+        "chapter": "registration",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Chào bạn. Đây là luồng xác minh danh tính của ứng dụng, dùng thông tin và ảnh giả lập, kết nối với máy chủ thật."
     },
     {
       "id": "registration-and-verification",
-      "startSeconds": 12.4,
-      "endSeconds": 24.3,
+      "start": {
+        "chapter": "registration",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "registered",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Đầu tiên, tạo tài khoản thử nghiệm. Mã xác thực được lấy từ hộp thư cục bộ để hoàn tất đăng ký."
     },
     {
       "id": "applicant-login",
-      "startSeconds": 30.2,
-      "endSeconds": 40.7,
-      "text": "Sau khi xác thực email thành công, đăng nhập bằng tài khoản vừa tạo để bắt đầu bổ sung hồ sơ."
+      "start": {
+        "chapter": "applicant-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "personal-details",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Đăng nhập tài khoản người nộp hồ sơ vừa tạo. Màn hình tài khoản cho thấy email và vai trò người dùng trước khi bổ sung thông tin."
     },
     {
       "id": "details-and-session-restoration",
-      "startSeconds": 44.0,
-      "endSeconds": 53.7,
+      "start": {
+        "chapter": "personal-details",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "document-step",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Nhập thông tin giả lập rồi lưu. Khi ứng dụng được khởi tạo lại, phiên đăng nhập và tiến độ đã lưu được khôi phục."
     },
     {
       "id": "synthetic-uploads",
-      "startSeconds": 57.5,
-      "endSeconds": 69.5,
-      "text": "Tiếp theo, tải giấy tờ và ảnh chân dung giả lập. Ảnh minh họa thay thao tác camera trên trình giả lập, còn tải ảnh dùng máy chủ thật."
+      "start": {
+        "chapter": "document-uploaded",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "review-profile",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Giấy tờ mẫu đã được tải lên. Tiếp tục với ảnh chân dung giả lập; ảnh minh họa thay thao tác camera, còn tải ảnh dùng máy chủ thật."
     },
     {
       "id": "review-and-edit",
-      "startSeconds": 70.9,
-      "endSeconds": 82.0,
+      "start": {
+        "chapter": "review-profile",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "retake-before-submit",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Trước khi gửi, kiểm tra lại hồ sơ. Từ màn hình xem trước, có thể sửa địa chỉ và xem từng ảnh để kiểm tra."
     },
     {
       "id": "retake-before-submission",
-      "startSeconds": 86.0,
-      "endSeconds": 94.8,
+      "start": {
+        "chapter": "retake-before-submit",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "pending-review",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Nếu ảnh chưa phù hợp, chọn chụp lại. Trong bản trình diễn này, ứng dụng thay ảnh bằng mẫu giả lập."
     },
     {
       "id": "first-submission-pending",
-      "startSeconds": 95.5,
-      "endSeconds": 104.7,
+      "start": {
+        "chapter": "pending-review",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "reviewer-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Gửi hồ sơ lần đầu. Trạng thái chuyển sang chờ xét duyệt, và người dùng có thể theo dõi kết quả tại đây."
     },
     {
-      "id": "reviewer-login-and-queue",
-      "startSeconds": 105.5,
-      "endSeconds": 113.8,
-      "text": "Chuyển sang tài khoản người xét duyệt. Trong danh sách hồ sơ đang chờ, mở hồ sơ của người dùng thử nghiệm."
+      "id": "separate-reviewer-account",
+      "start": {
+        "chapter": "reviewer-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "review-queue",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Đăng nhập tài khoản người xét duyệt, với email khác người nộp hồ sơ. Màn hình tài khoản xác nhận email và vai trò hiện tại."
     },
     {
-      "id": "reviewer-inspects-submission",
-      "startSeconds": 114.6,
-      "endSeconds": 124.8,
-      "text": "Người xét duyệt kiểm tra thông tin cá nhân, ảnh giấy tờ và ảnh chân dung trước khi đưa ra quyết định."
+      "id": "target-applicant-and-first-review",
+      "start": {
+        "chapter": "review-queue",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "request-selfie-update",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Email trong danh sách thuộc người nộp hồ sơ cần xét duyệt. Mở hồ sơ này để kiểm tra thông tin, giấy tờ và ảnh chân dung."
     },
     {
       "id": "selfie-correction-request",
-      "startSeconds": 125.3,
-      "endSeconds": 136.9,
+      "start": {
+        "chapter": "request-selfie-update",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "applicant-return-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Lần đầu, hồ sơ bị từ chối với yêu cầu chụp lại ảnh chân dung dưới ánh sáng tốt hơn. Quyết định được lưu ngay trong ứng dụng."
     },
     {
+      "id": "return-to-applicant-account",
+      "start": {
+        "chapter": "applicant-return-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "applicant-rejected",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Trở lại tài khoản người nộp hồ sơ. Email và vai trò trên màn hình tài khoản xác nhận phiên đăng nhập đã chuyển đúng người."
+    },
+    {
       "id": "preserved-details-and-replacement",
-      "startSeconds": 139.3,
-      "endSeconds": 150.8,
+      "start": {
+        "chapter": "applicant-rejected",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "resubmission-review",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Người dùng thấy lý do cần bổ sung. Thông tin và giấy tờ đã được giữ lại, nên chỉ cần thay ảnh chân dung theo yêu cầu."
     },
     {
       "id": "second-submission",
-      "startSeconds": 151.2,
-      "endSeconds": 161.9,
+      "start": {
+        "chapter": "resubmission-review",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "reviewer-return-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Kiểm tra lại hồ sơ với ảnh mới rồi gửi lần thứ hai. Hồ sơ quay lại trạng thái chờ xét duyệt."
     },
     {
+      "id": "return-to-separate-reviewer",
+      "start": {
+        "chapter": "reviewer-return-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "review-queue",
+        "occurrence": 2,
+        "offsetSeconds": -0.3
+      },
+      "text": "Tiếp tục chuyển sang tài khoản xét duyệt có email riêng. Kiểm tra vai trò hiện tại trước khi mở hồ sơ được gửi lại."
+    },
+    {
       "id": "reviewer-inspects-update",
-      "startSeconds": 168.0,
-      "endSeconds": 178.9,
+      "start": {
+        "chapter": "review-queue",
+        "occurrence": 2,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "approve-confirmation",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Người xét duyệt mở hồ sơ được gửi lại, kiểm tra thông tin đã giữ nguyên cùng ảnh chân dung vừa cập nhật."
     },
     {
       "id": "reviewer-approval",
-      "startSeconds": 180.0,
-      "endSeconds": 191.8,
+      "start": {
+        "chapter": "approve-confirmation",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "applicant-final-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Sau khi kiểm tra, xác nhận phê duyệt hồ sơ. Quyết định này được gửi đến máy chủ thật và cập nhật cho người dùng."
     },
     {
+      "id": "final-return-to-applicant",
+      "start": {
+        "chapter": "applicant-final-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "verified",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Đăng nhập lại tài khoản người nộp hồ sơ để xem kết quả. Email trên màn hình tài khoản vẫn là email đã đăng ký ban đầu."
+    },
+    {
       "id": "verified-and-history",
-      "startSeconds": 196.7,
-      "endSeconds": 203.5,
+      "start": {
+        "chapter": "verified",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "original-submission",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Hồ sơ đã được xác minh. Mở lịch sử để xem lại cả hai lần gửi."
     },
     {
       "id": "original-submission-history",
-      "startSeconds": 204.0,
-      "endSeconds": 215.9,
+      "start": {
+        "chapter": "original-submission",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "logout",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
       "text": "Bản gửi lần đầu vẫn lưu lý do từ chối và các ảnh khi đó. Người dùng có thể xem lại hồ sơ cũ ở chế độ chỉ đọc."
     },
     {
       "id": "logout",
-      "startSeconds": 216.0,
-      "endSeconds": 220.0,
-      "text": "Cuối cùng, đăng xuất để kết thúc phiên làm việc."
+      "start": {
+        "chapter": "logout",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "videoEnd": true,
+        "offsetSeconds": -0.25
+      },
+      "text": "Cuối cùng, đăng xuất và kết thúc phiên."
     }
   ]
 }

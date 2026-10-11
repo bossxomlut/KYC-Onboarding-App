@@ -1,7 +1,7 @@
 {
   "syntheticOnly": true,
   "applicant": {
-    "email": "maya.recording@kyc.example",
+    "email": "applicant.demo@kyc.example",
     "password": "DemoOnlyPass123!",
     "fullName": "Maya Demo",
     "dateOfBirth": "1995-06-15",
@@ -10,7 +10,7 @@
     "documentNumber": "DEMO000123"
   },
   "reviewer": {
-    "email": "reviewer.recording@kyc.example",
+    "email": "reviewer.demo@kyc.example",
     "password": "ReviewerDemo123!"
   },
   "document": "assets/document.jpg",

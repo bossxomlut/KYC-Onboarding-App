@@ -1,71 +1,83 @@
 1
-00:00:00,500 --> 00:00:08,079
+00:00:00,500 --> 00:00:08,327
 Chào bạn. Đây là luồng xác minh danh tính của ứng dụng, dùng thông tin và ảnh giả lập, kết nối với máy chủ thật.
 
 2
-00:00:12,400 --> 00:00:19,312
+00:00:12,433 --> 00:00:19,636
 Đầu tiên, tạo tài khoản thử nghiệm. Mã xác thực được lấy từ hộp thư cục bộ để hoàn tất đăng ký.
 
 3
-00:00:30,200 --> 00:00:36,795
-Sau khi xác thực email thành công, đăng nhập bằng tài khoản vừa tạo để bắt đầu bổ sung hồ sơ.
+00:00:28,246 --> 00:00:36,505
+Đăng nhập tài khoản người nộp hồ sơ vừa tạo. Màn hình tài khoản cho thấy email và vai trò người dùng trước khi bổ sung thông tin.
 
 4
-00:00:44,000 --> 00:00:51,425
+00:00:51,547 --> 00:00:59,086
 Nhập thông tin giả lập rồi lưu. Khi ứng dụng được khởi tạo lại, phiên đăng nhập và tiến độ đã lưu được khôi phục.
 
 5
-00:00:57,500 --> 00:01:06,765
-Tiếp theo, tải giấy tờ và ảnh chân dung giả lập. Ảnh minh họa thay thao tác camera trên trình giả lập, còn tải ảnh dùng máy chủ thật.
+00:01:06,532 --> 00:01:15,487
+Giấy tờ mẫu đã được tải lên. Tiếp tục với ảnh chân dung giả lập; ảnh minh họa thay thao tác camera, còn tải ảnh dùng máy chủ thật.
 
 6
-00:01:10,900 --> 00:01:18,927
+00:01:18,020 --> 00:01:26,039
 Trước khi gửi, kiểm tra lại hồ sơ. Từ màn hình xem trước, có thể sửa địa chỉ và xem từng ảnh để kiểm tra.
 
 7
-00:01:26,000 --> 00:01:32,838
+00:01:33,025 --> 00:01:40,420
 Nếu ảnh chưa phù hợp, chọn chụp lại. Trong bản trình diễn này, ứng dụng thay ảnh bằng mẫu giả lập.
 
 8
-00:01:35,500 --> 00:01:42,787
+00:01:42,398 --> 00:01:49,601
 Gửi hồ sơ lần đầu. Trạng thái chuyển sang chờ xét duyệt, và người dùng có thể theo dõi kết quả tại đây.
 
 9
-00:01:45,500 --> 00:01:52,390
-Chuyển sang tài khoản người xét duyệt. Trong danh sách hồ sơ đang chờ, mở hồ sơ của người dùng thử nghiệm.
+00:01:50,597 --> 00:01:59,048
+Đăng nhập tài khoản người xét duyệt, với email khác người nộp hồ sơ. Màn hình tài khoản xác nhận email và vai trò hiện tại.
 
 10
-00:01:54,600 --> 00:02:01,045
-Người xét duyệt kiểm tra thông tin cá nhân, ảnh giấy tờ và ảnh chân dung trước khi đưa ra quyết định.
+00:02:05,361 --> 00:02:13,788
+Email trong danh sách thuộc người nộp hồ sơ cần xét duyệt. Mở hồ sơ này để kiểm tra thông tin, giấy tờ và ảnh chân dung.
 
 11
-00:02:05,300 --> 00:02:13,906
+00:02:19,944 --> 00:02:28,251
 Lần đầu, hồ sơ bị từ chối với yêu cầu chụp lại ảnh chân dung dưới ánh sáng tốt hơn. Quyết định được lưu ngay trong ứng dụng.
 
 12
-00:02:19,300 --> 00:02:27,535
-Người dùng thấy lý do cần bổ sung. Thông tin và giấy tờ đã được giữ lại, nên chỉ cần thay ảnh chân dung theo yêu cầu.
+00:02:31,807 --> 00:02:39,610
+Trở lại tài khoản người nộp hồ sơ. Email và vai trò trên màn hình tài khoản xác nhận phiên đăng nhập đã chuyển đúng người.
 
 13
-00:02:31,200 --> 00:02:37,817
-Kiểm tra lại hồ sơ với ảnh mới rồi gửi lần thứ hai. Hồ sơ quay lại trạng thái chờ xét duyệt.
+00:02:41,332 --> 00:02:49,279
+Người dùng thấy lý do cần bổ sung. Thông tin và giấy tờ đã được giữ lại, nên chỉ cần thay ảnh chân dung theo yêu cầu.
 
 14
-00:02:48,000 --> 00:02:54,779
-Người xét duyệt mở hồ sơ được gửi lại, kiểm tra thông tin đã giữ nguyên cùng ảnh chân dung vừa cập nhật.
+00:02:52,657 --> 00:02:59,284
+Kiểm tra lại hồ sơ với ảnh mới rồi gửi lần thứ hai. Hồ sơ quay lại trạng thái chờ xét duyệt.
 
 15
-00:03:00,000 --> 00:03:07,730
-Sau khi kiểm tra, xác nhận phê duyệt hồ sơ. Quyết định này được gửi đến máy chủ thật và cập nhật cho người dùng.
+00:03:04,648 --> 00:03:12,235
+Tiếp tục chuyển sang tài khoản xét duyệt có email riêng. Kiểm tra vai trò hiện tại trước khi mở hồ sơ được gửi lại.
 
 16
-00:03:16,700 --> 00:03:21,661
-Hồ sơ đã được xác minh. Mở lịch sử để xem lại cả hai lần gửi.
+00:03:17,345 --> 00:03:23,444
+Người xét duyệt mở hồ sơ được gửi lại, kiểm tra thông tin đã giữ nguyên cùng ảnh chân dung vừa cập nhật.
 
 17
-00:03:24,000 --> 00:03:32,345
-Bản gửi lần đầu vẫn lưu lý do từ chối và các ảnh khi đó. Người dùng có thể xem lại hồ sơ cũ ở chế độ chỉ đọc.
+00:03:29,228 --> 00:03:36,767
+Sau khi kiểm tra, xác nhận phê duyệt hồ sơ. Quyết định này được gửi đến máy chủ thật và cập nhật cho người dùng.
 
 18
-00:03:36,000 --> 00:03:39,049
-Cuối cùng, đăng xuất để kết thúc phiên làm việc.
+00:03:41,059 --> 00:03:48,982
+Đăng nhập lại tài khoản người nộp hồ sơ để xem kết quả. Email trên màn hình tài khoản vẫn là email đã đăng ký ban đầu.
+
+19
+00:03:53,626 --> 00:03:59,197
+Hồ sơ đã được xác minh. Mở lịch sử để xem lại cả hai lần gửi.
+
+20
+00:04:00,875 --> 00:04:08,894
+Bản gửi lần đầu vẫn lưu lý do từ chối và các ảnh khi đó. Người dùng có thể xem lại hồ sơ cũ ở chế độ chỉ đọc.
+
+21
+00:04:13,611 --> 00:04:16,404
+Cuối cùng, đăng xuất và kết thúc phiên.

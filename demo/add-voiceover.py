@@ -39,19 +39,60 @@ def subtitle_time(seconds: float) -> str:
     return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
 
 
+def chapter_time(anchor: dict, chapters: list[dict], video_duration: float) -> float:
+    if anchor.get("videoEnd") is True:
+        base = video_duration
+    else:
+        matches = [chapter for chapter in chapters if chapter["slug"] == anchor["chapter"]]
+        occurrence = anchor.get("occurrence", 1)
+        if not isinstance(occurrence, int) or not 1 <= occurrence <= len(matches):
+            raise ValueError(f"Missing chapter anchor: {anchor}")
+        base = matches[occurrence - 1]["startSeconds"]
+    return round(base + anchor.get("offsetSeconds", 0), 3)
+
+
+def resolve_segments(plan: dict, video_duration: float) -> list[dict]:
+    if not plan.get("timingSource"):
+        return plan["segments"]
+    timing_file = DEMO / plan["timingSource"]
+    if timing_file.parent != DEMO:
+        raise ValueError("Narration chapter timings must be in demo/.")
+    chapters = json.loads(timing_file.read_text(encoding="utf-8"))["chapters"]
+    return [
+        {**segment,
+         "startSeconds": chapter_time(segment["start"], chapters, video_duration),
+         "endSeconds": chapter_time(segment["end"], chapters, video_duration)}
+        for segment in plan["segments"]
+    ]
+
+
 def main() -> None:
-    for name in ("say", "ffmpeg", "ffprobe"):
+    for name in ("ffmpeg", "ffprobe"):
         if shutil.which(name) is None:
             raise RuntimeError(f"Required executable is unavailable: {name}")
     plan = json.loads((DEMO / "voiceover.vi.json").read_text(encoding="utf-8"))
     if plan.get("syntheticOnly") is not True or plan.get("language") != "vi-VN":
         raise ValueError("Use the Vietnamese synthetic demo narration plan.")
+    engine = plan.get("engine", "macos-say")
+    if engine == "edge-tts":
+        tts = shutil.which("edge-tts")
+        fallback = DEMO / ".runtime" / "tts-venv" / "bin" / "edge-tts"
+        if not tts and fallback.is_file():
+            tts = str(fallback)
+        if not tts:
+            raise RuntimeError("Install demo/tts-requirements.txt in demo/.runtime/tts-venv first.")
+    elif engine == "macos-say":
+        tts = shutil.which("say")
+        if not tts:
+            raise RuntimeError("The macOS say command is unavailable.")
+    else:
+        raise ValueError(f"Unsupported narration engine: {engine}")
     video = DEMO / plan["video"]
     output = DEMO / plan["outputVideo"]
     if video.parent != DEMO or output.parent != DEMO or video == output:
         raise ValueError("Input and output must be distinct video files in demo/.")
     video_duration = duration(video)
-    segments = plan["segments"]
+    segments = resolve_segments(plan, video_duration)
     previous_end = 0.0
     for segment in segments:
         start, end = segment["startSeconds"], segment["endSeconds"]
@@ -68,13 +109,18 @@ def main() -> None:
         print(f"Voicing {index}/{len(segments)}: {segment['id']}", flush=True)
         base = RUNTIME / f"segment-{index:02}"
         text_file = base.with_suffix(".txt")
-        aiff_file = base.with_suffix(".aiff")
+        source_audio = base.with_suffix(".mp3" if engine == "edge-tts" else ".aiff")
         wav_file = base.with_suffix(".wav")
         text_file.write_text(segment["text"], encoding="utf-8")
-        run(["say", "-v", plan.get("voice", "Linh"), "-r",
-             str(plan.get("speakingRate", 175)), "-f", str(text_file),
-             "-o", str(aiff_file)])
-        original_duration = duration(aiff_file)
+        if engine == "edge-tts":
+            run([tts, "--voice", plan["voice"],
+                 f"--rate={plan.get('speechRate', '+0%')}",
+                 "--file", str(text_file), "--write-media", str(source_audio)])
+        else:
+            run([tts, "-v", plan.get("voice", "Linh"), "-r",
+                 str(plan.get("speakingRate", 175)), "-f", str(text_file),
+                 "-o", str(source_audio)])
+        original_duration = duration(source_audio)
         available = segment["endSeconds"] - segment["startSeconds"] - 0.2
         speed = max(1.0, original_duration / available)
         if speed > 1.20:
@@ -84,7 +130,7 @@ def main() -> None:
             )
         filters = f"atempo={speed:.6f},loudnorm=I=-18:LRA=7:TP=-1.5"
         run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
-             "-i", str(aiff_file), "-af", filters, "-ar", str(SAMPLE_RATE),
+             "-i", str(source_audio), "-af", filters, "-ar", str(SAMPLE_RATE),
              "-ac", "1", "-c:a", "pcm_s16le", str(wav_file)])
         with wave.open(str(wav_file), "rb") as clip:
             if (clip.getframerate(), clip.getnchannels(), clip.getsampwidth()) != (SAMPLE_RATE, 1, 2):
@@ -119,7 +165,9 @@ def main() -> None:
     encoded.replace(output)
     (DEMO / "full-flow.vi.srt").write_text("\n".join(subtitle_blocks), encoding="utf-8")
     (DEMO / "voiceover.vi.report.json").write_text(
-        json.dumps({"syntheticOnly": True, "voice": plan.get("voice", "Linh"),
+        json.dumps({"syntheticOnly": True, "engine": engine,
+                    "voice": plan.get("voice", "Linh"),
+                    "voiceGender": plan.get("voiceGender"),
                     "language": "vi-VN", "video": output.name,
                     "durationSeconds": video_duration, "segments": report},
                    ensure_ascii=False, indent=2) + "\n", encoding="utf-8",

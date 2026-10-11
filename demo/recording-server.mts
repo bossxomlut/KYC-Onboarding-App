@@ -16,7 +16,9 @@ const scenario = JSON.parse(
 if (
   scenario.syntheticOnly !== true ||
   !scenario.applicant.email.endsWith("@kyc.example") ||
-  !scenario.reviewer.email.endsWith("@kyc.example")
+  !scenario.reviewer.email.endsWith("@kyc.example") ||
+  scenario.applicant.email.toLowerCase() ===
+    scenario.reviewer.email.toLowerCase()
 ) {
   throw new Error("Recording requires the synthetic demo scenario.");
 }

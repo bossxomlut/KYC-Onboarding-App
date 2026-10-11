@@ -1,6 +1,6 @@
 {
   "syntheticOnly": true,
-  "recordedAt": "2026-10-11T15:24:38+07:00",
+  "recordedAt": "2026-10-12T00:44:54+07:00",
   "timezone": "Asia/Ho_Chi_Minh",
   "device": {
     "udid": "19818BA2-6A09-45F4-8A91-19CB8AED5BFB",
@@ -9,303 +9,373 @@
   "video": "full-flow.mp4",
   "framesPerSecond": 30,
   "width": 720,
-  "durationSeconds": 220.255,
-  "bytes": 5325742,
+  "durationSeconds": 256.87,
+  "bytes": 6448335,
   "scenario": "scenario.json",
   "chapters": [
     {
       "slug": "welcome",
       "label": "Identity onboarding starts here",
-      "timestampSeconds": 4.017,
+      "timestampSeconds": 4.016,
       "startSeconds": 0,
-      "endSeconds": 12.201
+      "endSeconds": 12.233
     },
     {
       "slug": "registration",
       "label": "Create a synthetic account",
-      "timestampSeconds": 12.201,
-      "startSeconds": 12.201,
-      "endSeconds": 16.256
+      "timestampSeconds": 12.233,
+      "startSeconds": 12.233,
+      "endSeconds": 16.242
     },
     {
       "slug": "email-otp",
       "label": "Verify email with a local OTP",
-      "timestampSeconds": 16.256,
-      "startSeconds": 16.256,
-      "endSeconds": 21.431
+      "timestampSeconds": 16.242,
+      "startSeconds": 16.242,
+      "endSeconds": 21.432
     },
     {
       "slug": "registered",
       "label": "Email verified; profile is ready",
-      "timestampSeconds": 21.431,
-      "startSeconds": 21.431,
-      "endSeconds": 29.793
+      "timestampSeconds": 21.432,
+      "startSeconds": 21.432,
+      "endSeconds": 28.046
+    },
+    {
+      "slug": "applicant-sign-in",
+      "label": "Sign in as Applicant (User): applicant.demo@kyc.example",
+      "timestampSeconds": 28.046,
+      "startSeconds": 28.046,
+      "endSeconds": 33.696
+    },
+    {
+      "slug": "applicant-sign-in-identity",
+      "label": "Current account is Applicant (User): applicant.demo@kyc.example",
+      "timestampSeconds": 33.696,
+      "startSeconds": 33.696,
+      "endSeconds": 37.392
     },
     {
       "slug": "applicant-login",
       "label": "Sign in to the demo account",
-      "timestampSeconds": 29.793,
-      "startSeconds": 29.793,
-      "endSeconds": 43.869
+      "timestampSeconds": 37.392,
+      "startSeconds": 37.392,
+      "endSeconds": 51.347
     },
     {
       "slug": "personal-details",
       "label": "Enter fictional personal details",
-      "timestampSeconds": 43.869,
-      "startSeconds": 43.869,
-      "endSeconds": 47.594
+      "timestampSeconds": 51.347,
+      "startSeconds": 51.347,
+      "endSeconds": 55.094
     },
     {
       "slug": "saved-progress",
       "label": "Personal details are saved",
-      "timestampSeconds": 47.594,
-      "startSeconds": 47.594,
-      "endSeconds": 50.594
+      "timestampSeconds": 55.094,
+      "startSeconds": 55.094,
+      "endSeconds": 58.045
     },
     {
       "slug": "session-restored",
       "label": "Session and saved progress are restored",
-      "timestampSeconds": 50.594,
-      "startSeconds": 50.594,
-      "endSeconds": 54.274
+      "timestampSeconds": 58.045,
+      "startSeconds": 58.045,
+      "endSeconds": 61.726
     },
     {
       "slug": "document-step",
       "label": "Continue at the identity document step",
-      "timestampSeconds": 54.274,
-      "startSeconds": 54.274,
-      "endSeconds": 59.096
+      "timestampSeconds": 61.726,
+      "startSeconds": 61.726,
+      "endSeconds": 66.332
     },
     {
       "slug": "document-uploaded",
       "label": "Synthetic document uploaded privately",
-      "timestampSeconds": 59.096,
-      "startSeconds": 59.096,
-      "endSeconds": 62.896
+      "timestampSeconds": 66.332,
+      "startSeconds": 66.332,
+      "endSeconds": 70.124
     },
     {
       "slug": "selfie-step",
       "label": "Continue with a synthetic selfie",
-      "timestampSeconds": 62.896,
-      "startSeconds": 62.896,
-      "endSeconds": 66.714
+      "timestampSeconds": 70.124,
+      "startSeconds": 70.124,
+      "endSeconds": 73.946
     },
     {
       "slug": "selfie-uploaded",
       "label": "Synthetic selfie uploaded privately",
-      "timestampSeconds": 66.714,
-      "startSeconds": 66.714,
-      "endSeconds": 70.58
+      "timestampSeconds": 73.946,
+      "startSeconds": 73.946,
+      "endSeconds": 77.82
     },
     {
       "slug": "review-profile",
       "label": "Review details before submitting",
-      "timestampSeconds": 70.58,
-      "startSeconds": 70.58,
-      "endSeconds": 75.68
+      "timestampSeconds": 77.82,
+      "startSeconds": 77.82,
+      "endSeconds": 82.926
     },
     {
       "slug": "edit-details",
       "label": "Edit the address from Review",
-      "timestampSeconds": 75.68,
-      "startSeconds": 75.68,
-      "endSeconds": 79.751
+      "timestampSeconds": 82.926,
+      "startSeconds": 82.926,
+      "endSeconds": 86.897
     },
     {
       "slug": "review-private-document",
       "label": "Check the private document preview",
-      "timestampSeconds": 79.751,
-      "startSeconds": 79.751,
-      "endSeconds": 81.993
+      "timestampSeconds": 86.897,
+      "startSeconds": 86.897,
+      "endSeconds": 89.145
     },
     {
       "slug": "review-private-selfie",
       "label": "Check the private selfie preview",
-      "timestampSeconds": 81.993,
-      "startSeconds": 81.993,
-      "endSeconds": 85.714
+      "timestampSeconds": 89.145,
+      "startSeconds": 89.145,
+      "endSeconds": 92.825
     },
     {
       "slug": "retake-before-submit",
       "label": "Retake the synthetic selfie before submission",
-      "timestampSeconds": 85.714,
-      "startSeconds": 85.714,
-      "endSeconds": 95.048
+      "timestampSeconds": 92.825,
+      "startSeconds": 92.825,
+      "endSeconds": 102.198
     },
     {
       "slug": "pending-review",
       "label": "First submission is pending review",
-      "timestampSeconds": 95.048,
-      "startSeconds": 95.048,
-      "endSeconds": 105.001
+      "timestampSeconds": 102.198,
+      "startSeconds": 102.198,
+      "endSeconds": 110.397
+    },
+    {
+      "slug": "reviewer-sign-in",
+      "label": "Sign in as Reviewer: reviewer.demo@kyc.example",
+      "timestampSeconds": 110.397,
+      "startSeconds": 110.397,
+      "endSeconds": 116.012
+    },
+    {
+      "slug": "reviewer-sign-in-identity",
+      "label": "Current account is Reviewer: reviewer.demo@kyc.example",
+      "timestampSeconds": 116.012,
+      "startSeconds": 116.012,
+      "endSeconds": 119.695
     },
     {
       "slug": "reviewer-login",
       "label": "Sign in as the synthetic reviewer",
-      "timestampSeconds": 105.001,
-      "startSeconds": 105.001,
-      "endSeconds": 110.434
+      "timestampSeconds": 119.695,
+      "startSeconds": 119.695,
+      "endSeconds": 125.161
     },
     {
       "slug": "review-queue",
-      "label": "Reviewer finds the demo applicant",
-      "timestampSeconds": 110.434,
-      "startSeconds": 110.434,
-      "endSeconds": 114.281
+      "label": "Separate reviewer account selects applicant profile: applicant.demo@kyc.example",
+      "timestampSeconds": 125.161,
+      "startSeconds": 125.161,
+      "endSeconds": 128.909
     },
     {
       "slug": "review-details",
       "label": "Reviewer checks personal details",
-      "timestampSeconds": 114.281,
-      "startSeconds": 114.281,
-      "endSeconds": 116.532
+      "timestampSeconds": 128.909,
+      "startSeconds": 128.909,
+      "endSeconds": 131.164
     },
     {
       "slug": "review-document",
       "label": "Reviewer checks the synthetic identity document",
-      "timestampSeconds": 116.532,
-      "startSeconds": 116.532,
-      "endSeconds": 118.788
+      "timestampSeconds": 131.164,
+      "startSeconds": 131.164,
+      "endSeconds": 133.411
     },
     {
       "slug": "review-selfie",
       "label": "Reviewer checks the synthetic selfie",
-      "timestampSeconds": 118.788,
-      "startSeconds": 118.788,
-      "endSeconds": 125.083
+      "timestampSeconds": 133.411,
+      "startSeconds": 133.411,
+      "endSeconds": 139.744
     },
     {
       "slug": "request-selfie-update",
       "label": "Request a selfie update with a reason",
-      "timestampSeconds": 125.083,
-      "startSeconds": 125.083,
-      "endSeconds": 128.799
+      "timestampSeconds": 139.744,
+      "startSeconds": 139.744,
+      "endSeconds": 143.445
     },
     {
       "slug": "review-rejected",
       "label": "Reviewer saves the rejection through the app",
-      "timestampSeconds": 128.799,
-      "startSeconds": 128.799,
-      "endSeconds": 138.973
+      "timestampSeconds": 143.445,
+      "startSeconds": 143.445,
+      "endSeconds": 151.607
+    },
+    {
+      "slug": "applicant-return-sign-in",
+      "label": "Sign in as Applicant (User): applicant.demo@kyc.example",
+      "timestampSeconds": 151.607,
+      "startSeconds": 151.607,
+      "endSeconds": 157.216
+    },
+    {
+      "slug": "applicant-return-sign-in-identity",
+      "label": "Current account is Applicant (User): applicant.demo@kyc.example",
+      "timestampSeconds": 157.216,
+      "startSeconds": 157.216,
+      "endSeconds": 161.132
     },
     {
       "slug": "applicant-rejected",
       "label": "Applicant sees the selfie correction request",
-      "timestampSeconds": 138.973,
-      "startSeconds": 138.973,
-      "endSeconds": 142.648
+      "timestampSeconds": 161.132,
+      "startSeconds": 161.132,
+      "endSeconds": 164.808
     },
     {
       "slug": "selfie-only-resume",
       "label": "Accepted details and document remain saved",
-      "timestampSeconds": 142.648,
-      "startSeconds": 142.648,
-      "endSeconds": 146.482
+      "timestampSeconds": 164.808,
+      "startSeconds": 164.808,
+      "endSeconds": 168.614
     },
     {
       "slug": "replacement-selfie",
       "label": "Replace only the requested synthetic selfie",
-      "timestampSeconds": 146.482,
-      "startSeconds": 146.482,
-      "endSeconds": 150.332
+      "timestampSeconds": 168.614,
+      "startSeconds": 168.614,
+      "endSeconds": 172.457
     },
     {
       "slug": "resubmission-review",
       "label": "Review the preserved details and replacement selfie",
-      "timestampSeconds": 150.332,
-      "startSeconds": 150.332,
-      "endSeconds": 154.181
+      "timestampSeconds": 172.457,
+      "startSeconds": 172.457,
+      "endSeconds": 176.261
     },
     {
       "slug": "resubmitted",
       "label": "Second submission is pending review",
-      "timestampSeconds": 154.181,
-      "startSeconds": 154.181,
-      "endSeconds": 167.636
+      "timestampSeconds": 176.261,
+      "startSeconds": 176.261,
+      "endSeconds": 184.448
+    },
+    {
+      "slug": "reviewer-return-sign-in",
+      "label": "Sign in as Reviewer: reviewer.demo@kyc.example",
+      "timestampSeconds": 184.448,
+      "startSeconds": 184.448,
+      "endSeconds": 190.059
+    },
+    {
+      "slug": "reviewer-return-sign-in-identity",
+      "label": "Current account is Reviewer: reviewer.demo@kyc.example",
+      "timestampSeconds": 190.059,
+      "startSeconds": 190.059,
+      "endSeconds": 197.145
     },
     {
       "slug": "review-queue",
-      "label": "Reviewer finds the demo applicant",
-      "timestampSeconds": 167.636,
-      "startSeconds": 167.636,
-      "endSeconds": 171.485
+      "label": "Separate reviewer account selects applicant profile: applicant.demo@kyc.example",
+      "timestampSeconds": 197.145,
+      "startSeconds": 197.145,
+      "endSeconds": 200.96
     },
     {
       "slug": "review-details",
       "label": "Reviewer checks personal details",
-      "timestampSeconds": 171.485,
-      "startSeconds": 171.485,
-      "endSeconds": 173.731
+      "timestampSeconds": 200.96,
+      "startSeconds": 200.96,
+      "endSeconds": 203.214
     },
     {
       "slug": "review-document",
       "label": "Reviewer checks the synthetic identity document",
-      "timestampSeconds": 173.731,
-      "startSeconds": 173.731,
-      "endSeconds": 175.983
+      "timestampSeconds": 203.214,
+      "startSeconds": 203.214,
+      "endSeconds": 205.464
     },
     {
       "slug": "review-selfie",
       "label": "Reviewer checks the synthetic selfie",
-      "timestampSeconds": 175.983,
-      "startSeconds": 175.983,
-      "endSeconds": 179.58
+      "timestampSeconds": 205.464,
+      "startSeconds": 205.464,
+      "endSeconds": 209.028
     },
     {
       "slug": "approve-confirmation",
       "label": "Confirm the checked identity submission",
-      "timestampSeconds": 179.58,
-      "startSeconds": 179.58,
-      "endSeconds": 183.318
+      "timestampSeconds": 209.028,
+      "startSeconds": 209.028,
+      "endSeconds": 212.731
     },
     {
       "slug": "review-approved",
       "label": "Reviewer approves through the app",
-      "timestampSeconds": 183.318,
-      "startSeconds": 183.318,
-      "endSeconds": 196.486
+      "timestampSeconds": 212.731,
+      "startSeconds": 212.731,
+      "endSeconds": 220.859
+    },
+    {
+      "slug": "applicant-final-sign-in",
+      "label": "Sign in as Applicant (User): applicant.demo@kyc.example",
+      "timestampSeconds": 220.859,
+      "startSeconds": 220.859,
+      "endSeconds": 226.511
+    },
+    {
+      "slug": "applicant-final-sign-in-identity",
+      "label": "Current account is Applicant (User): applicant.demo@kyc.example",
+      "timestampSeconds": 226.511,
+      "startSeconds": 226.511,
+      "endSeconds": 233.426
     },
     {
       "slug": "verified",
       "label": "Identity verified; applicant sees the result",
-      "timestampSeconds": 196.486,
-      "startSeconds": 196.486,
-      "endSeconds": 200.227
+      "timestampSeconds": 233.426,
+      "startSeconds": 233.426,
+      "endSeconds": 237.11
     },
     {
       "slug": "submission-history",
       "label": "Both submission rounds stay in history",
-      "timestampSeconds": 200.227,
-      "startSeconds": 200.227,
-      "endSeconds": 203.802
+      "timestampSeconds": 237.11,
+      "startSeconds": 237.11,
+      "endSeconds": 240.675
     },
     {
       "slug": "original-submission",
       "label": "Original rejected submission remains read only",
-      "timestampSeconds": 203.802,
-      "startSeconds": 203.802,
-      "endSeconds": 206.044
+      "timestampSeconds": 240.675,
+      "startSeconds": 240.675,
+      "endSeconds": 242.931
     },
     {
       "slug": "history-private-document",
       "label": "Original synthetic document remains private and readable",
-      "timestampSeconds": 206.044,
-      "startSeconds": 206.044,
-      "endSeconds": 208.301
+      "timestampSeconds": 242.931,
+      "startSeconds": 242.931,
+      "endSeconds": 245.178
     },
     {
       "slug": "history-private-selfie",
       "label": "Original synthetic selfie remains in submission history",
-      "timestampSeconds": 208.301,
-      "startSeconds": 208.301,
-      "endSeconds": 216.69
+      "timestampSeconds": 245.178,
+      "startSeconds": 245.178,
+      "endSeconds": 253.411
     },
     {
       "slug": "logout",
       "label": "Signed out safely at the end of the flow",
-      "timestampSeconds": 216.69,
-      "startSeconds": 216.69,
-      "endSeconds": 220.255
+      "timestampSeconds": 253.411,
+      "startSeconds": 253.411,
+      "endSeconds": 256.87
     }
   ],
   "notice": "Fictional identities, illustrated documents, and isolated local services only."

@@ -130,8 +130,10 @@ Future<void> recordingEnter(
 Future<void> recordingLogin(
   WidgetTester tester,
   String email,
-  String password,
-) async {
+  String password, {
+  required String role,
+  required String switchSlug,
+}) async {
   await recordingWaitFor(tester, find.text('Welcome back'));
   await recordingEnter(
     tester,
@@ -143,7 +145,36 @@ Future<void> recordingLogin(
     find.widgetWithText(TextFormField, 'Password'),
     password,
   );
+  final accountLabel = role == 'User' ? 'Applicant (User)' : role;
+  expect(
+    tester
+        .widget<TextFormField>(find.widgetWithText(TextFormField, 'Email'))
+        .controller!
+        .text,
+    email,
+  );
+  await recordingStep(
+    tester,
+    switchSlug,
+    'Sign in as $accountLabel: $email',
+  );
   await recordingTap(tester, find.text('Sign in'));
+  await recordingWaitEnabled(tester, const Key('logout'));
+  await recordingWaitEnabled(tester, const Key('account-access'));
+  await recordingTap(tester, find.byKey(const Key('account-access')));
+  await recordingWaitFor(tester, find.text(email));
+  await recordingWaitFor(tester, find.byKey(const Key('current-role')));
+  expect(find.text(email), findsOneWidget);
+  expect(
+    tester.widget<Text>(find.byKey(const Key('current-role'))).data,
+    'Current role: $role',
+  );
+  await recordingStep(
+    tester,
+    '$switchSlug-identity',
+    'Current account is $accountLabel: $email',
+  );
+  await recordingTap(tester, find.byTooltip('Back'));
   await recordingWaitEnabled(tester, const Key('logout'));
 }
 
@@ -220,7 +251,10 @@ Future<void> recordingOpenReview(
   await tester.ensureVisible(applicant);
   await tester.pumpAndSettle();
   await recordingStep(
-      tester, 'review-queue', 'Reviewer finds the demo applicant');
+    tester,
+    'review-queue',
+    'Separate reviewer account selects applicant profile: $email',
+  );
   await recordingTap(tester, applicant);
   await recordingWaitEnabled(tester, const Key('review-approve'));
   await recordingWaitFor(tester, find.text(fullName));
@@ -287,7 +321,7 @@ void main() {
     (tester) async {
       if (!email.endsWith('@kyc.example') ||
           !reviewerEmail.endsWith('@kyc.example') ||
-          email == reviewerEmail ||
+          email.trim().toLowerCase() == reviewerEmail.trim().toLowerCase() ||
           password.isEmpty ||
           reviewerPassword.isEmpty) {
         throw StateError(
@@ -348,7 +382,13 @@ void main() {
             tester, 'registered', 'Email verified; profile is ready');
 
         await recordingLogout(tester);
-        await recordingLogin(tester, email, password);
+        await recordingLogin(
+          tester,
+          email,
+          password,
+          role: 'User',
+          switchSlug: 'applicant-sign-in',
+        );
         await recordingStep(
             tester, 'applicant-login', 'Sign in to the demo account');
         await recordingTap(tester, find.byKey(const Key('kyc-next')));
@@ -473,7 +513,13 @@ void main() {
         await recordingTap(tester, find.text('Back to home'));
         await recordingLogout(tester);
 
-        await recordingLogin(tester, reviewerEmail, reviewerPassword);
+        await recordingLogin(
+          tester,
+          reviewerEmail,
+          reviewerPassword,
+          role: 'Reviewer',
+          switchSlug: 'reviewer-sign-in',
+        );
         await recordingStep(
             tester, 'reviewer-login', 'Sign in as the synthetic reviewer');
         await recordingOpenReview(tester, email, fullName);
@@ -494,7 +540,13 @@ void main() {
         await recordingTap(tester, find.byTooltip('Back'));
         await recordingLogout(tester);
 
-        await recordingLogin(tester, email, password);
+        await recordingLogin(
+          tester,
+          email,
+          password,
+          role: 'User',
+          switchSlug: 'applicant-return-sign-in',
+        );
         await recordingWaitFor(tester, find.text(rejectionReason));
         await tester.ensureVisible(find.text(rejectionReason));
         await tester.pumpAndSettle();
@@ -528,7 +580,13 @@ void main() {
         await recordingTap(tester, find.text('Back to home'));
         await recordingLogout(tester);
 
-        await recordingLogin(tester, reviewerEmail, reviewerPassword);
+        await recordingLogin(
+          tester,
+          reviewerEmail,
+          reviewerPassword,
+          role: 'Reviewer',
+          switchSlug: 'reviewer-return-sign-in',
+        );
         await recordingOpenReview(tester, email, fullName);
         await recordingTap(tester, find.byKey(const Key('review-approve')));
         await recordingWaitFor(tester, find.text('Approve this identity?'));
@@ -541,7 +599,13 @@ void main() {
         await recordingTap(tester, find.byTooltip('Back'));
         await recordingLogout(tester);
 
-        await recordingLogin(tester, email, password);
+        await recordingLogin(
+          tester,
+          email,
+          password,
+          role: 'User',
+          switchSlug: 'applicant-final-sign-in',
+        );
         await recordingTap(tester, find.byKey(const Key('kyc-next')));
         await recordingWaitFor(tester, find.text('Verified'));
         await recordingTap(tester, find.byKey(const Key('refresh-status')));
