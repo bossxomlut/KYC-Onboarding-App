@@ -12,6 +12,8 @@ On 11 Oct 2026, `python3 demo/record-full-flow.py` built and ran the recording-o
 
 The retained [MP4](../demo/full-flow.mp4), [chapter timestamps](../demo/full-flow.chapters.json) and [demo guide](../demo/README.md) use fictional data from `demo/scenario.json` and marked illustrations. The recording ran against a separate disposable PostgreSQL database/API/Mailpit and did not read or modify the development database. Camera capture was substituted on the simulator; session restoration recreated the app/container rather than force-killing it. This recording does not establish physical-camera, liveness or OCR/face accuracy.
 
+The [Vietnamese narrated variant](../demo/full-flow-voiced.mp4) was generated locally with the macOS Linh voice from 18 timed passages. All passages fit their intervals at the configured rate without speeding up; the final speech ends at 219.049s, before the 220.267s video ends. FFprobe confirms Vietnamese AAC audio, 720×1566 H.264 at 30fps and all 42 chapters. The encoded video stream hash matches the silent original; full audio/video decoding and per-passage non-silence checks passed. See the editable [narration plan](../demo/voiceover.vi.json) and [timing report](../demo/voiceover.vi.report.json).
+
 ## Automated checks
 
 From the repository root, after `npm ci` in `backend` and `flutter pub get` in `mobile`:

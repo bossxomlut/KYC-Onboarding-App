@@ -1,8 +1,20 @@
 # Demo and recording
 
-The complete main-flow recording is [full-flow.mp4](full-flow.mp4). It uses the current Flutter app and real NestJS API, PostgreSQL and Mailpit, with fictional identities from [scenario.json](scenario.json) and illustrated photos in `assets/`. Public passwords in the scenario are for this disposable local demo only.
+The complete main-flow recording with Vietnamese narration is [full-flow-voiced.mp4](full-flow-voiced.mp4). The [original silent recording](full-flow.mp4) is also retained. Both use the current Flutter app and real NestJS API, PostgreSQL and Mailpit, with fictional identities from [scenario.json](scenario.json) and illustrated photos in `assets/`. Public passwords in the scenario are for this disposable local demo only.
 
 The video shows registration and email OTP, login, personal details, saved session/progress restoration, document and selfie upload, private previews, editing and retaking, submission, reviewer rejection requesting only a new selfie, resubmission, reviewer approval, **Verified**, both historical submissions and logout. Review decisions are made through the authenticated reviewer screens. [Chapter timestamps](full-flow.chapters.json) and [subtitles](full-flow.srt) accompany the MP4.
+
+## Vietnamese voiceover
+
+The narrated version adds 18 timed passages using the macOS Vietnamese **Linh** voice at its normal configured rate. Its 3m40s duration, original video bitstream and all 42 chapters are preserved. [Vietnamese subtitles](full-flow.vi.srt), the editable [narration plan](voiceover.vi.json) and the [timing report](voiceover.vi.report.json) are included.
+
+To rebuild the narration locally on macOS with `say`, the Linh voice and FFmpeg installed:
+
+```sh
+python3 demo/add-voiceover.py
+```
+
+Edit the text and start/end times in `demo/voiceover.vi.json` to change the narration. The script checks that speech fits its screen interval, normalizes volume and exports the MP4 with an AAC Vietnamese audio track. Temporary audio stays in ignored `demo/.runtime/voiceover/`. The narration timings match the retained original video; adjust them when making a new recording.
 
 ## Reproduce the recording
 

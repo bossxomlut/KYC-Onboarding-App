@@ -136,7 +136,7 @@ flutter build ios --simulator --debug
 flutter build apk --debug
 ```
 
-The [complete main-flow recording](demo/full-flow.mp4) shows synthetic applicant onboarding, authenticated reviewer rejection/resubmission/approval, private submission history and logout. [Demo instructions](demo/README.md) include chapter timestamps, the fictional scenario and a reproducible recorder using an isolated real API/database. Camera capture is replaced with marked illustrations on iOS Simulator. See [verification evidence](docs/verification.md) for checks and remaining physical-device coverage.
+The [complete main-flow recording with Vietnamese narration](demo/full-flow-voiced.mp4) shows synthetic applicant onboarding, authenticated reviewer rejection/resubmission/approval, private submission history and logout. [Demo instructions](demo/README.md) include the silent original, editable narration/subtitles, chapter timestamps, the fictional scenario and a reproducible recorder using an isolated real API/database. Camera capture is replaced with marked illustrations on iOS Simulator. See [verification evidence](docs/verification.md) for checks and remaining physical-device coverage.
 
 ## Assumptions and further work
 

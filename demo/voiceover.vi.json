@@ -1,0 +1,118 @@
+{
+  "language": "vi-VN",
+  "voice": "Linh",
+  "speakingRate": 175,
+  "syntheticOnly": true,
+  "video": "full-flow.mp4",
+  "outputVideo": "full-flow-voiced.mp4",
+  "segments": [
+    {
+      "id": "welcome",
+      "startSeconds": 0.5,
+      "endSeconds": 11.9,
+      "text": "Chào bạn. Đây là luồng xác minh danh tính của ứng dụng, dùng thông tin và ảnh giả lập, kết nối với máy chủ thật."
+    },
+    {
+      "id": "registration-and-verification",
+      "startSeconds": 12.4,
+      "endSeconds": 24.3,
+      "text": "Đầu tiên, tạo tài khoản thử nghiệm. Mã xác thực được lấy từ hộp thư cục bộ để hoàn tất đăng ký."
+    },
+    {
+      "id": "applicant-login",
+      "startSeconds": 30.2,
+      "endSeconds": 40.7,
+      "text": "Sau khi xác thực email thành công, đăng nhập bằng tài khoản vừa tạo để bắt đầu bổ sung hồ sơ."
+    },
+    {
+      "id": "details-and-session-restoration",
+      "startSeconds": 44.0,
+      "endSeconds": 53.7,
+      "text": "Nhập thông tin giả lập rồi lưu. Khi ứng dụng được khởi tạo lại, phiên đăng nhập và tiến độ đã lưu được khôi phục."
+    },
+    {
+      "id": "synthetic-uploads",
+      "startSeconds": 57.5,
+      "endSeconds": 69.5,
+      "text": "Tiếp theo, tải giấy tờ và ảnh chân dung giả lập. Ảnh minh họa thay thao tác camera trên trình giả lập, còn tải ảnh dùng máy chủ thật."
+    },
+    {
+      "id": "review-and-edit",
+      "startSeconds": 70.9,
+      "endSeconds": 82.0,
+      "text": "Trước khi gửi, kiểm tra lại hồ sơ. Từ màn hình xem trước, có thể sửa địa chỉ và xem từng ảnh để kiểm tra."
+    },
+    {
+      "id": "retake-before-submission",
+      "startSeconds": 86.0,
+      "endSeconds": 94.8,
+      "text": "Nếu ảnh chưa phù hợp, chọn chụp lại. Trong bản trình diễn này, ứng dụng thay ảnh bằng mẫu giả lập."
+    },
+    {
+      "id": "first-submission-pending",
+      "startSeconds": 95.5,
+      "endSeconds": 104.7,
+      "text": "Gửi hồ sơ lần đầu. Trạng thái chuyển sang chờ xét duyệt, và người dùng có thể theo dõi kết quả tại đây."
+    },
+    {
+      "id": "reviewer-login-and-queue",
+      "startSeconds": 105.5,
+      "endSeconds": 113.8,
+      "text": "Chuyển sang tài khoản người xét duyệt. Trong danh sách hồ sơ đang chờ, mở hồ sơ của người dùng thử nghiệm."
+    },
+    {
+      "id": "reviewer-inspects-submission",
+      "startSeconds": 114.6,
+      "endSeconds": 124.8,
+      "text": "Người xét duyệt kiểm tra thông tin cá nhân, ảnh giấy tờ và ảnh chân dung trước khi đưa ra quyết định."
+    },
+    {
+      "id": "selfie-correction-request",
+      "startSeconds": 125.3,
+      "endSeconds": 136.9,
+      "text": "Lần đầu, hồ sơ bị từ chối với yêu cầu chụp lại ảnh chân dung dưới ánh sáng tốt hơn. Quyết định được lưu ngay trong ứng dụng."
+    },
+    {
+      "id": "preserved-details-and-replacement",
+      "startSeconds": 139.3,
+      "endSeconds": 150.8,
+      "text": "Người dùng thấy lý do cần bổ sung. Thông tin và giấy tờ đã được giữ lại, nên chỉ cần thay ảnh chân dung theo yêu cầu."
+    },
+    {
+      "id": "second-submission",
+      "startSeconds": 151.2,
+      "endSeconds": 161.9,
+      "text": "Kiểm tra lại hồ sơ với ảnh mới rồi gửi lần thứ hai. Hồ sơ quay lại trạng thái chờ xét duyệt."
+    },
+    {
+      "id": "reviewer-inspects-update",
+      "startSeconds": 168.0,
+      "endSeconds": 178.9,
+      "text": "Người xét duyệt mở hồ sơ được gửi lại, kiểm tra thông tin đã giữ nguyên cùng ảnh chân dung vừa cập nhật."
+    },
+    {
+      "id": "reviewer-approval",
+      "startSeconds": 180.0,
+      "endSeconds": 191.8,
+      "text": "Sau khi kiểm tra, xác nhận phê duyệt hồ sơ. Quyết định này được gửi đến máy chủ thật và cập nhật cho người dùng."
+    },
+    {
+      "id": "verified-and-history",
+      "startSeconds": 196.7,
+      "endSeconds": 203.5,
+      "text": "Hồ sơ đã được xác minh. Mở lịch sử để xem lại cả hai lần gửi."
+    },
+    {
+      "id": "original-submission-history",
+      "startSeconds": 204.0,
+      "endSeconds": 215.9,
+      "text": "Bản gửi lần đầu vẫn lưu lý do từ chối và các ảnh khi đó. Người dùng có thể xem lại hồ sơ cũ ở chế độ chỉ đọc."
+    },
+    {
+      "id": "logout",
+      "startSeconds": 216.0,
+      "endSeconds": 220.0,
+      "text": "Cuối cùng, đăng xuất để kết thúc phiên làm việc."
+    }
+  ]
+}

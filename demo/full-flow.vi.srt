@@ -1,0 +1,71 @@
+1
+00:00:00,500 --> 00:00:08,079
+Chào bạn. Đây là luồng xác minh danh tính của ứng dụng, dùng thông tin và ảnh giả lập, kết nối với máy chủ thật.
+
+2
+00:00:12,400 --> 00:00:19,312
+Đầu tiên, tạo tài khoản thử nghiệm. Mã xác thực được lấy từ hộp thư cục bộ để hoàn tất đăng ký.
+
+3
+00:00:30,200 --> 00:00:36,795
+Sau khi xác thực email thành công, đăng nhập bằng tài khoản vừa tạo để bắt đầu bổ sung hồ sơ.
+
+4
+00:00:44,000 --> 00:00:51,425
+Nhập thông tin giả lập rồi lưu. Khi ứng dụng được khởi tạo lại, phiên đăng nhập và tiến độ đã lưu được khôi phục.
+
+5
+00:00:57,500 --> 00:01:06,765
+Tiếp theo, tải giấy tờ và ảnh chân dung giả lập. Ảnh minh họa thay thao tác camera trên trình giả lập, còn tải ảnh dùng máy chủ thật.
+
+6
+00:01:10,900 --> 00:01:18,927
+Trước khi gửi, kiểm tra lại hồ sơ. Từ màn hình xem trước, có thể sửa địa chỉ và xem từng ảnh để kiểm tra.
+
+7
+00:01:26,000 --> 00:01:32,838
+Nếu ảnh chưa phù hợp, chọn chụp lại. Trong bản trình diễn này, ứng dụng thay ảnh bằng mẫu giả lập.
+
+8
+00:01:35,500 --> 00:01:42,787
+Gửi hồ sơ lần đầu. Trạng thái chuyển sang chờ xét duyệt, và người dùng có thể theo dõi kết quả tại đây.
+
+9
+00:01:45,500 --> 00:01:52,390
+Chuyển sang tài khoản người xét duyệt. Trong danh sách hồ sơ đang chờ, mở hồ sơ của người dùng thử nghiệm.
+
+10
+00:01:54,600 --> 00:02:01,045
+Người xét duyệt kiểm tra thông tin cá nhân, ảnh giấy tờ và ảnh chân dung trước khi đưa ra quyết định.
+
+11
+00:02:05,300 --> 00:02:13,906
+Lần đầu, hồ sơ bị từ chối với yêu cầu chụp lại ảnh chân dung dưới ánh sáng tốt hơn. Quyết định được lưu ngay trong ứng dụng.
+
+12
+00:02:19,300 --> 00:02:27,535
+Người dùng thấy lý do cần bổ sung. Thông tin và giấy tờ đã được giữ lại, nên chỉ cần thay ảnh chân dung theo yêu cầu.
+
+13
+00:02:31,200 --> 00:02:37,817
+Kiểm tra lại hồ sơ với ảnh mới rồi gửi lần thứ hai. Hồ sơ quay lại trạng thái chờ xét duyệt.
+
+14
+00:02:48,000 --> 00:02:54,779
+Người xét duyệt mở hồ sơ được gửi lại, kiểm tra thông tin đã giữ nguyên cùng ảnh chân dung vừa cập nhật.
+
+15
+00:03:00,000 --> 00:03:07,730
+Sau khi kiểm tra, xác nhận phê duyệt hồ sơ. Quyết định này được gửi đến máy chủ thật và cập nhật cho người dùng.
+
+16
+00:03:16,700 --> 00:03:21,661
+Hồ sơ đã được xác minh. Mở lịch sử để xem lại cả hai lần gửi.
+
+17
+00:03:24,000 --> 00:03:32,345
+Bản gửi lần đầu vẫn lưu lý do từ chối và các ảnh khi đó. Người dùng có thể xem lại hồ sơ cũ ở chế độ chỉ đọc.
+
+18
+00:03:36,000 --> 00:03:39,049
+Cuối cùng, đăng xuất để kết thúc phiên làm việc.
