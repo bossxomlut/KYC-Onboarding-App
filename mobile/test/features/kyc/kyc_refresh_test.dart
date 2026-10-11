@@ -22,6 +22,7 @@ void main() {
       loadPrivateMedia: LoadPrivateMedia(repository),
       submitKyc: SubmitKyc(repository),
       resubmitKyc: ResubmitKyc(repository),
+      verifyIdentity: VerifyIdentity(repository),
       recoverCapture: RecoverCapture(repository),
       discardLocalMedia: DiscardLocalMedia(repository),
     );

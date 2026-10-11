@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/kyc_profile.dart';
 import 'kyc_scaffold.dart';
 import 'kyc_status_badge.dart';
+import 'verification_summary.dart';
 
 class KycProfileSummary extends StatelessWidget {
   const KycProfileSummary({
@@ -98,6 +99,10 @@ class KycProfileSummary extends StatelessWidget {
             ),
           ],
         ),
+        if (profile?.verification != null) ...[
+          const SizedBox(height: 16),
+          VerificationSummary(verification: profile!.verification),
+        ],
       ],
     );
   }

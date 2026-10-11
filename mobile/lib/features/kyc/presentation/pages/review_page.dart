@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/navigation/current_route.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../domain/entities/kyc_profile.dart';
 import '../bloc/kyc_cubit.dart';
 import '../widgets/kyc_profile_summary.dart';
 import '../widgets/kyc_scaffold.dart';
@@ -34,6 +35,11 @@ class _ReviewPageState extends State<ReviewPage> {
   Widget build(BuildContext context) => BlocBuilder<KycCubit, KycState>(
     builder: (context, state) {
       final profile = state.profile;
+      final verificationStatus = profile?.verification?.status;
+      final canRunChecks =
+          (profile?.canEdit ?? false) &&
+          (verificationStatus == VerificationStatus.notStarted ||
+              verificationStatus == VerificationStatus.failed);
       return KycScaffold(
         title: 'Review & submit',
         signatureHeader: const KycSignatureIntro(
@@ -70,8 +76,37 @@ class _ReviewPageState extends State<ReviewPage> {
             KycProfileSummary(
               profile: profile,
               media: state.reviewMedia,
-              onEdit: (step) => context.pushReplacement(step.routePath),
+              onEdit: state.busy
+                  ? null
+                  : (step) => context.pushReplacement(step.routePath),
             ),
+            if (canRunChecks) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Your document and selfie are sent to AWS when you run identity checks. '
+                'Review any extracted details before submitting. These checks do not '
+                'include liveness detection; a reviewer makes the final decision.',
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                key: const Key('run-identity-checks'),
+                onPressed:
+                    state.busy ||
+                        profile?.document == null ||
+                        profile?.selfie == null ||
+                        state.pendingCaptures.isNotEmpty
+                    ? null
+                    : () => context.read<KycCubit>().verifyIdentity(),
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(
+                  state.operation == KycOperation.verifying
+                      ? 'Running identity checks…'
+                      : verificationStatus == VerificationStatus.failed
+                      ? 'Retry identity checks'
+                      : 'Run identity checks',
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             Text(
               'By submitting, you confirm that these details are accurate. You can follow the review result from your home screen.',

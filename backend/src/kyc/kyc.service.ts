@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -7,7 +7,15 @@ import sharp from "sharp";
 import type { Config } from "../config.js";
 import { transaction } from "../database.js";
 import { ApiError } from "../errors.js";
-import { APP_CONFIG, DATABASE_POOL } from "../infrastructure/tokens.js";
+import {
+  APP_CONFIG,
+  DATABASE_POOL,
+  IDENTITY_VERIFIER,
+} from "../infrastructure/tokens.js";
+import type { IdentityVerifier } from "../verification/identity-verifier.js";
+import { createIdentityVerifier } from "../verification/aws-identity-verifier.js";
+import { verifyProfile } from "./kyc-verification.service.js";
+import { verificationInProgress } from "./kyc-verification.repository.js";
 import { decrypt, encrypt } from "../security.js";
 import {
   archivedMedia,
@@ -40,10 +48,19 @@ export class KycService {
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
     @Inject(APP_CONFIG) private readonly config: Config,
+    @Optional()
+    @Inject(IDENTITY_VERIFIER)
+    private readonly verifier: IdentityVerifier | null = createIdentityVerifier(
+      config,
+    ),
   ) {}
 
   async profile(userId: string) {
     return { profile: await getProfile(this.pool, userId, this.config) };
+  }
+
+  async verification(userId: string) {
+    return verifyProfile(this.pool, this.config, this.verifier, userId);
   }
 
   async history(userId: string, pagination: HistoryPagination) {
@@ -171,7 +188,7 @@ export class KycService {
           ],
         );
         await client.query(
-          "UPDATE kyc_profiles SET status='in_progress',updated_at=now() WHERE user_id=$1",
+          "UPDATE kyc_profiles SET status='in_progress',verification=NULL,verification_attempt_id=NULL,updated_at=now() WHERE user_id=$1",
           [userId],
         );
         return { profile: await getProfile(client, userId, this.config) };
@@ -212,6 +229,12 @@ export class KycService {
         return { profile: await getProfile(client, userId, this.config) };
       }
       assertEditable(profile);
+      if (verificationInProgress(profile, this.config))
+        throw new ApiError(
+          409,
+          "KYC_VERIFICATION_IN_PROGRESS",
+          "Wait for the identity check to finish before submitting.",
+        );
       const media = await client.query(
         "SELECT kind FROM kyc_media WHERE user_id=$1",
         [userId],
@@ -223,7 +246,7 @@ export class KycService {
           "Complete personal details, document and selfie before submitting.",
         );
       await client.query(
-        "UPDATE kyc_profiles SET status='pending_review',submitted_at=now(),required_steps='{}',rejection_reason=NULL,updated_at=now() WHERE user_id=$1",
+        "UPDATE kyc_profiles SET status='pending_review',submitted_at=now(),required_steps='{}',rejection_reason=NULL,verification_attempt_id=NULL,updated_at=now() WHERE user_id=$1",
         [userId],
       );
       await ensureCurrentSubmission(client, userId);
@@ -249,8 +272,12 @@ export class KycService {
       );
       oldKeys = removed.rows.map((item) => item.storage_key);
       await client.query(
-        "UPDATE kyc_profiles SET status='in_progress',personal_details=CASE WHEN $2 THEN NULL ELSE personal_details END,rejection_reason=NULL,required_steps='{}',submitted_at=NULL,current_submission_id=NULL,updated_at=now() WHERE user_id=$1",
-        [userId, steps.includes("personal_details")],
+        "UPDATE kyc_profiles SET status='in_progress',personal_details=CASE WHEN $2 THEN NULL ELSE personal_details END,verification=CASE WHEN $3 THEN NULL ELSE verification END,verification_attempt_id=NULL,rejection_reason=NULL,required_steps='{}',submitted_at=NULL,current_submission_id=NULL,updated_at=now() WHERE user_id=$1",
+        [
+          userId,
+          steps.includes("personal_details"),
+          steps.includes("document") || steps.includes("selfie"),
+        ],
       );
       return { profile: await getProfile(client, userId, this.config) };
     });

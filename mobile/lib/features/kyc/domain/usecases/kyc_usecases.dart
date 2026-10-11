@@ -77,6 +77,12 @@ class ResubmitKyc {
   Future<Result<KycProfile>> call() => repository.resubmit();
 }
 
+class VerifyIdentity {
+  const VerifyIdentity(this.repository);
+  final KycRepository repository;
+  Future<Result<KycProfile>> call() => repository.verifyIdentity();
+}
+
 class DiscardLocalMedia {
   const DiscardLocalMedia(this.repository);
   final KycRepository repository;

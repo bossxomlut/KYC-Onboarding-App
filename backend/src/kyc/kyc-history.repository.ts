@@ -8,6 +8,7 @@ import { ApiError } from "../errors.js";
 import { decrypt } from "../security.js";
 import type { MediaKind, PersonalDetails } from "./kyc.schemas.js";
 import type { HistoryPagination } from "./kyc-history.schemas.js";
+import { verificationView } from "./kyc-verification.repository.js";
 
 interface SubmissionRecord {
   id: string;
@@ -27,6 +28,7 @@ interface SubmissionRecord {
   reviewed_by: string | null;
   reviewer_email: string | null;
   reviewer_role: UserRole | null;
+  verification: string | null;
 }
 
 interface ArchivedMedia {
@@ -68,6 +70,10 @@ export async function ensureCurrentSubmission(
   );
   await client.query(
     "UPDATE kyc_profiles SET current_submission_id=$2 WHERE user_id=$1",
+    [userId, id],
+  );
+  await client.query(
+    "UPDATE kyc_submissions s SET verification=p.verification FROM kyc_profiles p WHERE s.id=$2 AND p.user_id=$1",
     [userId, id],
   );
   return id;
@@ -136,6 +142,7 @@ function submittedProfile(
     requiredSteps: row.required_steps,
     submittedAt: row.submitted_at?.toISOString() ?? null,
     updatedAt: row.updated_at.toISOString(),
+    verification: verificationView(row.verification, config),
   };
 }
 

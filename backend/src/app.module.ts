@@ -11,14 +11,20 @@ import { ReviewsModule } from "./reviews/reviews.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { ApiExceptionFilter } from "./common/api-exception.filter.js";
 import { RateLimitGuard } from "./common/rate-limit.guard.js";
+import type { IdentityVerifier } from "./verification/identity-verifier.js";
 
 @Module({})
 export class AppModule {
-  static register(config: Config, pool: Pool, mailer: Mailer): DynamicModule {
+  static register(
+    config: Config,
+    pool: Pool,
+    mailer: Mailer,
+    verifier?: IdentityVerifier | null,
+  ): DynamicModule {
     return {
       module: AppModule,
       imports: [
-        InfrastructureModule.register(config, pool, mailer),
+        InfrastructureModule.register(config, pool, mailer, verifier),
         AuthModule,
         KycModule,
         AccessModule,

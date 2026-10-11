@@ -20,6 +20,12 @@ export interface Config {
   resetLink: string;
   rateLimitMax: number;
   maxUploadBytes: number;
+  verification?: {
+    provider: "aws";
+    region: string;
+    faceMatchThreshold: number;
+    timeoutMs: number;
+  };
 }
 
 function key(name: string): Buffer {
@@ -46,6 +52,15 @@ export function loadConfig(): Config {
       SMTP_PORT: z.coerce.number().int().default(1025),
       SMTP_SECURE: z.enum(["true", "false"]).default("false"),
       RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(12),
+      KYC_VERIFICATION_PROVIDER: z.enum(["none", "aws"]).default("none"),
+      AWS_REGION: z.string().trim().min(1).optional(),
+      KYC_FACE_MATCH_THRESHOLD: z.coerce.number().min(1).max(100).default(90),
+      KYC_VERIFICATION_TIMEOUT_MS: z.coerce
+        .number()
+        .int()
+        .min(1000)
+        .max(8000)
+        .default(7000),
       MAX_UPLOAD_BYTES: z.coerce
         .number()
         .int()
@@ -56,6 +71,10 @@ export function loadConfig(): Config {
     .parse(process.env);
   if (env.NODE_ENV === "production" && env.SMTP_SECURE !== "true")
     throw new Error("Production requires TLS SMTP.");
+  if (env.KYC_VERIFICATION_PROVIDER === "aws" && !env.AWS_REGION)
+    throw new Error(
+      "AWS_REGION is required when KYC_VERIFICATION_PROVIDER=aws.",
+    );
   return {
     nodeEnv: env.NODE_ENV,
     host: env.HOST,
@@ -74,5 +93,15 @@ export function loadConfig(): Config {
     resetLink: process.env.RESET_LINK ?? "kycapp://app/reset-password",
     rateLimitMax: env.RATE_LIMIT_MAX,
     maxUploadBytes: env.MAX_UPLOAD_BYTES,
+    ...(env.KYC_VERIFICATION_PROVIDER === "aws"
+      ? {
+          verification: {
+            provider: "aws" as const,
+            region: env.AWS_REGION!,
+            faceMatchThreshold: env.KYC_FACE_MATCH_THRESHOLD,
+            timeoutMs: env.KYC_VERIFICATION_TIMEOUT_MS,
+          },
+        }
+      : {}),
   };
 }

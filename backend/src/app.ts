@@ -11,18 +11,20 @@ import type { Server } from "node:http";
 import type { Config } from "./config.js";
 import { createMailer, type Mailer } from "./mail.js";
 import { AppModule } from "./app.module.js";
+import type { IdentityVerifier } from "./verification/identity-verifier.js";
 
 export async function buildApp(
   config: Config,
   pool: Pool,
   mailer: Mailer = createMailer(config),
+  verifier?: IdentityVerifier | null,
 ): Promise<NestExpressApplication> {
   const adapter = new ExpressAdapter();
   adapter.getInstance().disable("x-powered-by");
   adapter.getInstance().disable("etag");
   adapter.getInstance().set("trust proxy", false);
   const app = await NestFactory.create<NestExpressApplication>(
-    AppModule.register(config, pool, mailer),
+    AppModule.register(config, pool, mailer, verifier),
     adapter,
     {
       logger: false,

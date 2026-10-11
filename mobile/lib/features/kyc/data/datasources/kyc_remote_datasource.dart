@@ -33,6 +33,8 @@ class KycRemoteDataSource {
   Future<KycProfile> submit() async => _profile(await api.post('/kyc/submit'));
   Future<KycProfile> resubmit() async =>
       _profile(await api.post('/kyc/resubmit'));
+  Future<KycProfile> verifyIdentity() async =>
+      _profile(await api.post('/kyc/verification'));
   KycProfile _profile(Map<String, dynamic> json) =>
       KycProfileModel.fromJson(json['profile'] as Map<String, dynamic>);
 }

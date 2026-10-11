@@ -116,6 +116,12 @@ export class KycController {
     return this.kyc.submit(userId);
   }
 
+  @Post("verification")
+  @HttpCode(200)
+  verification(@CurrentUser() userId: string) {
+    return this.kyc.verification(userId);
+  }
+
   @Post("resubmit")
   @HttpCode(200)
   resubmit(@CurrentUser() userId: string) {

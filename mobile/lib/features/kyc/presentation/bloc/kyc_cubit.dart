@@ -15,6 +15,7 @@ enum KycOperation {
   loadingMedia,
   submitting,
   resubmitting,
+  verifying,
 }
 
 enum KycErrorSource { profile, media, operation, captureRecovery }
@@ -85,6 +86,7 @@ class KycCubit extends Cubit<KycState> {
     required LoadPrivateMedia loadPrivateMedia,
     required SubmitKyc submitKyc,
     required ResubmitKyc resubmitKyc,
+    required VerifyIdentity verifyIdentity,
     required RecoverCapture recoverCapture,
     required DiscardLocalMedia discardLocalMedia,
   }) : _load = loadKyc,
@@ -94,6 +96,7 @@ class KycCubit extends Cubit<KycState> {
        _privateMedia = loadPrivateMedia,
        _submit = submitKyc,
        _resubmit = resubmitKyc,
+       _verify = verifyIdentity,
        _recover = recoverCapture,
        _discard = discardLocalMedia,
        super(const KycState());
@@ -104,6 +107,7 @@ class KycCubit extends Cubit<KycState> {
   final LoadPrivateMedia _privateMedia;
   final SubmitKyc _submit;
   final ResubmitKyc _resubmit;
+  final VerifyIdentity _verify;
   final RecoverCapture _recover;
   final DiscardLocalMedia _discard;
   Future<void>? _profileRead;
@@ -587,6 +591,47 @@ class KycCubit extends Cubit<KycState> {
       return false;
     }
     return _profileOperation(_resubmit.call, KycOperation.resubmitting);
+  }
+
+  /// Runs only on explicit user intent, and preserves manual submission/review.
+  Future<bool> verifyIdentity() async {
+    if (_profileRead != null) await _waitForProfileReads();
+    if (!_canEdit()) return false;
+    final profile = state.profile!;
+    if (profile.document == null ||
+        profile.selfie == null ||
+        state.pendingCaptures.isNotEmpty) {
+      _update(
+        state.copyWith(
+          error: const AppFailure(
+            code: 'INCOMPLETE',
+            message: 'Upload both photos before running identity checks.',
+          ),
+          errorSource: KycErrorSource.operation,
+        ),
+      );
+      return false;
+    }
+    final checks = profile.verification;
+    if (checks?.status == VerificationStatus.completed &&
+        checks?.documentId == profile.document?.id &&
+        checks?.selfieId == profile.selfie?.id) {
+      return true;
+    }
+    if (checks == null || checks.status == VerificationStatus.disabled) {
+      _update(
+        state.copyWith(
+          error: const AppFailure(
+            code: 'KYC_VERIFICATION_UNAVAILABLE',
+            message:
+                'Automated identity checks are unavailable. You can submit for manual review.',
+          ),
+          errorSource: KycErrorSource.operation,
+        ),
+      );
+      return false;
+    }
+    return _profileOperation(_verify.call, KycOperation.verifying);
   }
 
   Future<void> discardLocalMedia() async {

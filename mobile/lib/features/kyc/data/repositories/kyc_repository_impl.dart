@@ -66,6 +66,8 @@ class KycRepositoryImpl implements KycRepository {
   @override
   Future<Result<KycProfile>> resubmit() => _guard(remote.resubmit);
   @override
+  Future<Result<KycProfile>> verifyIdentity() => _guard(remote.verifyIdentity);
+  @override
   Future<Result<void>> discardLocal(String profileId) =>
       _guard(() => camera.discard(profileId));
 }

@@ -21,6 +21,8 @@
     "prebuild": "node -e \"require('node:fs').rmSync('dist', {recursive:true, force:true})\""
   },
   "dependencies": {
+    "@aws-sdk/client-rekognition": "^3.1149.0",
+    "@aws-sdk/client-textract": "^3.1149.0",
     "@nestjs/common": "^12.1.2",
     "@nestjs/core": "^12.1.2",
     "@nestjs/platform-express": "^12.1.2",

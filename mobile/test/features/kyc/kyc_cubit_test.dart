@@ -20,6 +20,7 @@ void main() {
       loadPrivateMedia: LoadPrivateMedia(repository),
       submitKyc: SubmitKyc(repository),
       resubmitKyc: ResubmitKyc(repository),
+      verifyIdentity: VerifyIdentity(repository),
       recoverCapture: RecoverCapture(repository),
       discardLocalMedia: DiscardLocalMedia(repository),
     );
@@ -214,6 +215,8 @@ class FakeKycRepository implements KycRepository {
       Success(Uint8List(0));
   @override
   Future<Result<KycProfile>> submit() async => Success(profile);
+  @override
+  Future<Result<KycProfile>> verifyIdentity() async => Success(profile);
   @override
   Future<Result<KycProfile>> resubmit() async {
     profile = KycProfile(

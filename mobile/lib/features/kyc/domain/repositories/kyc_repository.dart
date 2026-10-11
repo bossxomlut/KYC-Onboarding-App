@@ -22,5 +22,6 @@ abstract interface class KycRepository {
   Future<Result<Uint8List>> privateMedia(MediaKind kind);
   Future<Result<KycProfile>> submit();
   Future<Result<KycProfile>> resubmit();
+  Future<Result<KycProfile>> verifyIdentity();
   Future<Result<void>> discardLocal(String profileId);
 }

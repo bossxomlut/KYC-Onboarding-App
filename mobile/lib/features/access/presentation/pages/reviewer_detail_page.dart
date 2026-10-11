@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/navigation/back_navigation.dart';
 import '../../../../core/navigation/current_route.dart';
 import '../../../kyc/domain/entities/kyc_profile.dart';
+import '../../../kyc/presentation/widgets/verification_summary.dart';
 import '../../domain/entities/access_entities.dart';
 import '../bloc/access_cubit.dart';
 import '../widgets/access_scaffold.dart';
@@ -100,6 +101,10 @@ class ReviewerDetailPage extends StatelessWidget {
                     ),
                   ),
                 ),
+            ],
+            if (profile.verification != null) ...[
+              const SizedBox(height: 20),
+              VerificationSummary(verification: profile.verification),
             ],
             const SizedBox(height: 24),
             if (actorId == userId)

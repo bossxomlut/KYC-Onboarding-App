@@ -10,7 +10,14 @@ import {
 import type { Pool } from "pg";
 import type { Config } from "../config.js";
 import { startOutboxWorker, type Mailer } from "../mail.js";
-import { APP_CONFIG, DATABASE_POOL, MAILER } from "./tokens.js";
+import {
+  APP_CONFIG,
+  DATABASE_POOL,
+  MAILER,
+  IDENTITY_VERIFIER,
+} from "./tokens.js";
+import type { IdentityVerifier } from "../verification/identity-verifier.js";
+import { createIdentityVerifier } from "../verification/aws-identity-verifier.js";
 
 @Injectable()
 export class EmailOutboxWorker implements OnModuleInit, OnModuleDestroy {
@@ -33,16 +40,22 @@ export class EmailOutboxWorker implements OnModuleInit, OnModuleDestroy {
 @Global()
 @Module({})
 export class InfrastructureModule {
-  static register(config: Config, pool: Pool, mailer: Mailer): DynamicModule {
+  static register(
+    config: Config,
+    pool: Pool,
+    mailer: Mailer,
+    verifier: IdentityVerifier | null = createIdentityVerifier(config),
+  ): DynamicModule {
     return {
       module: InfrastructureModule,
       providers: [
         { provide: APP_CONFIG, useValue: config },
         { provide: DATABASE_POOL, useValue: pool },
         { provide: MAILER, useValue: mailer },
+        { provide: IDENTITY_VERIFIER, useValue: verifier },
         EmailOutboxWorker,
       ],
-      exports: [APP_CONFIG, DATABASE_POOL, MAILER],
+      exports: [APP_CONFIG, DATABASE_POOL, MAILER, IDENTITY_VERIFIER],
     };
   }
 }

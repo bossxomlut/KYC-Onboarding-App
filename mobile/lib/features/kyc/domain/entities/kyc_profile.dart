@@ -1,4 +1,7 @@
 import 'dart:typed_data';
+import 'kyc_verification.dart';
+
+export 'kyc_verification.dart';
 
 enum KycStatus {
   notStarted('Not started'),
@@ -130,7 +133,8 @@ class KycProfile {
     this.requiredSteps = const [],
     this.submittedAt,
     this.updatedAt,
-  });
+    KycVerification? verification,
+  }) : _verificationResult = verification;
   final String id;
   final KycStatus status;
   final KycStep nextStep;
@@ -141,6 +145,32 @@ class KycProfile {
   final List<KycStep> requiredSteps;
   final DateTime? submittedAt;
   final DateTime? updatedAt;
+  final KycVerification? _verificationResult;
+
+  /// Evidence applies only to the document and selfie currently in this snapshot.
+  KycVerification? get verification {
+    final checks = _verificationResult;
+    if (checks == null || checks.status == VerificationStatus.disabled) {
+      return checks;
+    }
+    if (checks.status == VerificationStatus.notStarted) {
+      if (checks.ocr == null &&
+          checks.faceMatch == null &&
+          checks.checkedAt == null) {
+        return checks;
+      }
+    } else if (document != null &&
+        selfie != null &&
+        checks.documentId == document!.id &&
+        checks.selfieId == selfie!.id) {
+      return checks;
+    }
+    return KycVerification(
+      provider: checks.provider,
+      status: VerificationStatus.notStarted,
+    );
+  }
+
   bool get canEdit =>
       status == KycStatus.notStarted || status == KycStatus.inProgress;
   bool get canSubmit =>

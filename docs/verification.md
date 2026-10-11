@@ -249,3 +249,23 @@ Verified on 10 October 2026 (Asia/Ho_Chi_Minh). Review profiles now filters the 
 | Full Flutter regression suite rechecked on 11 October 2026 before commit | 294/294 passed after the concurrent navigation changes were completed; analyzer, the full bundled Dart format check and `git diff --check` also passed |
 
 Focused tests observed the original missing search control, absent query/status contracts, refresh resetting offset, an empty page after its last reviewed row, failed-page Retry resetting offset, and missing history return destination before their implementations. Tests use synthetic data. Global navigation/lifecycle files and new stack/foreground tests were being edited concurrently by another task; those changes were preserved. Authenticated smoke against the existing local database was not completed because the private local credential file returned login401; no passwords, tokens, applicant data or decisions were printed or modified. The new iOS build was not installed, and physical-device camera/permission checks were not rerun for this feature.
+
+## OCR and selfie/document comparison
+
+Verified on 11 October 2026 (Asia/Ho_Chi_Minh). The backend now has a real AWS Textract/Rekognition adapter and authenticated explicit verification action. Flutter shows extracted text/fields and face similarity in applicant, reviewer and submission-history views. Results are encrypted, bound to both source media IDs and preserved in immutable submission snapshots. Checks assist manual review; they do not automatically decide KYC or overwrite applicant details.
+
+| Check | Actual result |
+| --- | --- |
+| Backend `npm test` on bundled Node24.19.0 | 76/76 passed; 10 new verification cases use the real Nest HTTP application and disposable PostgreSQL |
+| Backend TypeScript check/build and Prettier check | Passed on final source |
+| Full `flutter test --no-pub --reporter expanded` | 336/336 passed, including architecture, access/history, capture, session and navigation regressions |
+| `flutter analyze --no-pub`; bundled Dart format | No issues; 149 files, no changes required |
+| Production summary renderer | 1/1 passed; inspected synthetic completed-checks panel at 390×844, including expandable OCR text and face score/threshold |
+| Final `flutter build ios --simulator --debug --no-pub --dart-define=API_BASE_URL=http://127.0.0.1:3000/api/v1` | Passed; `mobile/build/ios/iphonesimulator/Runner.app` |
+| Final `flutter build apk --debug --no-pub --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1` | Passed; `mobile/build/app/outputs/flutter-apk/app-debug.apk` |
+| Local migration and running API smoke | Migration006 applied; health200, authenticated profile200 with disabled verification and explicit check503/VERIFICATION_NOT_CONFIGURED; temporary synthetic account/session removed |
+| `git diff --check` | Passed |
+
+New cases cover provider failures/timeouts, partial success, absent/multiple faces, conservative field extraction, threshold handling, encrypted storage, completed-result caching, durable cooldown, in-flight submit/check guards, expired-attempt recovery, stale completion rejection and retained history. A concurrent profile read first reproduced old evidence alongside replacement media before the backend guard. Flutter regressions first reproduced stale or unknown-source evidence remaining visible with no Run action; the domain getter now strips it and makes the explicit action available. OCR regressions first reproduced parent/issuer name labels being suggested as applicant names, including an empty label followed by another field; these are now excluded.
+
+AWS network calls and provider accuracy were not tested with a live account. Automated tests substitute only the cloud/platform boundaries using synthetic data; the running API defaults to `KYC_VERIFICATION_PROVIDER=none` and did not send images to AWS. [Provider setup](identity-verification.md) describes required AWS credentials/IAM permissions and Textract's lack of Vietnamese OCR support. Liveness, physical-device camera checks, installation of the new native builds and a real-device/cloud end-to-end run remain unperformed. The local PostgreSQL process was restarted because the original API health check returned500 while its database was stopped. Existing applicant data was preserved.

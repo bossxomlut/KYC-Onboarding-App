@@ -16,6 +16,7 @@ import {
   type PersonalDetails,
   type RequiredStep,
 } from "./kyc.schemas.js";
+import { verificationView } from "./kyc-verification.repository.js";
 
 export type KycStatus =
   "not_started" | "in_progress" | "pending_review" | "verified" | "rejected";
@@ -29,6 +30,9 @@ export interface ProfileRecord {
   required_steps: RequiredStep[];
   submitted_at: Date | null;
   updated_at: Date;
+  verification: string | null;
+  verification_attempt_id: string | null;
+  verification_started_at: Date | null;
 }
 
 export interface MediaRecord {
@@ -94,6 +98,15 @@ export async function getProfile(
     records.rows.find((item) => item.kind === "document"),
   );
   const selfie = metadata(records.rows.find((item) => item.kind === "selfie"));
+  const storedVerification = verificationView(row.verification, config);
+  // Ordinary profile reads use two queries. If a replacement committed between
+  // them, never attach old evidence to the newly returned image metadata.
+  const verification =
+    row.verification &&
+    (storedVerification.documentId !== document?.id ||
+      storedVerification.selfieId !== selfie?.id)
+      ? verificationView(null, config)
+      : storedVerification;
   const personalDetails: PersonalDetails | null = row.personal_details
     ? JSON.parse(
         decrypt(
@@ -124,6 +137,7 @@ export async function getProfile(
     requiredSteps: row.required_steps,
     submittedAt: row.submitted_at?.toISOString() ?? null,
     updatedAt: row.updated_at.toISOString(),
+    verification,
   };
 }
 

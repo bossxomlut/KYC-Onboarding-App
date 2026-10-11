@@ -128,6 +128,7 @@ GetIt configureDependencies({
       loadPrivateMedia: LoadPrivateMedia(kyc),
       submitKyc: SubmitKyc(kyc),
       resubmitKyc: ResubmitKyc(kyc),
+      verifyIdentity: VerifyIdentity(kyc),
       recoverCapture: RecoverCapture(kyc),
       discardLocalMedia: DiscardLocalMedia(kyc),
     ),

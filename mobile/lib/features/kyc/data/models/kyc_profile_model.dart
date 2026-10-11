@@ -1,4 +1,5 @@
 import '../../domain/entities/kyc_profile.dart';
+import 'kyc_verification_model.dart';
 
 class KycProfileModel {
   static KycProfile fromJson(Map<String, dynamic> json) {
@@ -24,6 +25,11 @@ class KycProfileModel {
       ),
       submittedAt: DateTime.tryParse(json['submittedAt'] as String? ?? ''),
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
+      verification: json['verification'] == null
+          ? null
+          : KycVerificationModel.fromJson(
+              json['verification'] as Map<String, dynamic>,
+            ),
     );
   }
 
