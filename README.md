@@ -63,7 +63,7 @@ Use “Forgot password?” and check Mailpit. The app accepts `kycapp://app/rese
 
 ### Review results
 
-Sign in as a reviewer or super admin and open **Review profiles**. The backend checks the current account role, permits pending profiles belonging to other users, and records the reviewer with each decision. Approval is manual.
+Sign in as a reviewer or super admin and open **Review profiles**. Filter by **Pending review**, **Approved**, **Rejected** or **All**, and search by email across the complete paginated list. Completed profiles open their read-only submission history. Filters/search remain selected when refreshing, paging or returning from a profile. The backend checks the current account role, permits decisions only on pending profiles belonging to other users, and records the reviewer with each decision. Approval is manual.
 
 ```sh
 cd backend

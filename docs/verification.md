@@ -217,3 +217,35 @@ Verified on 10 October 2026 (Asia/Ho_Chi_Minh). The running compiled API still u
 | Authenticated local API smoke after restart | Health200, live super_admin role, queue200; all three pending profiles returned a valid stable submissionId, and all six document/selfie reads returned JPEG200 with no-store |
 
 The local smoke used a temporary diagnostic session that was removed afterward, printed only status/contract checks, and made no review decisions. Existing account credentials and applicant data were preserved. The installed app was not rebuilt and native screen interaction was not rerun; the current app can retry against the corrected API. The local setup guide now explains that rebuilding `dist` does not update an already running process.
+
+## Home push/pop navigation
+
+Verified on 10 October 2026 (Asia/Ho_Chi_Minh). Home pushes features and stays mounted with its existing state. Toolbar/system Back pops to the originating page; KYC step transitions replace the active step while keeping Home underneath. History returns to status/reviewer detail, and reviewer detail returns to the retained queue with its pagination/search criteria. Direct feature entry without route history retains a Home fallback.
+
+Current-route checks use the top router state and page identity. They reject completions from popped pages, including a new visit to the same URI. Session changes enforce access on pushed pages; revoked reviewer access removes detail and its confirmation dialog. Retained routes become stale after backgrounding and refresh when revealed, after Router reports the updated stack.
+
+| Check | Actual result |
+| --- | --- |
+| `flutter test --no-pub test/app/retained_route_foreground_test.dart test/app/foreground_resume_test.dart test/app/home_stack_navigation_test.dart test/app/reviewer_stack_navigation_test.dart --reporter expanded` | 37/37 passed; lost stack/Home state, stale hidden routes, same-URI delayed completion and pushed-role revocation were observed failing before their fixes |
+| Full `flutter test --no-pub --reporter expanded` | 294/294 passed, including architecture, existing modal/system/predictive Back, capture and session tests |
+| `flutter analyze --no-pub` | No issues found |
+| Bundled Dart format check on 23 affected files; `git diff --check` | Passed |
+
+The widget tests use the production router with synthetic HTTP/platform substitutes. They verify repeated feature entry preserves Home/Cubit identity, iOS edge-swipe pop, KYC save/submit return paths, reviewer approval/rejection queue refresh and lifecycle races. Physical-device interaction, installed-app rebuilds and real-API integration were not rerun for this navigation update. The full-suite count includes the concurrent reviewer-list filter/search work in this shared checkout.
+
+
+## Admin review filters and email search
+
+Verified on 10 October 2026 (Asia/Ho_Chi_Minh). Review profiles now filters the current submitted profiles by Pending review, Approved, Rejected or All and searches their emails using a case-insensitive literal substring. Filtering runs before pagination; the API count and page share one database snapshot. Completed entries open read-only submission history. Refresh, pagination and returning from a pushed detail/history page retain the current criteria. Changing criteria resets the page and invalidates older responses. Removing the final entry on a page moves to the last valid page; retrying a failed Next request retries its requested offset.
+
+| Check | Actual result |
+| --- | --- |
+| Backend focused `review-list.test.ts` and existing `reviews.test.ts` | 16/16 passed against disposable PostgreSQL and the real Nest HTTP application; new contract cases initially failed 400 before implementation |
+| Backend full test suite on bundled Node24.19.0; TypeScript check/build; targeted Prettier check | 52/52 passed; check/build/format passed |
+| `flutter test --no-pub --reporter expanded test/features/access test/app/review_queue_history_navigation_test.dart test/architecture` | 65/65 passed, including status parsing/query encoding, combined criteria, debounce/clear, 320px layout, pagination/retry, stale responses, history navigation and architectural boundaries |
+| `flutter analyze --no-pub`; bundled Dart format check; `git diff --check` | Passed |
+| `flutter build ios --simulator --debug --no-pub --dart-define=API_BASE_URL=http://127.0.0.1:3000/api/v1` | Passed; `mobile/build/ios/iphonesimulator/Runner.app` |
+| Local compiled API restart | New process started with the rebuilt server; health HTTP200 |
+| Full Flutter regression suite rechecked on 11 October 2026 before commit | 294/294 passed after the concurrent navigation changes were completed; analyzer, the full bundled Dart format check and `git diff --check` also passed |
+
+Focused tests observed the original missing search control, absent query/status contracts, refresh resetting offset, an empty page after its last reviewed row, failed-page Retry resetting offset, and missing history return destination before their implementations. Tests use synthetic data. Global navigation/lifecycle files and new stack/foreground tests were being edited concurrently by another task; those changes were preserved. Authenticated smoke against the existing local database was not completed because the private local credential file returned login401; no passwords, tokens, applicant data or decisions were printed or modified. The new iOS build was not installed, and physical-device camera/permission checks were not rerun for this feature.

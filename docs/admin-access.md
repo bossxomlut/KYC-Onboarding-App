@@ -51,6 +51,8 @@ Các danh sách có phân trang. Quyền được đọc từ database ở mỗi
 
 Đăng nhập reviewer/admin, mở **Review profiles** từ Home. Chọn hồ sơ chờ, xem chi tiết, ảnh giấy tờ và selfie, rồi duyệt hoặc từ chối. Từ chối cần lý do 3–1000 ký tự và ít nhất một bước làm lại: thông tin cá nhân, giấy tờ hoặc selfie. Chỉ hồ sơ `pending_review` được duyệt; quyết định đồng thời chỉ lưu một kết quả.
 
+Danh sách có bộ lọc **Pending review** (chưa duyệt, mặc định), **Approved** (đã duyệt), **Rejected** (bị từ chối) và **All**. Nhập email hoặc một phần email vào **Search by email** để tìm, không phân biệt chữ hoa/thường; nút xóa trong ô tìm kiếm bỏ từ khóa. Bộ lọc và tìm kiếm kết hợp với nhau trên toàn bộ kết quả trước khi phân trang. Đổi bộ lọc hoặc từ khóa quay về trang đầu; tải lại và chuyển trang giữ điều kiện hiện tại. Hồ sơ đã duyệt/bị từ chối mở lịch sử ở chế độ chỉ đọc; quay lại giữ bộ lọc và từ khóa. Các trạng thái là trạng thái hiện tại của hồ sơ, không bao gồm hồ sơ chưa nộp hoặc đang chỉnh sửa để nộp lại.
+
 Người nộp hồ sơ mở màn hình kết quả và **Refresh status**. Nếu bị từ chối, **Update and resubmit** mở lại bước được yêu cầu, giữ phần đã chấp nhận. Ảnh vẫn yêu cầu xác thực, không có URL media công khai.
 
 Trạng thái KYC có màu nhất quán trên Home, màn hình kết quả và phần xem hồ sơ: **Not started** xám, **In progress** xanh dương, **Pending review** vàng nâu, **Verified** xanh lá, **Rejected** đỏ. Mỗi trạng thái có nhãn và biểu tượng, nền nhạt và viền; màu chữ đạt tương phản ít nhất 4.5:1.
@@ -64,7 +66,7 @@ Trạng thái KYC có màu nhất quán trên Home, màn hình kết quả và p
 - `PUT /api/v1/admin/users/:userId/role`: cấp/thu hồi reviewer.
 - `GET /api/v1/admin/role-requests`: danh sách yêu cầu; hỗ trợ `status`, `limit`, `offset`, mặc định đang chờ.
 - `POST /api/v1/admin/role-requests/:id/decision`: chấp thuận/từ chối.
-- `GET /api/v1/reviews`: danh sách hồ sơ chờ của người khác.
+- `GET /api/v1/reviews`: danh sách hồ sơ của người khác; hỗ trợ `status=pending_review|verified|rejected|all`, `search` theo email (tối đa 254 ký tự), `limit` và `offset`. Mặc định đang chờ duyệt.
 - `GET /api/v1/reviews/:userId`: chi tiết hồ sơ chờ và `submissionId` của lần nộp đang xem.
 - `GET /api/v1/reviews/:userId/media/:kind?submissionId=<uuid>`: ảnh JPEG riêng tư của đúng lần nộp đó.
 - `POST /api/v1/reviews/:userId/decision`: quyết định KYC; body bắt buộc có `submissionId` lấy từ chi tiết.
