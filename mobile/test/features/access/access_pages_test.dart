@@ -15,7 +15,108 @@ import 'package:kyc_onboarding/features/access/presentation/pages/access_page.da
 import 'package:kyc_onboarding/features/auth/domain/entities/user.dart';
 import 'access_cubit_test.dart';
 
+const _approvalConflictMessage =
+    'Unable to review this profile. It has already been approved by '
+    'first-reviewer@example.test.';
+
 void main() {
+  for (final conflict in [true, false]) {
+    testWidgets(
+      conflict
+          ? 'concurrent approval shows the prior reviewer and clears stale private data without leaving detail'
+          : 'successful approval clears private data and returns to the review queue',
+      (tester) async {
+        final repository = _UiRepository()
+          ..personalDetails = const PersonalDetails(
+            fullName: 'Example Applicant',
+            dateOfBirth: '1990-01-01',
+            nationality: 'Vietnamese',
+            address: '123 Example Street',
+            documentNumber: 'EXAMPLE123',
+          )
+          ..decisionFailure = conflict
+              ? const AppFailure(
+                  code: 'KYC_REVIEW_NOT_PENDING',
+                  message: _approvalConflictMessage,
+                )
+              : null;
+        final cubit = AccessCubit(AccessUseCases(repository));
+        await cubit.loadDetail('u');
+        final router = GoRouter(
+          initialLocation: '/reviews/u',
+          routes: [
+            GoRoute(
+              path: '/reviews/u',
+              builder: (_, _) =>
+                  const ReviewerDetailPage(userId: 'u', actorId: 'r'),
+            ),
+            GoRoute(
+              path: '/reviews',
+              builder: (_, _) => const Scaffold(body: Text('Review queue')),
+            ),
+          ],
+        );
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox());
+          router.dispose();
+          await cubit.close();
+        });
+        await tester.pumpWidget(
+          BlocProvider.value(
+            value: cubit,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Example Applicant'), findsOneWidget);
+        expect(find.byType(Image), findsNWidgets(2));
+        expect(cubit.state.media.keys, containsAll(MediaKind.values));
+
+        final approve = find.byKey(const Key('review-approve'));
+        await tester.ensureVisible(approve);
+        await tester.tap(approve);
+        await tester.pumpAndSettle();
+        expect(find.text('Approve this identity?'), findsOneWidget);
+        expect(repository.decisions, 0);
+        await tester.tap(find.widgetWithText(FilledButton, 'Approve'));
+        await tester.pumpAndSettle();
+
+        expect(repository.decisions, 1);
+        expect(repository.decidedSubmissionId, 'submission-1');
+        expect(cubit.state.busy, isFalse);
+        expect(cubit.state.detail, isNull);
+        expect(cubit.state.media, isEmpty);
+        expect(find.text('Example Applicant'), findsNothing);
+        expect(find.text('sample@example.test'), findsNothing);
+        expect(find.byType(Image), findsNothing);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(find.byKey(const Key('review-approve')), findsNothing);
+        expect(find.byKey(const Key('review-reject')), findsNothing);
+        if (conflict) {
+          expect(router.routeInformationProvider.value.uri.path, '/reviews/u');
+          expect(find.text(_approvalConflictMessage), findsOneWidget);
+          expect(
+            find.textContaining('first-reviewer@example.test'),
+            findsOneWidget,
+          );
+          expect(find.text('Review queue'), findsNothing);
+          expect(find.text('Review decision saved.'), findsNothing);
+          expect(cubit.state.error?.code, 'KYC_REVIEW_NOT_PENDING');
+          expect(cubit.state.error?.message, _approvalConflictMessage);
+          expect(cubit.state.message, isNull);
+        } else {
+          expect(router.routeInformationProvider.value.uri.path, '/reviews');
+          expect(find.text('Review queue'), findsOneWidget);
+          expect(find.text(_approvalConflictMessage), findsNothing);
+          expect(cubit.state.error, isNull);
+          expect(cubit.state.message, 'Review decision saved.');
+        }
+        await tester.pump(const Duration(seconds: 1));
+        expect(repository.decisions, 1);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   for (final approve in [true, false]) {
     testWidgets(
       '${approve ? 'approval' : 'rejection'} confirmation revalidates its original submission after background',
@@ -276,6 +377,8 @@ class _UiRepository extends FakeAccessRepository {
   UserRole? createdRole;
   bool mediaUnavailable = false;
   bool hasPending = false;
+  PersonalDetails? personalDetails;
+  AppFailure? decisionFailure;
   @override
   Future<Result<PageResult<ManagedUser>>> users({int offset = 0}) async =>
       Success(
@@ -362,15 +465,38 @@ class _UiRepository extends FakeAccessRepository {
       submissionId: detailSubmissionId,
       userId: userId,
       email: 'sample@example.test',
-      profile: const KycProfile(
+      profile: KycProfile(
         id: 'p',
         status: KycStatus.pendingReview,
         nextStep: KycStep.result,
-        document: KycMedia(id: 'd', mimeType: 'image/jpeg', size: 10),
-        selfie: KycMedia(id: 's', mimeType: 'image/jpeg', size: 10),
+        personalDetails: personalDetails,
+        document: const KycMedia(id: 'd', mimeType: 'image/jpeg', size: 10),
+        selfie: const KycMedia(id: 's', mimeType: 'image/jpeg', size: 10),
       ),
     ),
   );
+  @override
+  Future<Result<KycProfile>> decideProfile(
+    String userId,
+    ReviewDecision decision, {
+    required String submissionId,
+    String? reason,
+    List<KycStep> requiredSteps = const [],
+  }) async {
+    if (decisionFailure case final failure?) {
+      decisions++;
+      decidedSubmissionId = submissionId;
+      return Failure(failure);
+    }
+    return super.decideProfile(
+      userId,
+      decision,
+      submissionId: submissionId,
+      reason: reason,
+      requiredSteps: requiredSteps,
+    );
+  }
+
   @override
   Future<Result<Uint8List>> reviewMedia(
     String userId,

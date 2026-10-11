@@ -307,6 +307,48 @@ void main() {
     },
   );
   test(
+    'concurrent approval preserves the 409 code and prior reviewer message',
+    () async {
+      const message =
+          'Unable to review this profile. It has already been approved by '
+          'first-reviewer@example.test.';
+      final request = RequestOptions(path: '/reviews/u/decision');
+      final api = _Api()
+        ..error = DioException(
+          requestOptions: request,
+          type: DioExceptionType.badResponse,
+          response: Response(
+            requestOptions: request,
+            statusCode: 409,
+            data: {
+              'error': {
+                'code': 'KYC_REVIEW_NOT_PENDING',
+                'message': message,
+                'requestId': 'conflicting-review-request',
+              },
+            },
+          ),
+        );
+      final repository = AccessRepositoryImpl(AccessRemoteDataSource(api));
+
+      final result = await repository.decideProfile(
+        'u',
+        ReviewDecision.verified,
+        submissionId: 'submission-1',
+      );
+
+      expect(api.path, '/reviews/u/decision');
+      expect(api.body, {
+        'submissionId': 'submission-1',
+        'decision': 'verified',
+      });
+      final failure = (result as Failure<KycProfile>).error;
+      expect(failure.code, 'KYC_REVIEW_NOT_PENDING');
+      expect(failure.message, message);
+      expect(failure.isNetwork, isFalse);
+    },
+  );
+  test(
     'rejection maps personal details step and permission error to typed result',
     () async {
       final api = _Api()

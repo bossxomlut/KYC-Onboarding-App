@@ -342,14 +342,20 @@ test("super admin can reject a pending profile, recording the authenticated deci
   assert.equal(audit.rows[0].decision, "rejected");
   assert.equal(audit.rows[0].reason, "Synthetic image needs retaking");
   assert.deepEqual(audit.rows[0].required_steps, ["selfie"]);
+  const conflict = await json(
+    "POST",
+    `/reviews/${applicant.id}/decision`,
+    reviewer.token,
+    {
+      submissionId: detail.body.submissionId,
+      decision: "verified",
+    },
+  );
+  assert.equal(conflict.status, 409);
+  assert.equal(conflict.body.error.code, "KYC_REVIEW_NOT_PENDING");
   assert.equal(
-    (
-      await json("POST", `/reviews/${applicant.id}/decision`, reviewer.token, {
-        submissionId: detail.body.submissionId,
-        decision: "verified",
-      })
-    ).status,
-    409,
+    conflict.body.error.message,
+    `Unable to review this profile. It has already been rejected by ${administrator.email}.`,
   );
   assert.equal(
     (await json("GET", `/reviews/${applicant.id}`, reviewer.token)).status,
@@ -380,6 +386,14 @@ test("concurrent reviewer decisions produce a single audit record and leave the 
   assert.ok(
     [reviewer.id, otherReviewer.id].includes(audit.rows[0].reviewed_by),
   );
+  const winner =
+    audit.rows[0].reviewed_by === reviewer.id ? reviewer : otherReviewer;
+  const conflict = results.find((item) => item.status === 409)!;
+  assert.equal(conflict.body.error.code, "KYC_REVIEW_NOT_PENDING");
+  assert.equal(
+    conflict.body.error.message,
+    `Unable to review this profile. It has already been approved by ${winner.email}.`,
+  );
   assert.equal(
     (
       await json(
@@ -389,6 +403,159 @@ test("concurrent reviewer decisions produce a single audit record and leave the 
       )
     ).status,
     404,
+  );
+});
+
+test("a review conflict preserves decision-time email with microsecond submission timestamps", async () => {
+  const candidate = await actor("snapshot-conflict-applicant", "user");
+  const decidingReviewer = await actor(
+    "snapshot-conflict-reviewer",
+    "reviewer",
+  );
+  await pending(candidate.id);
+  await pool.query(
+    "UPDATE kyc_profiles SET submitted_at='2026-10-11T00:00:00.123456Z'::timestamptz WHERE user_id=$1",
+    [candidate.id],
+  );
+  const detail = await json("GET", `/reviews/${candidate.id}`, reviewer.token);
+  assert.equal(
+    (
+      await json(
+        "POST",
+        `/reviews/${candidate.id}/decision`,
+        decidingReviewer.token,
+        { submissionId: detail.body.submissionId, decision: "verified" },
+      )
+    ).status,
+    200,
+  );
+  await pool.query("UPDATE users SET email_normalized=$2 WHERE id=$1", [
+    decidingReviewer.id,
+    `changed-${decidingReviewer.id}@example.test`,
+  ]);
+  const conflict = await json(
+    "POST",
+    `/reviews/${candidate.id}/decision`,
+    otherReviewer.token,
+    { submissionId: detail.body.submissionId, decision: "verified" },
+  );
+  assert.equal(conflict.status, 409);
+  assert.equal(conflict.body.error.code, "KYC_REVIEW_NOT_PENDING");
+  assert.equal(
+    conflict.body.error.message,
+    `Unable to review this profile. It has already been approved by ${decidingReviewer.email}.`,
+  );
+  assert.equal(
+    (
+      await pool.query("SELECT id FROM kyc_reviews WHERE user_id=$1", [
+        candidate.id,
+      ])
+    ).rowCount,
+    1,
+  );
+});
+
+test("legacy review conflicts stay friendly without inventing reviewer identities", async () => {
+  for (const status of ["verified", "rejected"] as const) {
+    const candidate = await actor(`legacy-${status}-applicant`, "user");
+    await pending(candidate.id);
+    const detail = await json(
+      "GET",
+      `/reviews/${candidate.id}`,
+      reviewer.token,
+    );
+    assert.equal(
+      (
+        await json(
+          "POST",
+          `/reviews/${candidate.id}/decision`,
+          reviewer.token,
+          {
+            submissionId: detail.body.submissionId,
+            decision: status,
+            ...(status === "rejected"
+              ? { reason: "Retake the selfie", requiredSteps: ["selfie"] }
+              : {}),
+          },
+        )
+      ).status,
+      200,
+    );
+    await pool.query(
+      "UPDATE kyc_submissions SET reviewer_email=NULL WHERE id=$1",
+      [detail.body.submissionId],
+    );
+    const conflict = await json(
+      "POST",
+      `/reviews/${candidate.id}/decision`,
+      otherReviewer.token,
+      { submissionId: detail.body.submissionId, decision: "verified" },
+    );
+    assert.equal(conflict.status, 409);
+    assert.equal(conflict.body.error.code, "KYC_REVIEW_NOT_PENDING");
+    assert.equal(
+      conflict.body.error.message,
+      status === "verified"
+        ? "Unable to review this profile. It has already been approved."
+        : "Unable to review this profile. It has already been rejected.",
+    );
+    assert.equal(
+      (
+        await pool.query("SELECT id FROM kyc_reviews WHERE user_id=$1", [
+          candidate.id,
+        ])
+      ).rowCount,
+      1,
+    );
+  }
+
+  const candidate = await actor("legacy-without-snapshot-applicant", "user");
+  await pool.query(
+    "UPDATE kyc_profiles SET status='verified' WHERE user_id=$1",
+    [candidate.id],
+  );
+  const conflict = await json(
+    "POST",
+    `/reviews/${candidate.id}/decision`,
+    otherReviewer.token,
+    { submissionId: randomUUID(), decision: "verified" },
+  );
+  assert.equal(conflict.status, 409);
+  assert.equal(
+    conflict.body.error.message,
+    "Unable to review this profile. It has already been approved.",
+  );
+  assert.equal(
+    (
+      await pool.query("SELECT id FROM kyc_submissions WHERE user_id=$1", [
+        candidate.id,
+      ])
+    ).rowCount,
+    0,
+  );
+});
+
+test("unsubmitted profiles are not described as already approved", async () => {
+  const candidate = await actor("unsubmitted-conflict-applicant", "user");
+  const conflict = await json(
+    "POST",
+    `/reviews/${candidate.id}/decision`,
+    reviewer.token,
+    { submissionId: randomUUID(), decision: "verified" },
+  );
+  assert.equal(conflict.status, 409);
+  assert.equal(conflict.body.error.code, "KYC_REVIEW_NOT_PENDING");
+  assert.equal(
+    conflict.body.error.message,
+    "Unable to review this profile. It is not awaiting review.",
+  );
+  assert.equal(
+    (
+      await pool.query("SELECT id FROM kyc_reviews WHERE user_id=$1", [
+        candidate.id,
+      ])
+    ).rowCount,
+    0,
   );
 });
 
@@ -445,6 +612,18 @@ test("a review stays bound to the inspected submission after rejection and resub
     (await json("POST", "/kyc/resubmit", candidate.token)).status,
     200,
   );
+  const reopenedConflict = await json(
+    "POST",
+    `/reviews/${candidate.id}/decision`,
+    reviewer.token,
+    { submissionId: originalId, decision: "verified" },
+  );
+  assert.equal(reopenedConflict.status, 409);
+  assert.equal(reopenedConflict.body.error.code, "KYC_REVIEW_NOT_PENDING");
+  assert.equal(
+    reopenedConflict.body.error.message,
+    "Unable to review this profile. It is not awaiting review.",
+  );
   await pending(candidate.id);
   const current = await json("GET", `/reviews/${candidate.id}`, reviewer.token);
   assert.notEqual(current.body.submissionId, originalId);
@@ -494,6 +673,26 @@ test("a review stays bound to the inspected submission after rejection and resub
       })
     ).status,
     200,
+  );
+  const oldSubmissionConflict = await json(
+    "POST",
+    `/reviews/${candidate.id}/decision`,
+    otherReviewer.token,
+    { submissionId: originalId, decision: "verified" },
+  );
+  assert.equal(oldSubmissionConflict.status, 409);
+  assert.equal(oldSubmissionConflict.body.error.code, "KYC_REVIEW_NOT_PENDING");
+  assert.equal(
+    oldSubmissionConflict.body.error.message,
+    "Unable to review this profile. It is not awaiting review.",
+  );
+  assert.equal(
+    (
+      await pool.query("SELECT id FROM kyc_reviews WHERE user_id=$1", [
+        candidate.id,
+      ])
+    ).rowCount,
+    2,
   );
 });
 

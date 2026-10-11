@@ -373,6 +373,24 @@ The registration/reset hint regressions first exposed truncation at 320px with d
 
 A whole-mobile test run passed 493 cases and had one failure in the concurrently edited KYC verification summary; its isolated 25-case suite passed afterward. The initial whole-project analyzer also observed a concurrently edited KYC unused import; the final whole-project analyzer passed after that change completed. This task preserved those unrelated KYC edits. Native builds, installed-device UI and full real-device password recovery were not rerun; the live HTTP/SMTP smoke and widget previews provide the runtime evidence above. Older reset-link clients require updating with the new API contract.
 
+## Concurrent profile review notification
+
+Verified on 11 October 2026 (Asia/Ho_Chi_Minh). When two reviewers approve the same submission, the second receives `Unable to review this profile. It has already been approved by <reviewer email>.` The email is the stored identity snapshot of the reviewer who saved the first decision. The existing `409 KYC_REVIEW_NOT_PENDING` contract remains unchanged; Flutter already displays the server message and clears stale profile details/photos. Rejected submissions have accurate rejection wording, and legacy records without a saved email omit attribution.
+
+| Check | Actual result |
+| --- | --- |
+| Bundled Node 24: `node_modules/tsx/dist/cli.mjs --test --test-concurrency=1 test/reviews.test.ts test/kyc-history.test.ts` | 19/19 passed using isolated PostgreSQL and HTTP requests |
+| Review suite rerun after adding explicit microsecond timestamp coverage | 11/11 passed |
+| Backend TypeScript and Prettier checks on touched files | Passed |
+| `flutter test --no-pub test/features/access/access_data_test.dart test/features/access/access_pages_test.dart --reporter expanded` | 21/21 passed |
+| `flutter test --no-pub test/features/access test/architecture --reporter expanded` | 74/74 passed |
+| `flutter analyze --no-pub` and bundled Dart analyzer on touched tests | No issues found |
+| Bundled Dart format check on the two touched test files; `git diff --check` | Passed |
+
+Before the backend fix, six focused assertions failed against the old generic message. Regressions verify the winning reviewer's email, one decision/audit record, unchanged snapshot identity after an account email change, PostgreSQL microsecond timestamp precision, rejection and legacy fallbacks, and stale/reopened submissions. Flutter widget tests exercise the approval confirmation, full conflict message/email, retained detail route, removal of stale private data and decision buttons, single submission, and the adjacent successful approval path. No Flutter production code or migration was needed. Native builds and installed-device UI were not rerun for this message-only backend change.
+
+The final approval, rejection and fallback messages use English to match the app. After correcting the copy, the review suite passed 11/11 and the focused Flutter data/pages suite passed 21/21; backend typecheck and formatting checks passed. The existing identity, concurrency and stale-data behavior is unchanged.
+
 ## Submission history back navigation
 
 Verified on 11 October 2026 (Asia/Ho_Chi_Minh). Submission history no longer renders the body buttons “Back to review queue” or “Back to current review”. Toolbar and system Back preserve the originating queue/detail route; direct entry retains the existing Home fallback. The obsolete page flag was removed without changing the history data contract or provider scope.

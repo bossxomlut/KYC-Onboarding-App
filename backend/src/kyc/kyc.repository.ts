@@ -32,6 +32,7 @@ export interface ProfileRecord {
   rejection_reason: string | null;
   required_steps: RequiredStep[];
   submitted_at: Date | null;
+  current_submission_id: string | null;
   updated_at: Date;
   verification: string | null;
   verification_attempt_id: string | null;
@@ -147,6 +148,32 @@ export async function getProfile(
   };
 }
 
+async function reviewConflictMessage(
+  client: PoolClient,
+  profile: ProfileRecord,
+  expectedSubmissionId?: string,
+) {
+  const unavailable =
+    "Unable to review this profile. It is not awaiting review.";
+  if (
+    !["verified", "rejected"].includes(profile.status) ||
+    (expectedSubmissionId !== undefined &&
+      profile.current_submission_id !== null &&
+      profile.current_submission_id !== expectedSubmissionId)
+  )
+    return unavailable;
+
+  // Read the immutable identity snapshot for this version under the profile lock.
+  const review = await client.query<{ reviewer_email: string | null }>(
+    "SELECT s.reviewer_email FROM kyc_submissions s JOIN kyc_profiles p ON p.current_submission_id=s.id AND p.user_id=s.user_id WHERE p.user_id=$1 AND s.id=$2 AND s.status=p.status AND s.review_decision=p.status AND s.submitted_at IS NOT DISTINCT FROM p.submitted_at",
+    [profile.user_id, expectedSubmissionId ?? profile.current_submission_id],
+  );
+  const email = review.rows[0]?.reviewer_email?.trim();
+  const decision = profile.status === "verified" ? "approved" : "rejected";
+  const attribution = email ? ` by ${email}` : "";
+  return `Unable to review this profile. It has already been ${decision}${attribution}.`;
+}
+
 /** Every review records a separate, authorized actor, including internal callers. */
 export async function reviewProfile(
   pool: Pool,
@@ -195,7 +222,7 @@ export async function reviewProfile(
       throw new ApiError(
         409,
         "KYC_REVIEW_NOT_PENDING",
-        "Only pending profiles can be reviewed.",
+        await reviewConflictMessage(client, profile, expectedSubmissionId),
       );
     const submissionId = await ensureCurrentSubmission(client, userId);
     if (
