@@ -17,6 +17,7 @@ abstract final class AppTheme {
   static const disabledSurface = Color(0xFFE9EEEB);
   static const controlRadius = 8.0;
   static const panelRadius = 16.0;
+  static const cardSpacing = 12.0;
 
   static ThemeData get light {
     final colors =

@@ -276,3 +276,10 @@ AWS network calls and provider accuracy were not tested with a live account. Aut
 Verified on 11 October 2026 (Asia/Ho_Chi_Minh). Review identity now uses only the toolbar Back control; its redundant body-level “Back to review queue” button has been removed. Toolbar Back still pops to the retained queue and falls back to `/reviews` for a direct detail entry. Other access pages retain their existing Back behavior.
 
 The existing reviewer-stack tests first failed for the duplicate control and the direct-entry toolbar destination, then all 9 passed after the change. The focused access/history-return/architecture suite passed 65/65; `flutter analyze --no-pub`, bundled Dart formatting of the three touched source/test files and `git diff --check` passed. Native builds and installed-app interaction were not rerun for this small UI change.
+
+
+## Admin card list spacing
+
+Verified on 11 October 2026 (Asia/Ho_Chi_Minh). Pending access requests, managed accounts and reviewer profile lists now give each card a 12px bottom margin using the shared `AppTheme.cardSpacing` token. These repeated cards previously inherited the zero-margin global card theme and touched each other. Existing Admin Home and submission-history spacing is preserved.
+
+The existing access-page, reviewer-queue, admin-Home and architecture tests passed 24/24, including narrow-screen rendering and list interactions. `flutter analyze --no-pub`, bundled Dart formatting on the three affected source files and `git diff --check` passed. This is a visual-only change; no new tests, native builds or installed-app checks were added.

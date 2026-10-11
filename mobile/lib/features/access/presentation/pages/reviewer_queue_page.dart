@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/navigation/current_route.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../kyc/domain/entities/kyc_profile.dart';
 import '../../../kyc/presentation/widgets/kyc_status_badge.dart';
 import '../../domain/entities/access_entities.dart';
@@ -147,6 +148,7 @@ class _ReviewerQueuePageState extends State<ReviewerQueuePage> {
           for (final profile in queue?.items ?? <ReviewSummary>[])
             Card(
               key: ValueKey('review-profile-${profile.userId}'),
+              margin: const EdgeInsets.only(bottom: AppTheme.cardSpacing),
               child: ListTile(
                 title: Text(profile.email),
                 subtitle: Column(

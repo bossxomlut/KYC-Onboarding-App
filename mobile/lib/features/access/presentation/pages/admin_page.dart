@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../auth/domain/entities/user.dart';
 import '../../domain/entities/access_entities.dart';
 import '../bloc/access_cubit.dart';
@@ -123,6 +124,7 @@ class _AdminPageState extends State<AdminPage> {
             const Text('No pending requests.'),
           for (final request in requests?.items ?? <RoleRequest>[])
             Card(
+              margin: const EdgeInsets.only(bottom: AppTheme.cardSpacing),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -182,6 +184,7 @@ class _AdminPageState extends State<AdminPage> {
             const Text('No accounts found.'),
           for (final managed in users?.items ?? <ManagedUser>[])
             Card(
+              margin: const EdgeInsets.only(bottom: AppTheme.cardSpacing),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
