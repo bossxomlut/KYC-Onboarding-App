@@ -87,7 +87,7 @@ class _ReviewerQueuePageState extends State<ReviewerQueuePage> {
         error: state.error,
         message: state.message,
         onRefresh: _loadQueue,
-        children: [
+        header: [
           const Text(
             'Find submitted profiles by email or review status. Check the personal details, identity document and selfie before deciding. You cannot review your own profile.',
           ),
@@ -143,6 +143,8 @@ class _ReviewerQueuePageState extends State<ReviewerQueuePage> {
             ],
           ),
           const SizedBox(height: 20),
+        ],
+        children: [
           if (queue != null && queue.items.isEmpty && !state.busy)
             Text(_emptyMessage(state), key: const Key('empty-review-queue')),
           for (final profile in queue?.items ?? <ReviewSummary>[])

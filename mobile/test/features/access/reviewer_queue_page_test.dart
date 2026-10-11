@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,6 +86,254 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 400));
     expect(repository.calls, hasLength(2));
+  });
+
+  testWidgets('search keeps its focus, keyboard and selection while loading', (
+    tester,
+  ) async {
+    final repository = _QueueRepository();
+    final cubit = await _mountQueue(tester, repository);
+    _deferQueueResponses(repository);
+    final search = find.byKey(const Key('review-search'));
+    final editable = find.descendant(
+      of: search,
+      matching: find.byType(EditableText),
+    );
+    await tester.showKeyboard(search);
+    const value = TextEditingValue(
+      text: 'alice@example.test',
+      selection: TextSelection(baseOffset: 2, extentOffset: 5),
+    );
+    tester.testTextInput.updateEditingValue(value);
+    await tester.pump();
+    final original = tester.state<EditableTextState>(editable);
+    expect(original.widget.focusNode.hasFocus, isTrue);
+    expect(tester.testTextInput.isVisible, isTrue);
+
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+    expect(cubit.state.busy, isTrue);
+    expect(
+      tester.state<EditableTextState>(editable).widget.focusNode.hasFocus,
+      isTrue,
+      reason: 'Starting a debounced search must keep the active input focused.',
+    );
+    expect(tester.state<EditableTextState>(editable), same(original));
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(tester.testTextInput.hasAnyClients, isTrue);
+    expect(original.widget.controller.value, value);
+
+    repository.responseGates.single.complete(_emptyQueueResult);
+    await tester.pumpAndSettle();
+    expect(cubit.state.busy, isFalse);
+    expect(tester.state<EditableTextState>(editable), same(original));
+    expect(original.widget.focusNode.hasFocus, isTrue);
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(original.widget.controller.value, value);
+  });
+
+  testWidgets('search stays in place while its delayed results load', (
+    tester,
+  ) async {
+    final repository = _QueueRepository();
+    await _mountQueue(tester, repository);
+    _deferQueueResponses(repository);
+    final search = find.byKey(const Key('review-search'));
+    await tester.enterText(search, 'alice');
+    final originalRect = tester.getRect(search);
+
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+    expect(
+      tester.getRect(search),
+      originalRect,
+      reason: 'Loading feedback must not push the search field down.',
+    );
+    repository.responseGates.single.complete(_emptyQueueResult);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(search), originalRect);
+  });
+
+  testWidgets('scrolled narrow search stays steady with the keyboard open', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    final repository = _QueueRepository(
+      items: List.generate(20, (index) => _profile(userId: 'applicant-$index')),
+      total: 20,
+    );
+    final cubit = await _mountQueue(tester, repository);
+    _deferQueueResponses(repository);
+    final search = find.byKey(const Key('review-search'));
+    final scrollable = tester.state<ScrollableState>(
+      find.ancestor(of: search, matching: find.byType(Scrollable)),
+    );
+    final offsetToSearch =
+        scrollable.position.pixels +
+        tester.getRect(search).top -
+        (kToolbarHeight + 20);
+    scrollable.position.jumpTo(
+      offsetToSearch.clamp(
+        scrollable.position.minScrollExtent,
+        scrollable.position.maxScrollExtent,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.showKeyboard(search);
+    await tester.pumpAndSettle();
+    expect(scrollable.position.pixels, greaterThan(0));
+    const value = TextEditingValue(
+      text: 'alice@example.test',
+      selection: TextSelection(baseOffset: 2, extentOffset: 5),
+    );
+    tester.testTextInput.updateEditingValue(value);
+    await tester.pump();
+    final originalRect = tester.getRect(search);
+    final originalOffset = scrollable.position.pixels;
+    final originalMaxScroll = scrollable.position.maxScrollExtent;
+    expect(originalRect.top, closeTo(kToolbarHeight + 20, 0.1));
+    expect(originalRect.top, greaterThanOrEqualTo(kToolbarHeight));
+    expect(originalRect.bottom, lessThanOrEqualTo(400));
+
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+    expect(cubit.state.busy, isTrue);
+    expect(
+      tester.getRect(search),
+      originalRect,
+      reason:
+          'Clearing results must not clamp the scroll offset while typing. '
+          'Before: offset=$originalOffset, max=$originalMaxScroll. '
+          'Loading: offset=${scrollable.position.pixels}, '
+          'max=${scrollable.position.maxScrollExtent}.',
+    );
+    expect(tester.widget<TextField>(search).controller!.value, value);
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(tester.testTextInput.hasAnyClients, isTrue);
+    expect(tester.takeException(), isNull);
+    repository.responseGates.single.complete(_emptyQueueResult);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(search),
+      originalRect,
+      reason:
+          'Empty results must keep the visible search in place. '
+          'Before: offset=$originalOffset, max=$originalMaxScroll. '
+          'After: offset=${scrollable.position.pixels}, '
+          'max=${scrollable.position.maxScrollExtent}.',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('typing continues through pending and trailing search requests', (
+    tester,
+  ) async {
+    final repository = _QueueRepository();
+    final cubit = await _mountQueue(tester, repository);
+    repository.calls.clear();
+    _deferQueueResponses(repository);
+    final search = find.byKey(const Key('review-search'));
+    await tester.showKeyboard(search);
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: 'alice',
+        selection: TextSelection.collapsed(offset: 5),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+    expect(cubit.state.busy, isTrue);
+    expect(
+      tester.testTextInput.hasAnyClients,
+      isTrue,
+      reason: 'The keyboard must stay connected while a request is pending.',
+    );
+
+    const latestValue = TextEditingValue(
+      text: 'alice@example.test',
+      selection: TextSelection.collapsed(offset: 18),
+    );
+    tester.testTextInput.updateEditingValue(latestValue);
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+    expect(repository.calls.single.search, 'alice');
+    expect(tester.widget<TextField>(search).controller!.value, latestValue);
+
+    repository.responseGates.first.complete(_emptyQueueResult);
+    await tester.pump();
+    await tester.pump();
+    expect(repository.calls.map((call) => call.search), [
+      'alice',
+      'alice@example.test',
+    ]);
+    expect(repository.responseGates, hasLength(2));
+    expect(cubit.state.busy, isTrue);
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(tester.testTextInput.hasAnyClients, isTrue);
+    repository.responseGates.last.complete(_emptyQueueResult);
+    await tester.pumpAndSettle();
+    expect(cubit.state.reviewSearch, 'alice@example.test');
+    expect(tester.widget<TextField>(search).controller!.value, latestValue);
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(tester.testTextInput.hasAnyClients, isTrue);
+  });
+
+  testWidgets('search focus and position survive a failed request and retry', (
+    tester,
+  ) async {
+    final repository = _QueueRepository();
+    final cubit = await _mountQueue(tester, repository);
+    _deferQueueResponses(repository);
+    final search = find.byKey(const Key('review-search'));
+    final editable = find.descendant(
+      of: search,
+      matching: find.byType(EditableText),
+    );
+    await tester.showKeyboard(search);
+    const value = TextEditingValue(
+      text: 'alice@example.test',
+      selection: TextSelection(baseOffset: 1, extentOffset: 4),
+    );
+    tester.testTextInput.updateEditingValue(value);
+    await tester.pump();
+    final original = tester.state<EditableTextState>(editable);
+    final originalRect = tester.getRect(search);
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump();
+    repository.responseGates.single.complete(
+      const Failure(
+        AppFailure(code: 'NETWORK_ERROR', message: 'Search could not refresh.'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Search could not refresh.'), findsOneWidget);
+    expect(tester.getRect(search), originalRect);
+    expect(tester.state<EditableTextState>(editable), same(original));
+    expect(original.widget.focusNode.hasFocus, isTrue);
+    expect(original.widget.controller.value, value);
+    expect(tester.testTextInput.isVisible, isTrue);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Retry'));
+    await tester.pump();
+    expect(cubit.state.busy, isTrue);
+    expect(tester.getRect(search), originalRect);
+    expect(tester.state<EditableTextState>(editable), same(original));
+    expect(original.widget.focusNode.hasFocus, isTrue);
+    expect(original.widget.controller.value, value);
+    expect(tester.testTextInput.isVisible, isTrue);
+    repository.responseGates.last.complete(_emptyQueueResult);
+    await tester.pumpAndSettle();
+    expect(cubit.state.error, isNull);
+    expect(tester.getRect(search), originalRect);
+    expect(tester.state<EditableTextState>(editable), same(original));
+    expect(original.widget.focusNode.hasFocus, isTrue);
+    expect(original.widget.controller.value, value);
+    expect(tester.testTextInput.isVisible, isTrue);
   });
 
   testWidgets('changing a filter includes the search draft and resets paging', (
@@ -339,6 +589,8 @@ class _QueueRepository extends FakeAccessRepository {
   final List<ReviewSummary> items;
   final int total;
   final calls = <({int offset, ReviewFilter filter, String search})>[];
+  bool deferResponses = false;
+  final responseGates = <Completer<Result<PageResult<ReviewSummary>>>>[];
 
   @override
   Future<Result<PageResult<ReviewSummary>>> reviewQueue({
@@ -347,6 +599,24 @@ class _QueueRepository extends FakeAccessRepository {
     String search = '',
   }) async {
     calls.add((offset: offset, filter: filter, search: search));
+    if (deferResponses) {
+      final response = Completer<Result<PageResult<ReviewSummary>>>();
+      responseGates.add(response);
+      return response.future;
+    }
     return Success(PageResult(items: items, total: total, offset: offset));
   }
+}
+
+const _emptyQueueResult = Success(
+  PageResult<ReviewSummary>(items: [], total: 0, offset: 0),
+);
+
+void _deferQueueResponses(_QueueRepository repository) {
+  repository.deferResponses = true;
+  addTearDown(() {
+    for (final gate in repository.responseGates) {
+      if (!gate.isCompleted) gate.complete(_emptyQueueResult);
+    }
+  });
 }

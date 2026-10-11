@@ -4,9 +4,12 @@ import '../../../../core/navigation/back_navigation.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class AccessScaffold extends StatelessWidget {
+  static const _contentPadding = EdgeInsets.fromLTRB(24, 20, 24, 24);
+
   const AccessScaffold({
     required this.title,
     required this.children,
+    this.header = const [],
     this.busy = false,
     this.revalidating = false,
     this.error,
@@ -17,6 +20,7 @@ class AccessScaffold extends StatelessWidget {
   });
   final String title;
   final List<Widget> children;
+  final List<Widget> header;
   final bool busy;
   final bool revalidating;
   final AppFailure? error;
@@ -46,64 +50,104 @@ class AccessScaffold extends StatelessWidget {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Stack(
               children: [
-                if (busy) ...[
-                  const LinearProgressIndicator(),
-                  const SizedBox(height: 16),
-                ],
-                if (revalidating)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      'Checking account access and refreshing information…',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppTheme.muted),
-                    ),
-                  ),
-                if (error != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(AppTheme.panelRadius),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          error!.message,
-                          style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onErrorContainer,
-                          ),
+                SingleChildScrollView(
+                  padding: _contentPadding,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Status changes must not recreate focused page inputs.
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: header,
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (revalidating)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Text(
+                                'Checking account access and refreshing information…',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: AppTheme.muted),
+                              ),
+                            ),
+                          if (error != null)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.errorContainer,
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.panelRadius,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    error!.message,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onErrorContainer,
+                                    ),
+                                  ),
+                                  if (onRefresh != null)
+                                    TextButton(
+                                      onPressed: busy ? null : onRefresh,
+                                      child: const Text('Retry'),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          if (message != null)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppTheme.mint,
+                                border: Border.all(color: AppTheme.border),
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.panelRadius,
+                                ),
+                              ),
+                              child: Text(
+                                message!,
+                                key: const Key('access-message'),
+                              ),
+                            ),
+                        ],
+                      ),
+                      ConstrainedBox(
+                        // Shorter results must not clamp a scrolled header.
+                        constraints: BoxConstraints(
+                          minHeight: header.isEmpty
+                              ? 0
+                              : (constraints.maxHeight -
+                                        _contentPadding.vertical)
+                                    .clamp(0, double.infinity),
                         ),
-                        if (onRefresh != null)
-                          TextButton(
-                            onPressed: busy ? null : onRefresh,
-                            child: const Text('Retry'),
-                          ),
-                      ],
-                    ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: children,
+                        ),
+                      ),
+                    ],
                   ),
-                if (message != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.mint,
-                      border: Border.all(color: AppTheme.border),
-                      borderRadius: BorderRadius.circular(AppTheme.panelRadius),
-                    ),
-                    child: Text(message!, key: const Key('access-message')),
+                ),
+                if (busy)
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: LinearProgressIndicator(),
                   ),
-                ...children,
               ],
             ),
           ),
