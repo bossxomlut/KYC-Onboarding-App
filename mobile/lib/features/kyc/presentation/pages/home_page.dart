@@ -66,6 +66,9 @@ class HomePage extends StatelessWidget {
             if (canReview) ...[
               OutlinedButton.icon(
                 key: const Key('review-profiles'),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: AppTheme.background,
+                ),
                 onPressed: () => context.push('/reviews'),
                 icon: const Icon(Icons.fact_check_outlined),
                 label: const Text('Review profiles'),

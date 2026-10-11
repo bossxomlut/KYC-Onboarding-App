@@ -13,6 +13,10 @@
     "email": "reviewer.demo@kyc.example",
     "password": "ReviewerDemo123!"
   },
+  "admin": {
+    "email": "admin.demo@kyc.example",
+    "password": "AdminDemoOnly123!"
+  },
   "document": "assets/document.jpg",
   "selfie": "assets/selfie.jpg",
   "notice": "Fictional identities and public demo-only passwords. Never use these credentials in production."

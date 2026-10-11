@@ -54,7 +54,7 @@ class RecordingSyntheticCamera implements CameraDataSource {
 
 Future<void> recordingPause(
   WidgetTester tester, {
-  Duration duration = const Duration(seconds: 2),
+  Duration duration = const Duration(seconds: 4),
 }) async {
   // A wall-clock pause keeps milestones visible in a simctl screen recording.
   await tester.runAsync(() => Future<void>.delayed(duration));
@@ -64,10 +64,49 @@ Future<void> recordingPause(
 Future<void> recordingStep(
   WidgetTester tester,
   String slug,
-  String label,
-) async {
+  String label, {
+  Duration? duration,
+}) async {
   debugPrint('DEMO_STEP|$slug|$label');
-  await recordingPause(tester);
+  const statusSteps = {
+    'pending-review',
+    'resubmitted',
+    'verified',
+    'submission-history',
+    'request-selfie-update',
+    'review-rejected',
+    'applicant-rejected',
+    'review-approved',
+    'admin-access-review',
+    'admin-access-approved',
+  };
+  const detailedSteps = {
+    'registration',
+    'email-otp',
+    'personal-details',
+    'review-profile',
+    'edit-details',
+    'retake-before-submit',
+    'review-details',
+    'resubmission-review',
+    'approve-confirmation',
+    'original-submission',
+    'logout',
+    'reviewer-access-request',
+    'admin-access-review',
+    'reviewer-home-entry',
+    'reviewer-account-access-entry',
+    'reviewer-account-access-queue',
+  };
+  final seconds = slug.endsWith('-identity') || statusSteps.contains(slug)
+      ? 8
+      : slug.endsWith('-sign-in') || detailedSteps.contains(slug)
+      ? 6
+      : 4;
+  await recordingPause(
+    tester,
+    duration: duration ?? Duration(seconds: seconds),
+  );
 }
 
 Future<void> recordingWaitFor(
@@ -98,16 +137,10 @@ Future<void> recordingTap(WidgetTester tester, Finder finder) async {
   await recordingWaitFor(tester, finder);
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
-  await recordingPause(
-    tester,
-    duration: const Duration(milliseconds: 350),
-  );
+  await recordingPause(tester, duration: const Duration(milliseconds: 700));
   await tester.tap(finder);
   await tester.pumpAndSettle();
-  await recordingPause(
-    tester,
-    duration: const Duration(milliseconds: 350),
-  );
+  await recordingPause(tester, duration: const Duration(milliseconds: 700));
 }
 
 Future<void> recordingEnter(
@@ -119,10 +152,7 @@ Future<void> recordingEnter(
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
   await tester.enterText(finder, value);
-  await recordingPause(
-    tester,
-    duration: const Duration(milliseconds: 650),
-  );
+  await recordingPause(tester, duration: const Duration(milliseconds: 1200));
   FocusManager.instance.primaryFocus?.unfocus();
   await tester.pumpAndSettle();
 }
@@ -133,6 +163,8 @@ Future<void> recordingLogin(
   String password, {
   required String role,
   required String switchSlug,
+  String? accountLabel,
+  bool keepAccountAccessOpen = false,
 }) async {
   await recordingWaitFor(tester, find.text('Welcome back'));
   await recordingEnter(
@@ -145,7 +177,8 @@ Future<void> recordingLogin(
     find.widgetWithText(TextFormField, 'Password'),
     password,
   );
-  final accountLabel = role == 'User' ? 'Applicant (User)' : role;
+  final displayAccount =
+      accountLabel ?? (role == 'User' ? 'Applicant (User)' : role);
   expect(
     tester
         .widget<TextFormField>(find.widgetWithText(TextFormField, 'Email'))
@@ -153,13 +186,20 @@ Future<void> recordingLogin(
         .text,
     email,
   );
-  await recordingStep(
-    tester,
-    switchSlug,
-    'Sign in as $accountLabel: $email',
-  );
+  await recordingStep(tester, switchSlug, 'Sign in as $displayAccount: $email');
   await recordingTap(tester, find.text('Sign in'));
   await recordingWaitEnabled(tester, const Key('logout'));
+  if (role == 'Super admin') {
+    await recordingWaitFor(tester, find.text(email));
+    await recordingWaitFor(tester, find.text('Super admin'));
+    await recordingWaitFor(tester, find.byKey(const Key('manage-accounts')));
+    await recordingStep(
+      tester,
+      '$switchSlug-identity',
+      'Current account is $displayAccount: $email',
+    );
+    return;
+  }
   await recordingWaitEnabled(tester, const Key('account-access'));
   await recordingTap(tester, find.byKey(const Key('account-access')));
   await recordingWaitFor(tester, find.text(email));
@@ -172,16 +212,150 @@ Future<void> recordingLogin(
   await recordingStep(
     tester,
     '$switchSlug-identity',
-    'Current account is $accountLabel: $email',
+    'Current account is $displayAccount: $email',
   );
-  await recordingTap(tester, find.byTooltip('Back'));
-  await recordingWaitEnabled(tester, const Key('logout'));
+  if (!keepAccountAccessOpen) {
+    await recordingTap(tester, find.byTooltip('Back'));
+    await recordingWaitEnabled(tester, const Key('logout'));
+  }
 }
 
 Future<void> recordingLogout(WidgetTester tester) async {
   await recordingWaitEnabled(tester, const Key('logout'));
   await recordingTap(tester, find.byKey(const Key('logout')));
   await recordingWaitFor(tester, find.text('Welcome back'));
+}
+
+Future<void> recordingApproveReviewerAccess(
+  WidgetTester tester, {
+  required String reviewerEmail,
+  required String reviewerPassword,
+  required String adminEmail,
+  required String adminPassword,
+}) async {
+  const requestReason = 'I will review synthetic demo onboarding submissions.';
+  await recordingLogin(
+    tester,
+    reviewerEmail,
+    reviewerPassword,
+    role: 'User',
+    switchSlug: 'reviewer-user-sign-in',
+    accountLabel: 'Reviewer candidate (User)',
+    keepAccountAccessOpen: true,
+  );
+  expect(find.text('Review profiles'), findsNothing);
+  await recordingEnter(
+    tester,
+    find.byKey(const Key('request-reason')),
+    requestReason,
+  );
+  await recordingTap(tester, find.byKey(const Key('request-reviewer')));
+  await recordingWaitFor(tester, find.text('Request status: pending'));
+  await recordingStep(
+    tester,
+    'reviewer-access-request',
+    'Ordinary User requests Reviewer access through the real API',
+  );
+  await recordingTap(tester, find.byTooltip('Back'));
+  await recordingLogout(tester);
+
+  await recordingLogin(
+    tester,
+    adminEmail,
+    adminPassword,
+    role: 'Super admin',
+    switchSlug: 'admin-sign-in',
+  );
+  await recordingTap(tester, find.byKey(const Key('manage-accounts')));
+  await recordingWaitFor(tester, find.text(requestReason));
+  final pendingRequest = find.ancestor(
+    of: find.text(requestReason),
+    matching: find.byType(Card),
+  );
+  expect(pendingRequest, findsOneWidget);
+  expect(
+    find.descendant(of: pendingRequest, matching: find.text(reviewerEmail)),
+    findsOneWidget,
+  );
+  await recordingTap(
+    tester,
+    find.descendant(
+      of: pendingRequest,
+      matching: find.widgetWithText(FilledButton, 'Approve access'),
+    ),
+  );
+  await recordingWaitFor(tester, find.text('Approve access request?'));
+  await recordingEnter(
+    tester,
+    find.widgetWithText(TextField, 'Response (optional)'),
+    'Synthetic demo reviewer access approved.',
+  );
+  await recordingStep(
+    tester,
+    'admin-access-review',
+    'Super admin confirms Reviewer permission for the separate demo account',
+  );
+  await recordingTap(tester, find.text('Confirm'));
+  await recordingWaitFor(tester, find.text('Request approved.'));
+  await recordingWaitFor(tester, find.text('No pending requests.'));
+  final reviewerAccount = find.ancestor(
+    of: find.text(reviewerEmail),
+    matching: find.byType(Card),
+  );
+  expect(reviewerAccount, findsOneWidget);
+  final grantedRole = find.descendant(
+    of: reviewerAccount,
+    matching: find.text('Reviewer • Email verified'),
+  );
+  await recordingWaitFor(tester, grantedRole);
+  await tester.ensureVisible(grantedRole);
+  await tester.pumpAndSettle();
+  await recordingStep(
+    tester,
+    'admin-access-approved',
+    'Server confirms the reviewer account was promoted from User to Reviewer',
+  );
+  await recordingTap(tester, find.byTooltip('Back'));
+  await recordingLogout(tester);
+}
+
+Future<void> recordingCheckReviewEntries(WidgetTester tester) async {
+  await recordingWaitEnabled(tester, const Key('review-profiles'));
+  await recordingStep(
+    tester,
+    'reviewer-home-entry',
+    'Reviewer can open Review profiles from Home after access is granted',
+  );
+  await recordingTap(tester, find.byKey(const Key('review-profiles')));
+  await recordingWaitFor(tester, find.byKey(const Key('review-search')));
+  await recordingStep(
+    tester,
+    'reviewer-home-queue',
+    'Home Review profiles opens the real reviewer queue',
+  );
+  await recordingTap(tester, find.byTooltip('Back'));
+  await recordingWaitEnabled(tester, const Key('account-access'));
+  await recordingTap(tester, find.byKey(const Key('account-access')));
+  await recordingWaitFor(tester, find.text('Current role: Reviewer'));
+  await recordingStep(
+    tester,
+    'reviewer-account-access-entry',
+    'Account access confirms Reviewer permission before opening profiles',
+  );
+  await recordingTap(
+    tester,
+    find.widgetWithText(FilledButton, 'Review profiles'),
+  );
+  await recordingWaitFor(tester, find.byKey(const Key('review-search')));
+  await recordingStep(
+    tester,
+    'reviewer-account-access-queue',
+    'Account access Review profiles also opens the real reviewer queue',
+  );
+  await recordingTap(tester, find.byTooltip('Back'));
+  await recordingWaitFor(tester, find.text('Current role: Reviewer'));
+  await recordingTap(tester, find.byTooltip('Back'));
+  await recordingWaitEnabled(tester, const Key('review-profiles'));
 }
 
 Future<void> recordingPhoto(
@@ -196,7 +370,12 @@ Future<void> recordingPhoto(
   await recordingWaitFor(tester, photo);
   await tester.ensureVisible(photo);
   await tester.pumpAndSettle();
-  await recordingStep(tester, slug, label);
+  await recordingStep(
+    tester,
+    slug,
+    label,
+    duration: const Duration(seconds: 6),
+  );
 }
 
 Future<void> recordingContinueCapture(
@@ -211,8 +390,9 @@ Future<void> recordingContinueCapture(
 
 Future<String> recordingOtp(WidgetTester tester, Dio mail, String email) async {
   for (var attempt = 0; attempt < 45; attempt++) {
-    final list =
-        (await mail.get<Map<String, dynamic>>('/api/v1/messages')).data!;
+    final list = (await mail.get<Map<String, dynamic>>(
+      '/api/v1/messages',
+    )).data!;
     for (final summary in list['messages'] as List) {
       if (!(summary['To'] as List).any(
         (recipient) => recipient['Address'] == email,
@@ -221,8 +401,7 @@ Future<String> recordingOtp(WidgetTester tester, Dio mail, String email) async {
       }
       final detail = (await mail.get<Map<String, dynamic>>(
         '/api/v1/message/${summary['ID']}',
-      ))
-          .data!;
+      )).data!;
       final code = RegExp(
         r'verification code is (\d{6})',
       ).firstMatch(detail['Text'] as String)?.group(1);
@@ -241,11 +420,7 @@ Future<void> recordingOpenReview(
   await recordingWaitEnabled(tester, const Key('review-profiles'));
   await recordingTap(tester, find.byKey(const Key('review-profiles')));
   await recordingWaitFor(tester, find.byKey(const Key('review-search')));
-  await recordingEnter(
-    tester,
-    find.byKey(const Key('review-search')),
-    email,
-  );
+  await recordingEnter(tester, find.byKey(const Key('review-search')), email);
   final applicant = find.widgetWithText(ListTile, email);
   await recordingWaitFor(tester, applicant);
   await tester.ensureVisible(applicant);
@@ -259,7 +434,10 @@ Future<void> recordingOpenReview(
   await recordingWaitEnabled(tester, const Key('review-approve'));
   await recordingWaitFor(tester, find.text(fullName));
   await recordingStep(
-      tester, 'review-details', 'Reviewer checks personal details');
+    tester,
+    'review-details',
+    'Reviewer checks personal details',
+  );
   await recordingPhoto(
     tester,
     'Submitted identity document',
@@ -294,6 +472,8 @@ void main() {
   );
   const reviewerEmail = String.fromEnvironment('DEMO_REVIEWER_EMAIL');
   const reviewerPassword = String.fromEnvironment('DEMO_REVIEWER_PASSWORD');
+  const adminEmail = String.fromEnvironment('DEMO_ADMIN_EMAIL');
+  const adminPassword = String.fromEnvironment('DEMO_ADMIN_PASSWORD');
   const fullName = String.fromEnvironment(
     'DEMO_FULL_NAME',
     defaultValue: 'Maya Demo',
@@ -319,15 +499,23 @@ void main() {
   testWidgets(
     'record synthetic applicant and reviewer main flow with the real API',
     (tester) async {
-      if (!email.endsWith('@kyc.example') ||
-          !reviewerEmail.endsWith('@kyc.example') ||
-          email.trim().toLowerCase() == reviewerEmail.trim().toLowerCase() ||
-          password.isEmpty ||
-          reviewerPassword.isEmpty) {
+      final accounts = [email, reviewerEmail, adminEmail];
+      if (accounts.any((account) => !account.endsWith('@kyc.example')) ||
+          accounts
+                  .map((account) => account.trim().toLowerCase())
+                  .toSet()
+                  .length !=
+              3 ||
+          [
+            password,
+            reviewerPassword,
+            adminPassword,
+          ].any((value) => value.isEmpty)) {
         throw StateError(
-          'Use distinct synthetic @kyc.example applicant and reviewer accounts. '
-          'Provide DEMO_REVIEWER_EMAIL and DEMO_REVIEWER_PASSWORD for a verified '
-          'local reviewer; no account or permission is provisioned by this test.',
+          'Use three distinct synthetic @kyc.example accounts. Provide '
+          'DEMO_REVIEWER_EMAIL/PASSWORD for an ordinary verified User and '
+          'DEMO_ADMIN_EMAIL/PASSWORD for the isolated Super admin. Reviewer '
+          'access is requested and granted through the production app and API.',
         );
       }
       final tokens = SecureTokenStore(
@@ -350,7 +538,10 @@ void main() {
         debugPrint('DEMO_READY');
         await recordingPause(tester, duration: const Duration(seconds: 4));
         await recordingStep(
-            tester, 'welcome', 'Identity onboarding starts here');
+          tester,
+          'welcome',
+          'Identity onboarding starts here',
+        );
 
         await recordingTap(tester, find.text('New here? Create an account'));
         await recordingEnter(
@@ -369,17 +560,26 @@ void main() {
           password,
         );
         await recordingStep(
-            tester, 'registration', 'Create a synthetic account');
+          tester,
+          'registration',
+          'Create a synthetic account',
+        );
         await recordingTap(tester, find.text('Create account'));
         await recordingWaitFor(tester, find.text('Verify your email'));
         await recordingStep(
-            tester, 'email-otp', 'Verify email with a local OTP');
+          tester,
+          'email-otp',
+          'Verify email with a local OTP',
+        );
         final code = await recordingOtp(tester, mail, email);
         await recordingEnter(tester, find.byKey(const Key('otp-input')), code);
         await recordingTap(tester, find.text('Verify email'));
         await recordingWaitEnabled(tester, const Key('kyc-next'));
         await recordingStep(
-            tester, 'registered', 'Email verified; profile is ready');
+          tester,
+          'registered',
+          'Email verified; profile is ready',
+        );
 
         await recordingLogout(tester);
         await recordingLogin(
@@ -390,7 +590,10 @@ void main() {
           switchSlug: 'applicant-sign-in',
         );
         await recordingStep(
-            tester, 'applicant-login', 'Sign in to the demo account');
+          tester,
+          'applicant-login',
+          'Sign in to the demo account',
+        );
         await recordingTap(tester, find.byKey(const Key('kyc-next')));
         await recordingWaitFor(tester, find.byKey(const Key('fullName')));
         for (final entry in {
@@ -408,14 +611,24 @@ void main() {
         await tester.pumpAndSettle();
         await recordingPause(tester);
         await recordingTap(
-            tester, find.byKey(const Key('confirm-date-of-birth')));
+          tester,
+          find.byKey(const Key('confirm-date-of-birth')),
+        );
         await recordingStep(
-            tester, 'personal-details', 'Enter fictional personal details');
+          tester,
+          'personal-details',
+          'Enter fictional personal details',
+        );
         await recordingTap(tester, find.byKey(const Key('save-details')));
         await recordingWaitFor(
-            tester, find.byKey(const Key('capture-document')));
+          tester,
+          find.byKey(const Key('capture-document')),
+        );
         await recordingStep(
-            tester, 'saved-progress', 'Personal details are saved');
+          tester,
+          'saved-progress',
+          'Personal details are saved',
+        );
 
         // Recreate the complete app/container while retaining the real secure
         // refresh credential; the server restores the saved document step.
@@ -430,13 +643,21 @@ void main() {
         await tester.pumpWidget(KycApp(dependencies: di));
         await recordingWaitEnabled(tester, const Key('kyc-next'));
         expect(find.text('In progress'), findsOneWidget);
-        await recordingStep(tester, 'session-restored',
-            'Session and saved progress are restored');
+        await recordingStep(
+          tester,
+          'session-restored',
+          'Session and saved progress are restored',
+        );
         await recordingTap(tester, find.byKey(const Key('kyc-next')));
         await recordingWaitFor(
-            tester, find.byKey(const Key('capture-document')));
+          tester,
+          find.byKey(const Key('capture-document')),
+        );
         await recordingStep(
-            tester, 'document-step', 'Continue at the identity document step');
+          tester,
+          'document-step',
+          'Continue at the identity document step',
+        );
         await recordingTap(tester, find.byKey(const Key('capture-document')));
         await recordingWaitEnabled(tester, const Key('continue-document'));
         await recordingPhoto(
@@ -451,7 +672,10 @@ void main() {
           find.byKey(const Key('capture-selfie')),
         );
         await recordingStep(
-            tester, 'selfie-step', 'Continue with a synthetic selfie');
+          tester,
+          'selfie-step',
+          'Continue with a synthetic selfie',
+        );
         await recordingTap(tester, find.byKey(const Key('capture-selfie')));
         await recordingWaitEnabled(tester, const Key('continue-selfie'));
         await recordingPhoto(
@@ -467,17 +691,19 @@ void main() {
         );
         await recordingWaitFor(tester, find.text(fullName));
         await recordingStep(
-            tester, 'review-profile', 'Review details before submitting');
+          tester,
+          'review-profile',
+          'Review details before submitting',
+        );
 
         await recordingTap(tester, find.text('Edit').first);
         await recordingWaitFor(tester, find.byKey(const Key('address')));
-        await recordingEnter(
-          tester,
-          find.byKey(const Key('address')),
-          address,
-        );
+        await recordingEnter(tester, find.byKey(const Key('address')), address);
         await recordingStep(
-            tester, 'edit-details', 'Edit the address from Review');
+          tester,
+          'edit-details',
+          'Edit the address from Review',
+        );
         await recordingTap(tester, find.byKey(const Key('save-details')));
         await recordingWaitFor(tester, find.byKey(const Key('submit-kyc')));
         expect(find.text(address), findsOneWidget);
@@ -495,8 +721,11 @@ void main() {
         );
         await recordingTap(tester, find.text('Edit').last);
         await recordingWaitFor(tester, find.byKey(const Key('capture-selfie')));
-        await recordingStep(tester, 'retake-before-submit',
-            'Retake the synthetic selfie before submission');
+        await recordingStep(
+          tester,
+          'retake-before-submit',
+          'Retake the synthetic selfie before submission',
+        );
         await recordingTap(tester, find.byKey(const Key('capture-selfie')));
         await recordingWaitEnabled(tester, const Key('continue-selfie'));
         await recordingPause(tester);
@@ -509,10 +738,20 @@ void main() {
         await recordingTap(tester, find.byKey(const Key('submit-kyc')));
         await recordingWaitFor(tester, find.text('Pending review'));
         await recordingStep(
-            tester, 'pending-review', 'First submission is pending review');
+          tester,
+          'pending-review',
+          'First submission is pending review',
+        );
         await recordingTap(tester, find.text('Back to home'));
         await recordingLogout(tester);
 
+        await recordingApproveReviewerAccess(
+          tester,
+          reviewerEmail: reviewerEmail,
+          reviewerPassword: reviewerPassword,
+          adminEmail: adminEmail,
+          adminPassword: adminPassword,
+        );
         await recordingLogin(
           tester,
           reviewerEmail,
@@ -521,7 +760,11 @@ void main() {
           switchSlug: 'reviewer-sign-in',
         );
         await recordingStep(
-            tester, 'reviewer-login', 'Sign in as the synthetic reviewer');
+          tester,
+          'reviewer-login',
+          'Sign in after the super admin grants Reviewer access',
+        );
+        await recordingCheckReviewEntries(tester);
         await recordingOpenReview(tester, email, fullName);
         await recordingTap(tester, find.byKey(const Key('review-reject')));
         await recordingEnter(
@@ -530,13 +773,21 @@ void main() {
           rejectionReason,
         );
         await recordingTap(
-            tester, find.widgetWithText(CheckboxListTile, 'Selfie'));
-        await recordingStep(tester, 'request-selfie-update',
-            'Request a selfie update with a reason');
+          tester,
+          find.widgetWithText(CheckboxListTile, 'Selfie'),
+        );
+        await recordingStep(
+          tester,
+          'request-selfie-update',
+          'Request a selfie update with a reason',
+        );
         await recordingTap(tester, find.text('Save rejection'));
         await recordingWaitFor(tester, find.byKey(const Key('review-search')));
-        await recordingStep(tester, 'review-rejected',
-            'Reviewer saves the rejection through the app');
+        await recordingStep(
+          tester,
+          'review-rejected',
+          'Reviewer saves the rejection through the app',
+        );
         await recordingTap(tester, find.byTooltip('Back'));
         await recordingLogout(tester);
 
@@ -550,12 +801,18 @@ void main() {
         await recordingWaitFor(tester, find.text(rejectionReason));
         await tester.ensureVisible(find.text(rejectionReason));
         await tester.pumpAndSettle();
-        await recordingStep(tester, 'applicant-rejected',
-            'Applicant sees the selfie correction request');
+        await recordingStep(
+          tester,
+          'applicant-rejected',
+          'Applicant sees the selfie correction request',
+        );
         await recordingTap(tester, find.byKey(const Key('kyc-next-step')));
         await recordingWaitFor(tester, find.byKey(const Key('capture-selfie')));
-        await recordingStep(tester, 'selfie-only-resume',
-            'Accepted details and document remain saved');
+        await recordingStep(
+          tester,
+          'selfie-only-resume',
+          'Accepted details and document remain saved',
+        );
         await recordingTap(tester, find.byKey(const Key('capture-selfie')));
         await recordingWaitEnabled(tester, const Key('continue-selfie'));
         await recordingPhoto(
@@ -571,12 +828,18 @@ void main() {
         );
         expect(find.text(fullName), findsOneWidget);
         expect(find.text(address), findsOneWidget);
-        await recordingStep(tester, 'resubmission-review',
-            'Review the preserved details and replacement selfie');
+        await recordingStep(
+          tester,
+          'resubmission-review',
+          'Review the preserved details and replacement selfie',
+        );
         await recordingTap(tester, find.byKey(const Key('submit-kyc')));
         await recordingWaitFor(tester, find.text('Pending review'));
         await recordingStep(
-            tester, 'resubmitted', 'Second submission is pending review');
+          tester,
+          'resubmitted',
+          'Second submission is pending review',
+        );
         await recordingTap(tester, find.text('Back to home'));
         await recordingLogout(tester);
 
@@ -590,12 +853,18 @@ void main() {
         await recordingOpenReview(tester, email, fullName);
         await recordingTap(tester, find.byKey(const Key('review-approve')));
         await recordingWaitFor(tester, find.text('Approve this identity?'));
-        await recordingStep(tester, 'approve-confirmation',
-            'Confirm the checked identity submission');
+        await recordingStep(
+          tester,
+          'approve-confirmation',
+          'Confirm the checked identity submission',
+        );
         await recordingTap(tester, find.text('Approve'));
         await recordingWaitFor(tester, find.byKey(const Key('review-search')));
         await recordingStep(
-            tester, 'review-approved', 'Reviewer approves through the app');
+          tester,
+          'review-approved',
+          'Reviewer approves through the app',
+        );
         await recordingTap(tester, find.byTooltip('Back'));
         await recordingLogout(tester);
 
@@ -611,20 +880,29 @@ void main() {
         await recordingTap(tester, find.byKey(const Key('refresh-status')));
         await recordingWaitFor(tester, find.text('Verified'));
         await recordingStep(
-            tester, 'verified', 'Identity verified; applicant sees the result');
+          tester,
+          'verified',
+          'Identity verified; applicant sees the result',
+        );
         await recordingTap(tester, find.byKey(const Key('view-kyc-history')));
         await recordingWaitFor(tester, find.text('Submission #1'));
         expect(find.text('Submission #2'), findsOneWidget);
-        await recordingStep(tester, 'submission-history',
-            'Both submission rounds stay in history');
+        await recordingStep(
+          tester,
+          'submission-history',
+          'Both submission rounds stay in history',
+        );
         final original = find.ancestor(
           of: find.text('Submission #1'),
           matching: find.byType(InkWell),
         );
         await recordingTap(tester, original);
         await recordingWaitFor(tester, find.text(rejectionReason));
-        await recordingStep(tester, 'original-submission',
-            'Original rejected submission remains read only');
+        await recordingStep(
+          tester,
+          'original-submission',
+          'Original rejected submission remains read only',
+        );
         await recordingPhoto(
           tester,
           'Your private document photo',
@@ -639,12 +917,17 @@ void main() {
         );
         expect(find.text('Edit'), findsNothing);
         await recordingTap(
-            tester, find.byKey(const Key('history-detail-close')));
+          tester,
+          find.byKey(const Key('history-detail-close')),
+        );
         await recordingTap(tester, find.byTooltip('Back'));
         await recordingTap(tester, find.text('Back to home'));
         await recordingLogout(tester);
         await recordingStep(
-            tester, 'logout', 'Signed out safely at the end of the flow');
+          tester,
+          'logout',
+          'Signed out safely at the end of the flow',
+        );
         await recordingPause(tester, duration: const Duration(seconds: 4));
         debugPrint('DEMO_FINISHED');
         // Let the external recorder stop before the test removes the app tree.
@@ -656,6 +939,6 @@ void main() {
         await di.reset();
       }
     },
-    timeout: const Timeout(Duration(minutes: 10)),
+    timeout: const Timeout(Duration(minutes: 15)),
   );
 }

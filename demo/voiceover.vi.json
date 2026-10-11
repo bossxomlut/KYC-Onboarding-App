@@ -3,7 +3,7 @@
   "engine": "edge-tts",
   "voice": "vi-VN-NamMinhNeural",
   "voiceGender": "Male",
-  "speechRate": "+0%",
+  "speechRate": "-10%",
   "syntheticOnly": true,
   "video": "full-flow.mp4",
   "outputVideo": "full-flow-voiced.mp4",
@@ -35,7 +35,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Đầu tiên, tạo tài khoản thử nghiệm. Mã xác thực được lấy từ hộp thư cục bộ để hoàn tất đăng ký."
+      "text": "Tạo tài khoản thử nghiệm trên máy chủ. Nhập mã xác thực từ hộp thư thử nghiệm để hoàn tất đăng ký."
     },
     {
       "id": "applicant-login",
@@ -63,7 +63,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Nhập thông tin giả lập rồi lưu. Khi ứng dụng được khởi tạo lại, phiên đăng nhập và tiến độ đã lưu được khôi phục."
+      "text": "Thông tin và tiến độ được lưu trên máy chủ. Khi ứng dụng khởi tạo lại, hồ sơ được tải về với phiên đăng nhập đã khôi phục."
     },
     {
       "id": "synthetic-uploads",
@@ -77,7 +77,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Giấy tờ mẫu đã được tải lên. Tiếp tục với ảnh chân dung giả lập; ảnh minh họa thay thao tác camera, còn tải ảnh dùng máy chủ thật."
+      "text": "Ảnh giấy tờ mẫu đã được lưu trên máy chủ. Tiếp tục tải ảnh chân dung giả lập; bản demo dùng ảnh minh họa thay camera."
     },
     {
       "id": "review-and-edit",
@@ -91,7 +91,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Trước khi gửi, kiểm tra lại hồ sơ. Từ màn hình xem trước, có thể sửa địa chỉ và xem từng ảnh để kiểm tra."
+      "text": "Kiểm tra hồ sơ trước khi gửi. Có thể sửa địa chỉ, lưu thay đổi lên máy chủ, rồi xem lại từng ảnh."
     },
     {
       "id": "retake-before-submission",
@@ -105,7 +105,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Nếu ảnh chưa phù hợp, chọn chụp lại. Trong bản trình diễn này, ứng dụng thay ảnh bằng mẫu giả lập."
+      "text": "Nếu ảnh chưa phù hợp, chọn chụp lại. Ảnh thay thế được tải lên máy chủ; bản demo vẫn dùng ảnh giả lập."
     },
     {
       "id": "first-submission-pending",
@@ -115,11 +115,67 @@
         "offsetSeconds": 0.2
       },
       "end": {
+        "chapter": "reviewer-user-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Gửi hồ sơ lần đầu. Bản gửi và trạng thái chờ xét duyệt được lưu trên máy chủ, rồi hiển thị trong ứng dụng."
+    },
+    {
+      "id": "reviewer-requests-access",
+      "start": {
+        "chapter": "reviewer-user-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "admin-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Tài khoản này hiện vẫn là người dùng. Gửi yêu cầu cấp quyền xét duyệt; máy chủ lưu yêu cầu để quản trị viên xem xét."
+    },
+    {
+      "id": "admin-login-for-access-review",
+      "start": {
+        "chapter": "admin-sign-in",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "admin-access-review",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Đăng nhập tài khoản quản trị viên có email riêng. Trang quản trị hiển thị email và vai trò trước khi mở yêu cầu đang chờ."
+    },
+    {
+      "id": "admin-confirms-reviewer-access",
+      "start": {
+        "chapter": "admin-access-review",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
+        "chapter": "admin-access-approved",
+        "occurrence": 1,
+        "offsetSeconds": -0.3
+      },
+      "text": "Quản trị viên xem yêu cầu và xác nhận cấp quyền xét duyệt. Quyết định được gửi lên máy chủ."
+    },
+    {
+      "id": "reviewer-access-saved-on-server",
+      "start": {
+        "chapter": "admin-access-approved",
+        "occurrence": 1,
+        "offsetSeconds": 0.2
+      },
+      "end": {
         "chapter": "reviewer-sign-in",
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Gửi hồ sơ lần đầu. Trạng thái chuyển sang chờ xét duyệt, và người dùng có thể theo dõi kết quả tại đây."
+      "text": "Máy chủ đã lưu quyết định cấp quyền và cập nhật vai trò người xét duyệt. Trong bản demo, đăng nhập lại vào tài khoản này."
     },
     {
       "id": "separate-reviewer-account",
@@ -129,16 +185,16 @@
         "offsetSeconds": 0.2
       },
       "end": {
-        "chapter": "review-queue",
+        "chapter": "reviewer-home-entry",
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Đăng nhập tài khoản người xét duyệt, với email khác người nộp hồ sơ. Màn hình tài khoản xác nhận email và vai trò hiện tại."
+      "text": "Đăng nhập lại tài khoản đã được cấp quyền xét duyệt, với email khác người nộp hồ sơ. Màn hình tài khoản xác nhận vai trò mới."
     },
     {
       "id": "target-applicant-and-first-review",
       "start": {
-        "chapter": "review-queue",
+        "chapter": "reviewer-home-entry",
         "occurrence": 1,
         "offsetSeconds": 0.2
       },
@@ -147,7 +203,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Email trong danh sách thuộc người nộp hồ sơ cần xét duyệt. Mở hồ sơ này để kiểm tra thông tin, giấy tờ và ảnh chân dung."
+      "text": "Mở danh sách xét duyệt từ trang chủ hoặc tài khoản. Email thuộc người nộp hồ sơ; chọn hồ sơ để kiểm tra thông tin và ảnh."
     },
     {
       "id": "selfie-correction-request",
@@ -161,7 +217,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Lần đầu, hồ sơ bị từ chối với yêu cầu chụp lại ảnh chân dung dưới ánh sáng tốt hơn. Quyết định được lưu ngay trong ứng dụng."
+      "text": "Yêu cầu chụp lại ảnh chân dung dưới ánh sáng tốt hơn. Máy chủ lưu quyết định từ chối, lý do và phần cần bổ sung."
     },
     {
       "id": "return-to-applicant-account",
@@ -189,7 +245,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Người dùng thấy lý do cần bổ sung. Thông tin và giấy tờ đã được giữ lại, nên chỉ cần thay ảnh chân dung theo yêu cầu."
+      "text": "Ứng dụng hiển thị lý do từ chối. Máy chủ giữ thông tin và giấy tờ đã được chấp nhận, nên chỉ cần thay ảnh chân dung."
     },
     {
       "id": "second-submission",
@@ -203,7 +259,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Kiểm tra lại hồ sơ với ảnh mới rồi gửi lần thứ hai. Hồ sơ quay lại trạng thái chờ xét duyệt."
+      "text": "Kiểm tra hồ sơ với ảnh mới rồi gửi lại. Máy chủ lưu bản gửi thứ hai và chuyển trạng thái sang chờ xét duyệt."
     },
     {
       "id": "return-to-separate-reviewer",
@@ -231,7 +287,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Người xét duyệt mở hồ sơ được gửi lại, kiểm tra thông tin đã giữ nguyên cùng ảnh chân dung vừa cập nhật."
+      "text": "Người xét duyệt mở bản gửi mới từ máy chủ, kiểm tra thông tin được giữ lại và ảnh chân dung đã cập nhật."
     },
     {
       "id": "reviewer-approval",
@@ -245,7 +301,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Sau khi kiểm tra, xác nhận phê duyệt hồ sơ. Quyết định này được gửi đến máy chủ thật và cập nhật cho người dùng."
+      "text": "Sau khi xác nhận phê duyệt, máy chủ lưu quyết định và trạng thái đã xác minh. Ứng dụng hiển thị kết quả cho người dùng."
     },
     {
       "id": "final-return-to-applicant",
@@ -273,7 +329,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Hồ sơ đã được xác minh. Mở lịch sử để xem lại cả hai lần gửi."
+      "text": "Máy chủ đã cập nhật trạng thái xác minh. Mở lịch sử để xem lại hai lần gửi."
     },
     {
       "id": "original-submission-history",
@@ -287,7 +343,7 @@
         "occurrence": 1,
         "offsetSeconds": -0.3
       },
-      "text": "Bản gửi lần đầu vẫn lưu lý do từ chối và các ảnh khi đó. Người dùng có thể xem lại hồ sơ cũ ở chế độ chỉ đọc."
+      "text": "Bản gửi đầu, lý do từ chối và ảnh được giữ trên máy chủ. Ứng dụng tải lại hồ sơ cũ ở chế độ chỉ đọc."
     },
     {
       "id": "logout",

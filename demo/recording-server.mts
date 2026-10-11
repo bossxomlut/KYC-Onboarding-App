@@ -13,12 +13,17 @@ const demoDir = dirname(fileURLToPath(import.meta.url));
 const scenario = JSON.parse(
   await readFile(join(demoDir, "scenario.json"), "utf8"),
 );
+const accounts = [scenario.applicant, scenario.reviewer, scenario.admin];
 if (
   scenario.syntheticOnly !== true ||
-  !scenario.applicant.email.endsWith("@kyc.example") ||
-  !scenario.reviewer.email.endsWith("@kyc.example") ||
-  scenario.applicant.email.toLowerCase() ===
-    scenario.reviewer.email.toLowerCase()
+  accounts.some(
+    (account) =>
+      typeof account?.email !== "string" ||
+      !account.email.endsWith("@kyc.example") ||
+      typeof account.password !== "string" ||
+      account.password.length === 0,
+  ) ||
+  new Set(accounts.map((account) => account.email.toLowerCase())).size !== 3
 ) {
   throw new Error("Recording requires the synthetic demo scenario.");
 }
@@ -69,19 +74,22 @@ try {
       console.error("The isolated demo database connection closed.");
   });
   await migrate(pool);
-  const reviewerId = randomUUID();
-  await pool.query(
-    "INSERT INTO users(id,email_normalized,password_hash,email_verified_at,status,role) VALUES($1,$2,$3,now(),'active','reviewer')",
-    [
-      reviewerId,
-      scenario.reviewer.email,
-      await passwordHash(scenario.reviewer.password),
-    ],
-  );
-  await pool.query("INSERT INTO kyc_profiles(id,user_id) VALUES($1,$2)", [
-    randomUUID(),
-    reviewerId,
-  ]);
+  // The future reviewer starts as an ordinary user. The recording grants
+  // access through the real request/approval UI and API, with a separate admin.
+  for (const [account, role] of [
+    [scenario.reviewer, "user"],
+    [scenario.admin, "super_admin"],
+  ] as const) {
+    const userId = randomUUID();
+    await pool.query(
+      "INSERT INTO users(id,email_normalized,password_hash,email_verified_at,status,role) VALUES($1,$2,$3,now(),'active',$4)",
+      [userId, account.email, await passwordHash(account.password), role],
+    );
+    await pool.query("INSERT INTO kyc_profiles(id,user_id) VALUES($1,$2)", [
+      randomUUID(),
+      userId,
+    ]);
+  }
   const config: Config = {
     nodeEnv: "test",
     host: "127.0.0.1",

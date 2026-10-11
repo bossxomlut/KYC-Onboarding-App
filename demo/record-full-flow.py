@@ -27,7 +27,8 @@ DEMO = ROOT / "demo"
 RUNTIME = DEMO / ".runtime"
 EXPECTED_STEPS = (
     "registration", "personal-details", "document-uploaded", "selfie-uploaded",
-    "pending-review", "review-rejected", "applicant-rejected", "resubmitted",
+    "pending-review", "reviewer-access-request", "admin-access-approved",
+    "reviewer-home-entry", "review-rejected", "applicant-rejected", "resubmitted",
     "review-approved", "verified", "submission-history", "logout",
 )
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -147,7 +148,7 @@ def load_scenario() -> dict:
     scenario = json.loads((DEMO / "scenario.json").read_text(encoding="utf-8"))
     if scenario.get("syntheticOnly") is not True:
         raise RecordingError("demo/scenario.json must explicitly declare syntheticOnly: true.")
-    for role in ("applicant", "reviewer"):
+    for role in ("applicant", "reviewer", "admin"):
         values = scenario.get(role, {})
         if not re.fullmatch(r"[^@\s]+@kyc\.example", values.get("email", "")):
             raise RecordingError(f"The {role} email must use the fictional @kyc.example domain.")
@@ -156,8 +157,9 @@ def load_scenario() -> dict:
     for key in ("fullName", "dateOfBirth", "nationality", "address", "documentNumber"):
         if not isinstance(scenario["applicant"].get(key), str) or not scenario["applicant"][key]:
             raise RecordingError(f"Missing synthetic applicant field: {key}.")
-    if scenario["applicant"]["email"].casefold() == scenario["reviewer"]["email"].casefold():
-        raise RecordingError("Applicant and reviewer must use different email accounts.")
+    emails = [scenario[role]["email"].casefold() for role in ("applicant", "reviewer", "admin")]
+    if len(set(emails)) != len(emails):
+        raise RecordingError("Applicant, reviewer and admin must use different email accounts.")
     return scenario
 
 
@@ -301,6 +303,8 @@ def record(args: argparse.Namespace) -> None:
             "DEMO_PASSWORD": scenario["applicant"]["password"],
             "DEMO_REVIEWER_EMAIL": scenario["reviewer"]["email"],
             "DEMO_REVIEWER_PASSWORD": scenario["reviewer"]["password"],
+            "DEMO_ADMIN_EMAIL": scenario["admin"]["email"],
+            "DEMO_ADMIN_PASSWORD": scenario["admin"]["password"],
         }
         for dart_name, field in (
             ("DEMO_FULL_NAME", "fullName"), ("DEMO_DATE_OF_BIRTH", "dateOfBirth"),

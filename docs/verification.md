@@ -2,23 +2,49 @@
 
 Run these checks after following [local setup](local-setup.md). Use Node 22.12+ and Flutter 3.44.6 with its bundled Dart SDK. Commands below describe how to reproduce checks; the dated results record earlier development runs and do not claim a new full run during repository cleanup.
 
+## Manual physical-device validation
+
+The developer has also manually tested the app on a physical device. This complements the automated checks and simulator recording below. The dated results retain the scope of each earlier development run.
+
 ## Repository cleanup checks
 
 On 11 Oct 2026, after removing old recordings, screenshot renderers and generated artifacts: `npm run check`, `flutter analyze --no-pub`, `flutter test --no-pub test/architecture --reporter expanded` (1/1), local Markdown file-link checks and `git diff --check` passed. Production source and normal unit/integration tests were unchanged. Full behavior suites, native builds and destructive data-reset commands were not rerun for this cleanup.
 
+## Reviewer Home action regression
+
+On 12 Oct 2026, the **Review profiles** Home button was found to render a green label and icon on a transparent surface over the green header. A focused regression first failed at a contrast ratio of **1.153**. Giving that button an opaque white surface fixes the visible contrast while keeping its existing reviewer route.
+
+The focused Flutter run passed **23/23**, including the architecture boundary check, and focused analysis reported no issues. The new widget regressions check label/icon contrast across all header gradient colors, a live User-to-Reviewer grant, opening the queue from both Home and Account access, Back navigation to the correct parent, and removal of both entries after Reviewer permission is withdrawn. These checks use boundary test doubles; the recording separately exercises the access request and admin approval against the real API.
+
+Reproduce the focused selection from `mobile/`:
+
+```sh
+flutter test test/app/reviewer_home_button_test.dart \
+  test/app/reviewer_stack_navigation_test.dart \
+  test/app/home_stack_navigation_test.dart \
+  test/features/access/session_role_refresh_test.dart \
+  test/features/kyc/home_page_test.dart test/architecture
+```
+
 ## Main-flow recording
 
-On 12 Oct 2026, `python3 demo/record-full-flow.py` rebuilt and ran the recording-only integration target on iPhone 17 Pro (iOS 26.2 Simulator). The real API integration passed **1/1**, including registration/OTP, explicit login, saved session/progress, private fixture uploads, edit/retake, authenticated reviewer rejection and approval, selfie-only resubmission, Verified, immutable history and logout. Focused Flutter analysis, Dart formatting, Python syntax and demo TypeScript/JSON formatting also passed for this revision. The retained source recording lasts **256.87 seconds (4m17s)** with **52 chapters**.
+The recording workflow uses three distinct fictional accounts: `applicant.demo@kyc.example` as **User**, `reviewer.demo@kyc.example` initially as **User**, and `admin.demo@kyc.example` as **Super admin**. The reviewer candidate requests access through Account access; the admin reviews and confirms the request through Manage accounts. The real server persists the grant before that account signs in with role **Reviewer**. The script then checks Review profiles through both Home and Account access before reviewing the applicant.
 
-The new run uses separate fictional accounts: `applicant.demo@kyc.example` with role **User** and `reviewer.demo@kyc.example` with role **Reviewer**. Every switch displays the sign-in email and the native **Account access** screen; integration expectations check the current email and role. The test and runner reject equal emails regardless of letter case. Visual checks confirmed the separate accounts during reviewer switches and the final applicant return. Profile-row emails in the reviewer queue identify the applicant being reviewed.
+Applicant/reviewer switches display the sign-in email and the native **Account access** screen; the admin switch shows its email and role on the native **Super admin** Home screen. Integration expectations check the current account identity, and the runner rejects equal emails regardless of letter case. Profile-row emails in the reviewer queue identify the applicant being reviewed.
 
-The preceding recording on 11 Oct 2026 also passed **1/1**. Its focused Flutter analysis, Dart formatting, architecture test (**1/1**), Python syntax and recorder TypeScript/JSON formatting passed. Those checks are evidence for that earlier checkout. The current recording changes are confined to demo tooling, integration-test orchestration and documentation; production app/backend source was unchanged.
+The slower target holds milestones for four seconds by default, forms/photo previews for six seconds, and account identities plus important statuses/decisions for eight seconds. The editable narration plan contains **25 passages** with **`vi-VN-NamMinhNeural` (Male)** at speech rate **`-10%`**, through `edge-tts==7.2.8`. The narration makes clear that details, progress, uploads, role grants, submissions, review decisions and history are persisted on the server and displayed by the app.
 
-The retained [MP4](../demo/full-flow.mp4), [chapter timestamps](../demo/full-flow.chapters.json) and [demo guide](../demo/README.md) use fictional data from `demo/scenario.json` and marked illustrations. The recording ran against a separate disposable PostgreSQL database/API/Mailpit and did not read or modify the development database. Camera capture was substituted on the simulator; session restoration recreated the app/container rather than force-killing it. This recording does not establish physical-camera, liveness or OCR/face accuracy.
+The retained [silent MP4](../demo/full-flow.mp4), [narrated MP4](../demo/full-flow-voiced.mp4), [chapter timestamps](../demo/full-flow.chapters.json) and [demo guide](../demo/README.md) use fictional data from `demo/scenario.json` and marked illustrations. The runner uses a separate disposable PostgreSQL database/API/Mailpit and does not read or modify the development database. Camera capture is substituted on the simulator; session restoration recreates the app/container rather than force-killing it. This recording does not establish physical-camera, liveness or OCR/face accuracy.
 
-The [Vietnamese narrated variant](../demo/full-flow-voiced.mp4) was generated from **21 passages** with **`vi-VN-NamMinhNeural` (Male)** through `edge-tts==7.2.8`. Microsoft lists this as a Vietnamese male voice in its [voice documentation](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts). FFprobe confirms **256.87 seconds**, **8,796,438 bytes**, 720×1566 H.264 at 30fps, all **52 chapters**, and mono 44.1kHz Vietnamese AAC audio at 128kbps. The encoded video stream SHA-256 matches the silent original, and complete audio/video decoding passed. All passages contain audible speech and fit their intervals; 20 retain the normal rate, while the short final logout passage uses a **1.1449×** speed adjustment and ends at **256.404 seconds**.
+Chapter slugs, occurrences and offsets resolve the narration intervals automatically after recording; the renderer validates these intervals before synthesis. See the editable [narration plan](../demo/voiceover.vi.json), [timing report](../demo/voiceover.vi.report.json) and [reproduction steps](../demo/README.md#vietnamese-voiceover). Reproduction requires internet access for the fictional narration text sent through the [speech library](https://github.com/rany2/edge-tts); the video, documents and server records remain in the isolated local demo environment.
 
-Chapter slugs, occurrences and offsets resolve the narration intervals automatically for the new recording; the renderer validates these intervals before synthesis. See the editable [narration plan](../demo/voiceover.vi.json), [timing report](../demo/voiceover.vi.report.json) and [reproduction steps](../demo/README.md#vietnamese-voiceover). Reproduction requires internet access for the fictional narration text sent through the [speech library](https://github.com/rany2/edge-tts); the video, documents and app data stay local.
+### Earlier recording evidence
+
+An earlier recording on 12 Oct 2026 passed **1/1** real-API integration on iPhone 17 Pro (iOS 26.2 Simulator), covering registration/OTP, explicit login, saved session/progress, private fixture uploads, edit/retake, authenticated reviewer rejection and approval, selfie-only resubmission, Verified, immutable history and logout. Focused Flutter analysis, Dart formatting, Python syntax and demo TypeScript/JSON formatting passed for that revision. That source was **256.87 seconds (4m17s)** with **52 chapters**, using separate applicant and already-authorized reviewer accounts.
+
+Its narrated variant used **21 passages** with the same male NamMinh voice at the normal rate. FFprobe recorded **256.87 seconds**, **8,796,438 bytes**, 720×1566 H.264 at 30fps, 52 chapters, and mono 44.1kHz Vietnamese AAC at 128kbps. Its encoded video stream SHA-256 matched the silent source, complete audio/video decoding passed, and all passages fit; the short final logout used a **1.1449×** adjustment and ended at **256.404 seconds**. These media measurements belong to that earlier artifact.
+
+The preceding recording on 11 Oct 2026 also passed **1/1**. Its focused Flutter analysis, Dart formatting, architecture test (**1/1**), Python syntax and recorder TypeScript/JSON formatting passed. Those earlier recording revisions changed demo tooling, integration orchestration and documentation without changing production app/backend source. The current Home contrast fix changes production presentation code and has the separate focused regression evidence above.
 
 ## Automated checks
 
@@ -113,8 +139,8 @@ The first four cases extracted the synthetic Vietnamese name, ISO birth date and
 
 On the same date, Android emulator and Samsung SM A235F debug builds were installed and launched, with API health reachable; an iPhone 17 Pro simulator build also launched. The later compact reviewer update was built/installed on Samsung. These checks confirm startup/connectivity; they did not perform the complete physical-camera-to-review interaction. Generated builds, screenshots and previous recordings are disposable development artifacts. The current synthetic main-flow recording is retained separately in `demo/full-flow.mp4`.
 
-## Remaining manual checks and limits
+## Limits and further work
 
-Physical iOS/Android camera quality, permission denial followed by Settings/retry, force-kill during capture, and complete physical-device capture/upload/review/password recovery still need hardware validation. Unsaved form edits survive ordinary background transitions in memory; process termination restores saved server progress and recoverable private captures, not durable unsaved forms.
+Unsaved form edits survive ordinary background transitions in memory; process termination restores saved server progress and recoverable private captures, not durable unsaved forms.
 
 No live AWS calls, real-user OCR/face accuracy calibration, liveness or document-authenticity checks were performed. Synthetic matching examples demonstrate integration only. Provider results assist manual review and do not decide KYC status. Store signing, production infrastructure, retention/deletion policy, KMS rotation and production monitoring remain follow-up work.

@@ -80,7 +80,7 @@ Use “Forgot password?”, enter your email and check Mailpit for the six-digit
 
 ### Review results
 
-Sign in as a reviewer or super admin and open **Review profiles**. Filter by **Pending review**, **Approved**, **Rejected** or **All**, and search by email across the complete paginated list. Completed profiles open their read-only submission history. Filters/search remain selected when refreshing, paging or returning from a profile. The backend checks the current account role, permits decisions only on pending profiles belonging to other users, and records the reviewer with each decision. Approval is manual.
+Sign in as a reviewer or super admin and open **Review profiles**. Reviewers can open the list from **Home** or **Account access**. Filter by **Pending review**, **Approved**, **Rejected** or **All**, and search by email across the complete paginated list. Completed profiles open their read-only submission history. Filters/search remain selected when refreshing, paging or returning from a profile. The backend checks the current account role, permits decisions only on pending profiles belonging to other users, and records the reviewer with each decision. Approval is manual.
 
 ```sh
 cd backend
@@ -94,7 +94,7 @@ Public registration creates a normal user. Users request reviewer access through
 
 Rejections require a reason and one or more of `personal_details,document,selfie`. Only pending profiles can be reviewed. Reopening deletes only requested fields/media; accepted steps remain. Submitted and verified profiles are locked. Refresh status to fetch the decision.
 
-## Architecture and contracts
+## Architecture and key decisions
 
 The backend is a NestJS 12.1.2 application using the Express adapter. `AppModule` composes `AuthModule`, `KycModule`, `AccessModule`, `ReviewsModule` and health checks. A global `InfrastructureModule` injects one configuration, PostgreSQL pool and mail transport, and owns the email worker lifecycle. Controllers handle HTTP boundaries; injectable services perform authentication and KYC operations with the existing PostgreSQL transactions. DTOs and strict schemas are validated through `ZodValidationPipe`.
 
@@ -108,6 +108,17 @@ Server state is authoritative. Saving details and uploading each photo immediate
 
 Returning from background checks the live session/role and refreshes only the current screen, preserving form drafts, photo previews and an open history sheet. Focus-only interruptions do not reload. Reads wait for active KYC operations rather than repeating a write; network failures remain retryable. OTP resend uses the server's 30-second cooldown and elapsed wall time. Reviewer photos and decisions are bound to the exact `submissionId` shown, so an old screen cannot decide a newer submission. Deploy backend/mobile together for this required reviewer API field; see [contracts](docs/architecture/contracts.md).
 
+### Key decisions
+
+| Decision | Why it was chosen |
+| --- | --- |
+| Feature-first Clean Architecture with Cubits scoped to their flow or page | Keeps business rules independent of HTTP, storage and camera APIs, makes them testable, and lets new profile types reuse the same boundaries. Explicit ownership also gives state and camera resources a clear lifecycle. |
+| Modular NestJS API with PostgreSQL transactions | Keeps authentication, access and review responsibilities separate while using transactions to keep session rotation, submission and concurrent review decisions consistent. |
+| Server-authoritative progress with a checkpoint after each saved step | Lets an applicant resume saved work after restarting the app and keeps progression rules consistent between applicant and reviewer screens. |
+| Refresh credentials in secure storage, access tokens in memory, and live session/role checks | Supports session restoration while allowing logout, password reset and permission revocation to take effect immediately on protected requests. |
+| Immutable submissions and decisions tied to a specific `submissionId` | Preserves the evidence reviewed at each attempt and prevents a stale reviewer screen from deciding a newer submission. |
+| Manual approval with optional OCR and face comparison as supporting evidence | Gives reviewers useful signals while keeping approval under human control; matching scores alone do not establish liveness or document authenticity. |
+
 ## Security and privacy
 
 - Passwords use Argon2id; email verification/reset OTPs and refresh tokens are stored as keyed hashes. Access JWTs last 15 minutes; refresh sessions last 30 days and rotate transactionally. Replay revokes the entire token family. Logout revokes the family; password reset revokes all user sessions. Every protected request also checks the session is active, so revocation applies immediately.
@@ -117,6 +128,8 @@ Returning from background checks the live session/role and refreshes only the cu
 - The development encryption key is provided through an ignored `.env` generated locally. Email addresses and operational KYC status metadata remain in PostgreSQL; encrypted details and media are application-protected. Local queued mail contains encrypted payloads. Local HTTP, local passwords and filesystem storage are development choices.
 
 For production: terminate HTTPS at a correctly configured ingress; use managed secret/KMS rotation, private object storage and encrypted database backups; apply retention/deletion policies and access audit trails; evaluate provider coverage and matching thresholds, add liveness and malware scanning, and use shared rate-limit storage for multiple API replicas. Optional OCR/face results are encrypted at rest and are tied to the exact uploaded images; reviewer approval remains manual.
+
+## Trade-offs
 
 A rotated refresh response lost in transit can cause the old token to be rejected as replay on the next attempt; the user must sign in again. This favors replay protection. A filesystem/DB crash can leave an encrypted orphan image; an operational garbage-collection job is future work. App-private retry images are temporary and protected by the OS sandbox rather than a separate client encryption layer; a stronger device threat model would require encrypted drafts and explicit retention. These trade-offs are deliberate and do not make the local demo a production deployment.
 
@@ -136,10 +149,17 @@ flutter build ios --simulator --debug
 flutter build apk --debug
 ```
 
-The [complete main-flow recording with a Vietnamese male voice](demo/full-flow-voiced.mp4) lasts 4m17s with 52 chapters, showing synthetic applicant onboarding, authenticated reviewer rejection/resubmission/approval, private submission history and logout. The applicant uses `applicant.demo@kyc.example` (User); the reviewer uses `reviewer.demo@kyc.example` (Reviewer). Each account switch displays the current email and role in **Account access**. [Demo instructions](demo/README.md) include the silent original, 21 narration passages using `vi-VN-NamMinhNeural`, subtitles, chapter timestamps, the fictional scenario and reproducible recording/voiceover commands. The recorder uses an isolated real API/database, and camera capture is replaced with marked illustrations on iOS Simulator. See [verification evidence](docs/verification.md) for checks and remaining physical-device coverage.
+The [complete main-flow recording with a Vietnamese male voice](demo/full-flow-voiced.mp4) shows synthetic applicant onboarding, a normal user requesting Reviewer access, super admin approval through the app, and authenticated reviewer rejection/resubmission/approval, private submission history and logout. Three separate fictional accounts use `applicant.demo@kyc.example`, `reviewer.demo@kyc.example` and `admin.demo@kyc.example`. Applicant/reviewer switches display the current email and role in **Account access**; the admin identity appears on the native **Super admin** Home screen. Both Home and Account access open the reviewer list after permission is granted. [Demo instructions](demo/README.md) include the silent original, 25 narration passages using the male `vi-VN-NamMinhNeural` voice at `-10%`, subtitles, chapter timestamps, the fictional scenario and reproducible recording/voiceover commands. The recording holds forms and photo previews for six seconds and important statuses/identities for eight seconds. The recorder uses an isolated real API/database, and camera capture is replaced with marked illustrations on iOS Simulator. The developer has also manually tested the app on a physical device. See [verification evidence](docs/verification.md) for recorded checks and their scope.
 
-## Assumptions and further work
+## Assumptions
 
 Email verification uses OTP; the UI is English to match the assignment. Applicants are adults aged 18–120; a passport/national ID/driving licence uses one document image in this scope (front/back support is future work). Local email goes to Mailpit only. Review is manual through authorized accounts in the app. There is no legal terms checkbox because the assignment supplies no product terms.
 
-With more time: real-device camera/lifecycle matrix, screenshot protection/app-switcher redaction, encrypted local drafts, production OCR/face accuracy evaluation and liveness, distributed rate limiting and a separately deployed email worker, accessible/localized copy, back-side documents, push result notifications, operational monitoring and deletion/retention tooling. The API already retries the durable email outbox in process. Native store signing and production deployment are environment-specific follow-up work.
+## With more time
+
+- **KYC notifications:** send email updates and Firebase Cloud Messaging (FCM) push notifications when a submission is received, changes are requested, or a profile is approved/rejected. Email OTP and password reset already exist; these would add workflow notifications.
+- **Two-sided documents:** capture, validate and review both the front and back of identity documents where required.
+- **Additional profile records:** extend uploads and review to education credentials, professional certificates, employment history and supporting documents, with requirements and statuses for each record type.
+- **Scoped reviewer access:** assign reviewers to specific profiles or applicants, with scheduled review hours and time-limited access grants, while recording assignments and decisions for audit.
+
+Longer term, this onboarding and verification foundation could support employee onboarding and HR record management, then job search and connections between candidates and businesses using verified education and employment profiles. These would be separate product extensions built on the existing identity, document and review workflows.
