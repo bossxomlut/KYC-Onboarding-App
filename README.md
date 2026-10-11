@@ -61,7 +61,7 @@ Capture opens an in-app camera with a framing overlay, requiring the rear lens f
 
 ### Password reset
 
-Use “Forgot password?” and check Mailpit. The app accepts `kycapp://app/reset-password?token=...` links; “I have a reset token” also opens a form where the token can be pasted. Tokens expire after 30 minutes and can be used once; successful reset revokes all sessions. Unverified accounts must still verify their email.
+Use “Forgot password?”, enter your email and check Mailpit for the six-digit password reset OTP. Enter the code and a new password in the app. Codes expire after 10 minutes, allow five wrong attempts and can be used once; resend becomes available after 30 seconds. Successful reset revokes all sessions. Unverified accounts must still verify their email.
 
 ### Review results
 
@@ -95,7 +95,7 @@ Returning from background checks the live session/role and refreshes only the cu
 
 ## Security and privacy
 
-- Passwords use Argon2id; OTPs, reset tokens and refresh tokens are stored as keyed hashes. Access JWTs last 15 minutes; refresh sessions last 30 days and rotate transactionally. Replay revokes the entire token family. Logout revokes the family; password reset revokes all user sessions. Every protected request also checks the session is active, so revocation applies immediately.
+- Passwords use Argon2id; email verification/reset OTPs and refresh tokens are stored as keyed hashes. Access JWTs last 15 minutes; refresh sessions last 30 days and rotate transactionally. Replay revokes the entire token family. Logout revokes the family; password reset revokes all user sessions. Every protected request also checks the session is active, so revocation applies immediately.
 - Only refresh credentials persist in Keychain/Keystore; access tokens stay in memory. Android backups are disabled; iOS uses a device-only Keychain accessibility class. No password is saved on the device. Concurrent unauthorized requests share one refresh operation. Network failures do not clear a valid local session, and a failed server logout remains retryable.
 - Auth endpoints have IP rate limits, OTP attempt limits and a resend cooldown. Errors have stable codes/request IDs and no stack traces. Production request logging is disabled to avoid PII/secrets. Forgot-password responses remain generic, including mail outages.
 - Personal details and images are encrypted at rest with AES-256-GCM. Uploads are private, limited to 10 MB, validated by signature and real image decoding, then re-encoded to strip EXIF/GPS. The API derives ownership from authentication; it accepts no user ID for profile/media operations. Owners read their own images; authorized reviewers read pending profiles of other users. Private images are returned only as authenticated bytes with `Cache-Control: no-store`.

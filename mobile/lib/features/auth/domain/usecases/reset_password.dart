@@ -5,8 +5,12 @@ final class ResetPassword {
   ResetPassword(this._repository);
   final AuthRepository _repository;
   Future<Result<void>> call({
-    required String token,
+    required String email,
+    required String code,
     required String newPassword,
-  }) =>
-      _repository.resetPassword(token: token.trim(), newPassword: newPassword);
+  }) => _repository.resetPassword(
+    email: email.trim().toLowerCase(),
+    code: code.trim(),
+    newPassword: newPassword,
+  );
 }

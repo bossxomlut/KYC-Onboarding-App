@@ -50,10 +50,11 @@ class AuthRemoteDataSource {
   Future<void> requestPasswordReset(String email) async =>
       _api.post('/auth/password/forgot', data: {'email': email});
   Future<void> resetPassword({
-    required String token,
+    required String email,
+    required String code,
     required String newPassword,
   }) async => _api.post(
     '/auth/password/reset',
-    data: {'token': token, 'newPassword': newPassword},
+    data: {'email': email, 'code': code, 'newPassword': newPassword},
   );
 }

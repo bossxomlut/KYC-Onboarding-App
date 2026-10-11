@@ -72,10 +72,14 @@ class _RegisterPageState extends State<RegisterPage> {
                   autofillHints: const [AutofillHints.newPassword],
                   textInputAction: TextInputAction.next,
                   validator: validateNewPassword,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Password',
-                    helperText:
-                        '12–128 characters, uppercase, lowercase and a number',
+                    helper: Text(
+                      '12–128 characters, uppercase, lowercase and a number',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      softWrap: true,
+                      overflow: TextOverflow.visible,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),

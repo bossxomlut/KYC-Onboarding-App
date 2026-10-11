@@ -28,7 +28,8 @@ export const refreshSchema = z.strictObject({
   refreshToken: z.string().min(1).max(256),
 });
 export const resetPasswordSchema = z.strictObject({
-  token: z.string().min(1).max(256),
+  email,
+  code: z.string().regex(/^\d{6}$/),
   newPassword: password,
 });
 
@@ -51,6 +52,7 @@ export class RefreshDto {
   refreshToken!: string;
 }
 export class ResetPasswordDto {
-  token!: string;
+  email!: string;
+  code!: string;
   newPassword!: string;
 }

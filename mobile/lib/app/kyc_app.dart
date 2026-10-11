@@ -138,18 +138,44 @@ class _KycAppState extends State<KycApp> with WidgetsBindingObserver {
         GoRoute(
           path: '/reset-password',
           builder: (context, state) {
+            final email = (state.uri.queryParameters['email'] ?? '')
+                .trim()
+                .toLowerCase();
+            if (email.isEmpty) {
+              return BlocProvider(
+                key: const ValueKey('password-reset-email'),
+                create: (_) => di<PasswordResetCubit>(),
+                child: const ForgotPasswordPage(),
+              );
+            }
+            final deadline = state.extra is DateTime
+                ? state.extra as DateTime
+                : null;
             return BlocProvider(
-              create: (_) => di<PasswordResetCubit>(),
-              child: ResetPasswordPage(
-                token: state.uri.queryParameters['token'] ?? '',
-                onPasswordResetStarted: () {
-                  final scope = _session.sessionScope;
-                  return () async {
-                    if (scope == _session.sessionScope) {
-                      await _session.sessionInvalidated();
-                    }
-                  };
-                },
+              key: const ValueKey('password-reset-code'),
+              create: (_) {
+                final cubit = di<PasswordResetCubit>()..resetForm(email: email);
+                if (deadline != null) {
+                  cubit.startCooldown(availableAt: deadline);
+                }
+                return cubit;
+              },
+              child: RouteForegroundRefresh(
+                location: state.uri.path,
+                onResume: (context) async =>
+                    context.read<PasswordResetCubit>().reconcileCooldown(),
+                child: ResetPasswordPage(
+                  email: email,
+                  resendAvailableAt: deadline,
+                  onPasswordResetStarted: () {
+                    final scope = _session.sessionScope;
+                    return () async {
+                      if (scope == _session.sessionScope) {
+                        await _session.sessionInvalidated();
+                      }
+                    };
+                  },
+                ),
               ),
             );
           },

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:kyc_onboarding/app/di/dependencies.dart';
 import 'package:kyc_onboarding/app/kyc_app.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_datasource.dart';
@@ -71,30 +72,34 @@ void main() {
     },
   );
 
-  testWidgets(
-    'password reset deep link survives a restore connection failure',
-    (tester) async {
-      final tokens = MemoryTokens();
-      final dependencies = configureDependencies(tokens: tokens);
-      dependencies<Dio>().httpClientAdapter = TestAdapter(
-        (options) => throw DioException(
-          requestOptions: options,
-          type: DioExceptionType.connectionError,
-        ),
-      );
-      await tester.pumpWidget(
-        KycApp(
-          dependencies: dependencies,
-          initialLocation: '/reset-password?token=demo-token',
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Choose a new password'), findsOneWidget);
-      expect(tokens.refreshToken, 'saved-refresh');
-      await tester.pumpWidget(const SizedBox());
-      await dependencies.reset();
-    },
-  );
+  testWidgets('password reset OTP form survives a restore connection failure', (
+    tester,
+  ) async {
+    final tokens = MemoryTokens();
+    final dependencies = configureDependencies(tokens: tokens);
+    dependencies<Dio>().httpClientAdapter = TestAdapter(
+      (options) => throw DioException(
+        requestOptions: options,
+        type: DioExceptionType.connectionError,
+      ),
+    );
+    await tester.pumpWidget(
+      KycApp(
+        dependencies: dependencies,
+        initialLocation: '/reset-password?email=demo%40example.test',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Choose a new password'), findsOneWidget);
+    expect(tokens.refreshToken, 'saved-refresh');
+    await tester.ensureVisible(find.text('Use a different email'));
+    await tester.tap(find.text('Use a different email'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
+    expect(tokens.refreshToken, 'saved-refresh');
+    await tester.pumpWidget(const SizedBox());
+    await dependencies.reset();
+  });
 
   testWidgets(
     'password reset success returns to sign in with revoked tokens removed',
@@ -114,10 +119,11 @@ void main() {
       await tester.pumpWidget(
         KycApp(
           dependencies: dependencies,
-          initialLocation: '/reset-password?token=demo-reset-token',
+          initialLocation: '/reset-password?email=demo%40example.test',
         ),
       );
       await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const ValueKey('otp-input')), '012345');
       await tester.enterText(
         find.widgetWithText(TextFormField, 'New password'),
         'NewPassword123',
@@ -143,4 +149,101 @@ void main() {
       await dependencies.reset();
     },
   );
+
+  testWidgets(
+    'forgot password opens OTP form with normalized email and cooldown',
+    (tester) async {
+      final tokens = MemoryTokens()..refreshToken = null;
+      final dependencies = configureDependencies(tokens: tokens);
+      final requests = <RequestOptions>[];
+      dependencies<Dio>().httpClientAdapter = TestAdapter((options) {
+        requests.add(options);
+        return jsonResponse({
+          'message': 'If an account exists, a code was sent.',
+        });
+      });
+      await tester.pumpWidget(
+        KycApp(dependencies: dependencies, initialLocation: '/forgot-password'),
+      );
+      await tester.pumpAndSettle();
+      (tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig!
+              as GoRouter)
+          .go('/forgot-password');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Email'),
+        ' Demo@Example.Test ',
+      );
+      await tester.tap(find.text('Send reset code'));
+      await tester.pumpAndSettle();
+      expect(requests.single.path, '/auth/password/forgot');
+      expect(requests.single.data, {'email': 'demo@example.test'});
+      expect(find.byKey(const ValueKey('otp-input')), findsOneWidget);
+      expect(find.textContaining('demo@example.test'), findsOneWidget);
+      expect(find.textContaining('Resend code in '), findsOneWidget);
+      await tester.ensureVisible(find.text('Use a different email'));
+      await tester.tap(find.text('Use a different email'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await dependencies.reset();
+    },
+  );
+
+  testWidgets('reset route without email opens forgot password form', (
+    tester,
+  ) async {
+    final tokens = MemoryTokens()..refreshToken = null;
+    final dependencies = configureDependencies(tokens: tokens);
+    await tester.pumpWidget(
+      KycApp(dependencies: dependencies, initialLocation: '/reset-password'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
+    expect(find.byKey(const ValueKey('otp-input')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await dependencies.reset();
+  });
+
+  testWidgets('failed reset code request keeps email for retry', (
+    tester,
+  ) async {
+    final tokens = MemoryTokens()..refreshToken = null;
+    final dependencies = configureDependencies(tokens: tokens);
+    var offline = true;
+    var requests = 0;
+    dependencies<Dio>().httpClientAdapter = TestAdapter((options) {
+      requests++;
+      if (offline) {
+        throw DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionError,
+        );
+      }
+      return jsonResponse({'message': 'Code sent.'});
+    });
+    await tester.pumpWidget(
+      KycApp(dependencies: dependencies, initialLocation: '/forgot-password'),
+    );
+    await tester.pumpAndSettle();
+    (tester.widget<MaterialApp>(find.byType(MaterialApp)).routerConfig!
+            as GoRouter)
+        .go('/forgot-password');
+    await tester.pumpAndSettle();
+    final emailField = find.widgetWithText(TextFormField, 'Email');
+    await tester.enterText(emailField, 'demo@example.test');
+    await tester.tap(find.text('Send reset code'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextFormField>(emailField).controller!.text,
+      'demo@example.test',
+    );
+    offline = false;
+    await tester.tap(find.text('Send reset code'));
+    await tester.pumpAndSettle();
+    expect(requests, 2);
+    expect(find.byKey(const ValueKey('otp-input')), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await dependencies.reset();
+  });
 }

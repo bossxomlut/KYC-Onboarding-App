@@ -191,7 +191,8 @@ void main() {
   test('successful password reset removes the revoked local session', () async {
     dio.httpClientAdapter = TestAdapter((_) => jsonResponse({'success': true}));
     final result = await repository.resetPassword(
-      token: 'reset-token',
+      email: 'demo@example.test',
+      code: '123456',
       newPassword: 'DemoPassword12',
     );
     expect(result, isA<Success<void>>());
@@ -207,7 +208,8 @@ void main() {
       return jsonResponse({'success': true});
     });
     final reset = repository.resetPassword(
-      token: 'reset-token',
+      email: 'demo@example.test',
+      code: '123456',
       newPassword: 'DemoPassword12',
     );
     await reachedServer.future;

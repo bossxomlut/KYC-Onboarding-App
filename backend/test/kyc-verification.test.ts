@@ -84,7 +84,6 @@ before(async () => {
     smtpPort: 1025,
     smtpSecure: false,
     mailFrom: "test@example.test",
-    resetLink: "kycapp://app/reset-password",
     rateLimitMax: 1000,
     maxUploadBytes: 10 * 1024 * 1024,
     verification: {

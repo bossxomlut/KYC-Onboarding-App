@@ -21,7 +21,7 @@ import { passwordHash } from "./password.js";
 
 const genericMessage = {
   message:
-    "If this email is registered, instructions will arrive shortly. Check your inbox and retry later if no email arrives.",
+    "If this email is registered, a code will arrive shortly. Check your inbox and retry later if no email arrives.",
 };
 const publicUser = (row: any) => ({
   id: row.id,
@@ -73,6 +73,36 @@ export async function createOtp(client: PoolClient, user: any, config: Config) {
     subject: "Verify your KYC email",
     text: `Your verification code is ${code}. It expires in 10 minutes. If you did not request this, ignore this email.`,
   });
+}
+
+async function createResetOtp(client: PoolClient, user: any, config: Config) {
+  await client.query(
+    "UPDATE password_reset_tokens SET consumed_at=now() WHERE user_id=$1 AND consumed_at IS NULL",
+    [user.id],
+  );
+  // Retain hash uniqueness so a resend cannot accidentally reissue an old code.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = String(randomInt(100000, 1000000));
+    const inserted = await client.query(
+      "INSERT INTO password_reset_tokens(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '10 minutes') ON CONFLICT(token_hash) DO NOTHING RETURNING id",
+      [
+        randomUUID(),
+        user.id,
+        tokenHash(`${user.id}:password-reset:${code}`, config.tokenPepper),
+      ],
+    );
+    if (!inserted.rowCount) continue;
+    return queueMail(client, config, user.id, "reset", {
+      to: user.email_normalized,
+      subject: "Reset your KYC password",
+      text: `Your password reset code is ${code}. It expires in 10 minutes and can be used once. If you did not request this, ignore this email.`,
+    });
+  }
+  throw new ApiError(
+    503,
+    "RESET_UNAVAILABLE",
+    "Password reset is temporarily unavailable. Please try again shortly.",
+  );
 }
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -346,21 +376,12 @@ export class AuthService implements OnModuleInit {
       );
       const user = users.rows[0];
       if (!user) return null;
-      const token = opaqueToken();
-      await client.query(
-        "UPDATE password_reset_tokens SET consumed_at=now() WHERE user_id=$1 AND consumed_at IS NULL",
+      const recent = await client.query(
+        "SELECT 1 FROM password_reset_tokens WHERE user_id=$1 AND created_at>now()-interval '30 seconds'",
         [user.id],
       );
-      await client.query(
-        "INSERT INTO password_reset_tokens(id,user_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '30 minutes')",
-        [randomUUID(), user.id, tokenHash(token, config.tokenPepper)],
-      );
-      const separator = config.resetLink.includes("?") ? "&" : "?";
-      return queueMail(client, config, user.id, "reset", {
-        to: email,
-        subject: "Reset your KYC password",
-        text: `Reset your password: ${config.resetLink}${separator}token=${token}\nThis link expires in 30 minutes and can be used once. If you did not request this, ignore this email.`,
-      });
+      if (recent.rowCount) return null;
+      return createResetOtp(client, user, config);
     });
     // Keep the response generic and independent of SMTP availability/latency.
     return genericMessage;
@@ -368,31 +389,40 @@ export class AuthService implements OnModuleInit {
 
   async resetPassword(dto: ResetPasswordDto) {
     const { pool, config } = this;
-    const { token, newPassword } = dto;
+    const { email, code, newPassword } = dto;
     const hash = await passwordHash(newPassword);
-    const success = await transaction(pool, async (client) => {
-      const ownership = await client.query(
-        "SELECT user_id FROM password_reset_tokens WHERE token_hash=$1",
-        [tokenHash(token, config.tokenPepper)],
+    const result = await transaction(pool, async (client) => {
+      // Match login/refresh/resend lock ordering so session revocation is atomic.
+      const users = await client.query(
+        "SELECT * FROM users WHERE email_normalized=$1 FOR UPDATE",
+        [email],
       );
-      const owner = ownership.rows[0];
-      if (!owner) return false;
-      const user = await client.query(
-        "SELECT * FROM users WHERE id=$1 FOR UPDATE",
-        [owner.user_id],
-      );
+      const user = users.rows[0];
+      if (!user || user.status === "disabled")
+        return { error: "RESET_OTP_INVALID" } as const;
       const tokens = await client.query(
-        "SELECT * FROM password_reset_tokens WHERE token_hash=$1 FOR UPDATE",
-        [tokenHash(token, config.tokenPepper)],
+        "SELECT * FROM password_reset_tokens WHERE user_id=$1 AND consumed_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE",
+        [user.id],
       );
       const reset = tokens.rows[0];
+      if (!reset || reset.attempt_count >= 5)
+        return { error: "RESET_OTP_INVALID" } as const;
+      if (new Date(reset.expires_at).getTime() <= Date.now())
+        return { error: "RESET_OTP_EXPIRED" } as const;
+      const codeHash = tokenHash(
+        `${user.id}:password-reset:${code}`,
+        config.tokenPepper,
+      );
       if (
-        !reset ||
-        reset.consumed_at ||
-        new Date(reset.expires_at).getTime() <= Date.now()
-      )
-        return false;
-      if (user.rows[0].status === "disabled") return false;
+        !timingSafeEqual(Buffer.from(codeHash), Buffer.from(reset.token_hash))
+      ) {
+        await client.query(
+          "UPDATE password_reset_tokens SET attempt_count=attempt_count+1 WHERE id=$1",
+          [reset.id],
+        );
+        // Return the error after committing so wrong-attempt counts persist.
+        return { error: "RESET_OTP_INVALID" } as const;
+      }
       await client.query(
         "UPDATE users SET password_hash=$2,updated_at=now() WHERE id=$1",
         [reset.user_id, hash],
@@ -405,13 +435,19 @@ export class AuthService implements OnModuleInit {
         "UPDATE auth_sessions SET revoked_at=COALESCE(revoked_at,now()) WHERE user_id=$1",
         [reset.user_id],
       );
-      return true;
+      await client.query(
+        "DELETE FROM email_outbox WHERE user_id=$1 AND kind='reset'",
+        [reset.user_id],
+      );
+      return { success: true } as const;
     });
-    if (!success)
+    if ("error" in result)
       throw new ApiError(
         400,
-        "RESET_TOKEN_INVALID",
-        "The reset link is invalid or expired. Please request a new link.",
+        result.error!,
+        result.error === "RESET_OTP_EXPIRED"
+          ? "Your password reset code expired. Please request a new code."
+          : "Invalid password reset code. Check the code or request a new one.",
       );
     return { success: true };
   }

@@ -101,11 +101,16 @@ class AuthRepositoryImpl implements AuthRepository {
       _result(() => _remote.requestPasswordReset(email));
   @override
   Future<Result<void>> resetPassword({
-    required String token,
+    required String email,
+    required String code,
     required String newPassword,
   }) => _result(() async {
     final expectedToken = await _tokens.readRefreshToken();
-    await _remote.resetPassword(token: token, newPassword: newPassword);
+    await _remote.resetPassword(
+      email: email,
+      code: code,
+      newPassword: newPassword,
+    );
     final store = _tokens;
     if (store is ConditionalTokenStore) {
       await store.clearIfUnchanged(expectedRefreshToken: expectedToken);

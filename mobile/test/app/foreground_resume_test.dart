@@ -7,7 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kyc_onboarding/app/di/dependencies.dart';
 import 'package:kyc_onboarding/app/kyc_app.dart';
+import 'package:kyc_onboarding/features/auth/domain/repositories/auth_repository.dart';
+import 'package:kyc_onboarding/features/auth/domain/usecases/request_password_reset.dart';
+import 'package:kyc_onboarding/features/auth/domain/usecases/reset_password.dart';
 import 'package:kyc_onboarding/features/auth/presentation/bloc/auth_session_cubit.dart';
+import 'package:kyc_onboarding/features/auth/presentation/bloc/password_reset_cubit.dart';
 import 'package:kyc_onboarding/features/auth/presentation/pages/reset_password_page.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/bloc/kyc_cubit.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/pages/home_page.dart';
@@ -187,10 +191,14 @@ void main() {
     tester,
   ) async {
     final fixture = _Fixture()..resetGate = Completer<void>();
-    await fixture.pump(tester, location: '/reset-password?token=old-token');
+    await fixture.pump(
+      tester,
+      location: '/reset-password?email=old%40example.test',
+    );
     final session = tester
         .element(find.byType(ResetPasswordPage))
         .read<AuthSessionCubit>();
+    await tester.enterText(find.byKey(const ValueKey('otp-input')), '012345');
     await tester.enterText(
       find.widgetWithText(TextFormField, 'New password'),
       'NewPassword1234',
@@ -202,15 +210,16 @@ void main() {
     await tester.ensureVisible(find.text('Change password'));
     await tester.tap(find.text('Change password'));
     await tester.pump();
-    fixture.router.go('/reset-password?token=new-token');
+    fixture.router.go('/reset-password?email=new%40example.test');
     await tester.pumpAndSettle();
     fixture.resetGate!.complete();
     await tester.pumpAndSettle();
     expect(session.state, isA<AuthSignedOut>());
-    final tokenField = find.widgetWithText(TextFormField, 'Reset token');
+    final codeField = find.byKey(const ValueKey('otp-input'));
+    expect(tester.widget<TextField>(codeField).controller!.text, isEmpty);
     expect(
-      tester.widget<TextFormField>(tokenField).controller!.text,
-      'new-token',
+      tester.widget<ResetPasswordPage>(find.byType(ResetPasswordPage)).email,
+      'new@example.test',
     );
     expect(
       find.text(
@@ -219,6 +228,90 @@ void main() {
       findsNothing,
     );
   });
+
+  testWidgets('authenticated reset can change email and request a new code', (
+    tester,
+  ) async {
+    final fixture = _Fixture();
+    await fixture.pump(
+      tester,
+      location: '/reset-password?email=old%40example.test',
+    );
+    await tester.ensureVisible(find.text('Use a different email'));
+    await tester.tap(find.text('Use a different email'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextFormField, 'Email'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Email'),
+      'new@example.test',
+    );
+    await tester.tap(find.text('Send reset code'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<ResetPasswordPage>(find.byType(ResetPasswordPage)).email,
+      'new@example.test',
+    );
+    expect(find.byKey(const ValueKey('otp-input')), findsOneWidget);
+    // Dispose the owned cooldown before widget-test timer invariants run.
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+    'reset resume reconciles cooldown while keeping OTP and passwords',
+    (tester) async {
+      final fixture = _Fixture()..now = DateTime.utc(2026, 10, 11);
+      await fixture.pump(
+        tester,
+        location: '/reset-password?email=demo%40example.test',
+      );
+      final cubit = tester
+          .element(find.byType(ResetPasswordPage))
+          .read<PasswordResetCubit>();
+      cubit.startCooldown();
+      await tester.pump();
+      await tester.enterText(find.byKey(const ValueKey('otp-input')), '012345');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'New password'),
+        'NewPassword1234',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Confirm new password'),
+        'NewPassword1234',
+      );
+      fixture.calls.clear();
+      await background(tester);
+      fixture.now = fixture.now!.add(const Duration(seconds: 75));
+      await resume(tester);
+      await tester.pumpAndSettle();
+      expect(cubit.state.resendSeconds, 0);
+      expect(fixture.calls, isNot(contains('/auth/password/forgot')));
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('otp-input')))
+            .controller!
+            .text,
+        '012345',
+      );
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'New password'),
+            )
+            .controller!
+            .text,
+        'NewPassword1234',
+      );
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.widgetWithText(TextFormField, 'Confirm new password'),
+            )
+            .controller!
+            .text,
+        'NewPassword1234',
+      );
+    },
+  );
 
   for (final entry in {
     '/admin': ('super_admin', '/admin/users'),
@@ -280,6 +373,7 @@ class _Fixture {
   bool offline = false;
   Completer<void>? meGate;
   Completer<void>? resetGate;
+  DateTime? now;
   Map<String, Object?> profile = {...profileJson};
   Map<String, dynamic>? historySubmission;
   late GoRouter router;
@@ -290,6 +384,16 @@ class _Fixture {
       tokens: MemoryTokens(),
       camera: NoCaptureCamera(),
     );
+    if (now != null) {
+      await dependencies.unregister<PasswordResetCubit>();
+      dependencies.registerFactory<PasswordResetCubit>(
+        () => PasswordResetCubit(
+          RequestPasswordReset(dependencies<AuthRepository>()),
+          ResetPassword(dependencies<AuthRepository>()),
+          now: () => now!,
+        ),
+      );
+    }
     dependencies<Dio>().httpClientAdapter = TestAdapter((options) async {
       calls.add(options.path);
       final user = {...userJson, 'role': role};

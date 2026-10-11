@@ -47,7 +47,7 @@ export async function queueMail(
     kind,
   ]);
   await client.query(
-    "INSERT INTO email_outbox(id,user_id,kind,encrypted_payload,expires_at) VALUES($1,$2,$3,$4,now()+CASE WHEN $3='verification' THEN interval '10 minutes' ELSE interval '30 minutes' END)",
+    "INSERT INTO email_outbox(id,user_id,kind,encrypted_payload,expires_at) VALUES($1,$2,$3,$4,now()+interval '10 minutes')",
     [
       id,
       userId,

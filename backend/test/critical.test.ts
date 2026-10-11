@@ -75,7 +75,6 @@ before(async () => {
     smtpPort: 1025,
     smtpSecure: false,
     mailFrom: "test@example.test",
-    resetLink: "kycapp://app/reset-password",
     rateLimitMax: 200,
     maxUploadBytes: 10 * 1024 * 1024,
   };
@@ -563,7 +562,7 @@ test("OTP attempt limit persists and prevents a correct code after five wrong at
   assert.equal(stored.rows[0].attempt_count, 5);
 });
 
-test("reset is generic, expiring and single-use; resets revoke all sessions", async () => {
+test("reset OTP is generic, expiring and single-use; resets revoke all sessions", async () => {
   const unknown = await json("POST", "/auth/password/forgot", {
     email: "unknown@example.test",
   });
@@ -577,15 +576,16 @@ test("reset is generic, expiring and single-use; resets revoke all sessions", as
     }),
     true,
   );
-  const token = mails.at(-1)!.text.match(/token=([^\s]+)/)![1]!;
+  const code = mails.at(-1)!.text.match(/\b\d{6}\b/)![0]!;
   assert.equal(
     (
       await json("POST", "/auth/password/reset", {
-        token: "invalid",
+        email,
+        code: "000000",
         newPassword: password,
       })
     ).json().error.code,
-    "RESET_TOKEN_INVALID",
+    "RESET_OTP_INVALID",
   );
   await pool.query(
     "UPDATE password_reset_tokens SET expires_at=now()-interval '1 second'",
@@ -593,7 +593,8 @@ test("reset is generic, expiring and single-use; resets revoke all sessions", as
   assert.equal(
     (
       await json("POST", "/auth/password/reset", {
-        token,
+        email,
+        code,
         newPassword: password,
       })
     ).statusCode,
@@ -605,7 +606,8 @@ test("reset is generic, expiring and single-use; resets revoke all sessions", as
   assert.equal(
     (
       await json("POST", "/auth/password/reset", {
-        token,
+        email,
+        code,
         newPassword: "ReplacementPass123!",
       })
     ).statusCode,
@@ -614,7 +616,8 @@ test("reset is generic, expiring and single-use; resets revoke all sessions", as
   assert.equal(
     (
       await json("POST", "/auth/password/reset", {
-        token,
+        email,
+        code,
         newPassword: password,
       })
     ).statusCode,
@@ -980,6 +983,10 @@ test("forgot/resend stay generic during SMTP outage and encrypted outbox retries
       url: `/api/v1/auth${path}`,
       payload: payload as any,
     });
+  await pool.query(
+    "UPDATE password_reset_tokens SET created_at=now()-interval '1 minute' WHERE user_id=$1",
+    [session.user.id],
+  );
   const known = await post("/password/forgot", { email });
   const unknown = await post("/password/forgot", {
     email: "missing@example.test",
@@ -1058,6 +1065,10 @@ test("forgot and resend return after enqueueing without invoking or awaiting SMT
     await pool.query(
       "UPDATE email_verification_tokens SET created_at=now()-interval '1 minute' WHERE user_id=$1",
       [registered.rows[0].id],
+    );
+    await pool.query(
+      "UPDATE password_reset_tokens SET created_at=now()-interval '1 minute' WHERE user_id=$1",
+      [session.user.id],
     );
     const requests = [
       post("/password/forgot", { email }),

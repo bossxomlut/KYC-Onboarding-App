@@ -19,7 +19,6 @@ export interface Config {
   smtpUser?: string;
   smtpPassword?: string;
   mailFrom: string;
-  resetLink: string;
   rateLimitMax: number;
   maxUploadBytes: number;
   verification?:
@@ -108,7 +107,6 @@ export function loadConfig(): Config {
     smtpUser: process.env.SMTP_USER,
     smtpPassword: process.env.SMTP_PASSWORD,
     mailFrom: process.env.MAIL_FROM ?? "KYC Demo <no-reply@kyc.example>",
-    resetLink: process.env.RESET_LINK ?? "kycapp://app/reset-password",
     rateLimitMax: env.RATE_LIMIT_MAX,
     maxUploadBytes: env.MAX_UPLOAD_BYTES,
     ...(env.KYC_VERIFICATION_PROVIDER === "aws"

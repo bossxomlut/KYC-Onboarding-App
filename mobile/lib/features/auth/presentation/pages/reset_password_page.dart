@@ -6,17 +6,20 @@ import '../bloc/auth_form_state.dart';
 import '../bloc/password_reset_cubit.dart';
 import '../widgets/auth_layout.dart';
 import '../widgets/auth_password_field.dart';
+import '../widgets/otp_code_field.dart';
 
 typedef PasswordResetCompletion = Future<void> Function();
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({
     super.key,
-    this.token = '',
+    required this.email,
+    this.resendAvailableAt,
     this.onPasswordReset,
     this.onPasswordResetStarted,
   });
-  final String token;
+  final String email;
+  final DateTime? resendAvailableAt;
   final PasswordResetCompletion? onPasswordReset;
   final PasswordResetCompletion Function()? onPasswordResetStarted;
   @override
@@ -25,23 +28,32 @@ class ResetPasswordPage extends StatefulWidget {
 
 class _ResetPasswordPageState extends State<ResetPasswordPage> {
   var _formKey = GlobalKey<FormState>();
-  late final _token = TextEditingController(text: widget.token);
+  final _code = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
+
+  String get _email => widget.email.trim().toLowerCase();
+
   @override
   void didUpdateWidget(covariant ResetPasswordPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.token == widget.token) return;
-    _token.text = widget.token;
-    _password.clear();
-    _confirm.clear();
-    _formKey = GlobalKey<FormState>();
-    context.read<PasswordResetCubit>().resetForm();
+    final cubit = context.read<PasswordResetCubit>();
+    if (oldWidget.email.trim().toLowerCase() != _email) {
+      _code.clear();
+      _password.clear();
+      _confirm.clear();
+      _formKey = GlobalKey<FormState>();
+      cubit.resetForm(email: _email);
+    }
+    if (oldWidget.resendAvailableAt != widget.resendAvailableAt &&
+        widget.resendAvailableAt != null) {
+      cubit.startCooldown(availableAt: widget.resendAvailableAt);
+    }
   }
 
   @override
   void dispose() {
-    _token.dispose();
+    _code.dispose();
     _password.dispose();
     _confirm.dispose();
     super.dispose();
@@ -52,7 +64,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     final onPasswordReset =
         widget.onPasswordResetStarted?.call() ?? widget.onPasswordReset;
     final succeeded = await context.read<PasswordResetCubit>().reset(
-      token: _token.text,
+      email: _email,
+      code: _code.text,
       newPassword: _password.text,
     );
     // Revocation belongs to the submitted operation even if its form changed.
@@ -65,7 +78,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   ) => BlocBuilder<PasswordResetCubit, AuthFormState>(
     builder: (context, state) => AuthLayout(
       title: 'Choose a new password',
-      subtitle: 'Paste the token from your reset email and set a new password.',
+      subtitle: 'Enter the six digit code for $_email and set a new password.',
       children: [
         AuthFeedback(state: state),
         if (state.status != AuthFormStatus.success) ...[
@@ -74,35 +87,33 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
-                  controller: _token,
-                  enabled: !state.isLoading,
-                  obscureText: true,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Enter the reset token from your email.'
-                      : null,
-                  decoration: const InputDecoration(labelText: 'Reset token'),
+                OtpCodeField(
+                  controller: _code,
+                  enabled: !state.isLoading && !state.isResending,
+                  onSubmitted: _submit,
                 ),
                 const SizedBox(height: 16),
                 AuthPasswordField(
                   controller: _password,
-                  enabled: !state.isLoading,
+                  enabled: !state.isLoading && !state.isResending,
                   textInputAction: TextInputAction.next,
                   validator: validateNewPassword,
                   autofillHints: const [AutofillHints.newPassword],
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'New password',
-                    helperText:
-                        '12–128 characters, uppercase, lowercase and a number',
+                    helper: Text(
+                      '12–128 characters, uppercase, lowercase and a number',
+                      softWrap: true,
+                      overflow: TextOverflow.visible,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    errorMaxLines: 3,
                   ),
                 ),
                 const SizedBox(height: 16),
                 AuthPasswordField(
                   controller: _confirm,
-                  enabled: !state.isLoading,
+                  enabled: !state.isLoading && !state.isResending,
                   onFieldSubmitted: (_) => _submit(),
                   validator: (value) =>
                       value != _password.text ? 'Passwords must match.' : null,
@@ -113,16 +124,41 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 const SizedBox(height: 24),
                 AuthSubmitButton(
                   label: 'Change password',
-                  isLoading: state.isLoading,
+                  loadingLabel: state.isResending
+                      ? 'Sending code…'
+                      : 'Changing password…',
+                  isLoading: state.isLoading || state.isResending,
                   onPressed: _submit,
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed:
+                state.isLoading || state.isResending || state.resendSeconds > 0
+                ? null
+                : () => context.read<PasswordResetCubit>().resend(_email),
+            child: Text(
+              state.isResending
+                  ? 'Sending code…'
+                  : state.resendSeconds > 0
+                  ? 'Resend code in ${state.resendSeconds}s'
+                  : 'Resend reset code',
+            ),
+          ),
+          TextButton(
+            onPressed: state.isLoading || state.isResending
+                ? null
+                : () => context.go('/reset-password'),
+            child: const Text('Use a different email'),
+          ),
         ],
         const SizedBox(height: 20),
         TextButton(
-          onPressed: state.isLoading ? null : () => context.go('/login'),
+          onPressed: state.isLoading || state.isResending
+              ? null
+              : () => context.go('/login'),
           child: const Text('Back to sign in'),
         ),
       ],
