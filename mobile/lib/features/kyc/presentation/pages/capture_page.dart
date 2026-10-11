@@ -67,10 +67,11 @@ class _CapturePageState extends State<_CaptureView> {
               kind: widget.kind,
               documentType: documentType,
               previewBuilder: camera.previewBuilder,
-              onCapture: () => cubit.capture(
+              onCapture: (crop) => cubit.capture(
                 widget.kind,
                 documentType: documentType,
                 uploadImmediately: false,
+                crop: crop,
               ),
             ),
           ),

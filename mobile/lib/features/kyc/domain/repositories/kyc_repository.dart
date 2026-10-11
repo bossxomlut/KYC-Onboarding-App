@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import '../../../../core/domain/result.dart';
 import '../entities/kyc_profile.dart';
+import '../entities/document_capture_crop.dart';
 
 abstract interface class KycRepository {
   Future<Result<KycProfile>> load();
@@ -9,6 +10,7 @@ abstract interface class KycRepository {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
+    DocumentCaptureCrop? crop,
   });
   Future<Result<CapturedMedia?>> recover(
     MediaKind kind,

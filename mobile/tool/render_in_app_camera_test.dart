@@ -81,7 +81,7 @@ void main() {
                     ),
                   ),
                 ),
-                onCapture: () async => true,
+                onCapture: (_) async => true,
               ),
             ),
           ),

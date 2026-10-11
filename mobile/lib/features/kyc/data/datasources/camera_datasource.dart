@@ -4,8 +4,10 @@ import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../domain/entities/document_capture_crop.dart';
 import '../../domain/entities/kyc_profile.dart';
 import 'camera_capture_exception.dart';
+import 'document_photo_cropper.dart';
 import 'in_app_camera_driver.dart';
 
 export 'camera_capture_exception.dart';
@@ -16,6 +18,7 @@ abstract interface class CameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
+    DocumentCaptureCrop? crop,
   });
   Future<CapturedMedia?> recover(MediaKind kind, String profileId);
   Future<void> remove(CapturedMedia media);
@@ -56,6 +59,7 @@ class ImagePickerCameraDataSource implements CameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
+    DocumentCaptureCrop? crop,
   }) async {
     final directory = await _profileDirectory(profileId);
     final intent = File('${directory.path}/capture_intent.json');
@@ -104,9 +108,10 @@ class ImagePickerCameraDataSource implements CameraDataSource {
     MediaKind kind,
     String profileId,
     DocumentType? documentType,
-    String captureId,
-  ) async {
-    final bytes = await source.readAsBytes();
+    String captureId, {
+    Uint8List? imageBytes,
+  }) async {
+    final bytes = imageBytes ?? await source.readAsBytes();
     if (bytes.length > 10 * 1024 * 1024) {
       await _deleteSource(source.path);
       throw const CameraCaptureException(
@@ -121,7 +126,8 @@ class ImagePickerCameraDataSource implements CameraDataSource {
         await file.delete();
       }
     }
-    final extension = source.path.toLowerCase().endsWith('.png')
+    final extension =
+        imageBytes == null && source.path.toLowerCase().endsWith('.png')
         ? 'png'
         : 'jpg';
     final file = File(
@@ -230,10 +236,34 @@ class InAppCameraDataSource extends ImagePickerCameraDataSource {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
+    DocumentCaptureCrop? crop,
   }) async {
+    if (kind == MediaKind.document && crop == null) {
+      throw const CameraCaptureException(
+        'DOCUMENT_CROP_REQUIRED',
+        'The document frame is not ready. Please take the photo again.',
+      );
+    }
     // Validate scope before taking the photo, then persist before upload.
     await _profileDirectory(profileId);
     final source = await driver.takePicture(kind);
-    return _persist(source, kind, profileId, documentType, _newCaptureId());
+    try {
+      final bytes = kind == MediaKind.document
+          ? await const DocumentPhotoCropper().crop(
+              await source.readAsBytes(),
+              crop!,
+            )
+          : null;
+      return await _persist(
+        source,
+        kind,
+        profileId,
+        documentType,
+        _newCaptureId(),
+        imageBytes: bytes,
+      );
+    } finally {
+      await _deleteSource(source.path);
+    }
   }
 }

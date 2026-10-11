@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kyc_onboarding/core/domain/result.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 import 'package:kyc_onboarding/features/kyc/domain/repositories/kyc_repository.dart';
 import 'package:kyc_onboarding/features/kyc/domain/usecases/kyc_usecases.dart';
@@ -64,15 +65,26 @@ void main() {
 
   test('deferred capture retains draft until an explicit upload', () async {
     await cubit.load();
+    final crop = DocumentCaptureCrop.fromViewport(
+      viewportWidth: 390,
+      viewportHeight: 844,
+      frameLeft: 24,
+      frameTop: 240,
+      frameWidth: 342,
+      frameHeight: 240,
+      previewAspectRatio: .75,
+    );
 
     final saved = await cubit.capture(
       MediaKind.document,
       documentType: DocumentType.passport,
       uploadImmediately: false,
+      crop: crop,
     );
 
     expect(saved, isTrue);
     expect(repository.captureCount, 1);
+    expect(repository.receivedCrop, same(crop));
     expect(repository.observedUploads, 0);
     expect(repository.deleted, isFalse);
     expect(cubit.state.pendingCaptures[MediaKind.document], captured);
@@ -242,6 +254,7 @@ class FakeKycRepository implements KycRepository {
   bool captureCancelled = false;
   Completer<void>? captureGate;
   CapturedMedia? recovered;
+  DocumentCaptureCrop? receivedCrop;
   @override
   Future<Result<KycProfile>> load() async {
     observedLoads++;
@@ -266,8 +279,10 @@ class FakeKycRepository implements KycRepository {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
+    DocumentCaptureCrop? crop,
   }) async {
     captureCount++;
+    receivedCrop = crop;
     if (captureGate != null) await captureGate!.future;
     return Success(captureCancelled ? null : captured);
   }

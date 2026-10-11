@@ -316,3 +316,21 @@ Focused tests first reproduced missing deferred-capture behavior, duplicate came
 Android runtime screenshots were inspected in `output/in-app-camera/runtime/`: the rear camera shows the emulator's virtual room and the front camera its synthetic texture, both beneath the production framing UI. The initial camera permission dialog was captured and allowed on the emulator; final repeat tests pre-granted camera permission. The smoke harness's route-exit assertion was corrected to wait for Flutter's exit animation, then both tests passed together. Native-background mode uses a host watcher to send Home/reopen after each `CAMERA_SMOKE_BACKGROUND_READY` marker. The default integration command instead exercises lifecycle notifications without that watcher.
 
 Physical Android/iPhone camera quality, OS force-kill during capture and real-device denied permission → Settings → Retry still require device checks. The backend and stored applicant records are unchanged; no new real-API submission or identity-provider request was made for this camera update.
+
+
+## Document capture follows the framing guide
+
+Verified on 11 October 2026 (Asia/Ho_Chi_Minh). Document capture now saves the region inside the actual on-screen guide plus a 3% margin on each edge. Normalized guide coordinates account for safe-area/header/control offsets, centered cover scaling and differing preview/still aspect ratios. Decoding, orientation correction and JPEG quality-95 encoding run off the UI thread without resizing the original pixels. Private preview, recovery and upload use only the cropped result; the SDK temporary original is deleted. Missing geometry or crop failures cannot fall back to the full photo and preserve the previous pending document. Selfie bytes and dimensions remain unchanged.
+
+| Check | Actual result |
+| --- | --- |
+| Focused geometry/encoder/data/camera/page command | 59/59 passed |
+| Full `flutter test --no-pub --reporter expanded` | 425/425 passed, including architecture, 28 new crop regressions and existing session/navigation/verification/KYC checks |
+| `flutter analyze --no-pub` | No issues found |
+| `flutter build ios --simulator --debug --no-pub` | Built Runner.app successfully |
+| `flutter build apk --debug` | Built standard app-debug.apk successfully; installed and launched the normal sign-in app on `emulator-5554` after the test harness |
+| Actual camera SDK smoke on Android `emulator-5554` | 2/2 passed: document 720×1280 → 538×380; selfie 1080×1920 → 1080×1920 with identical bytes; correct lenses, resume, private persistence and recovery checked |
+
+The focused crop tests were first observed failing for the absent crop contract before implementation. They exercise asymmetric and landscape guides, preview/still aspect differences, card/passport ratios, margins at image edges, invalid geometry, EXIF rotations, source-pixel sharpness, corrupt data, temporary-file cleanup and recovery of cropped bytes. The widget mapping tests compare callback geometry with the actual rendered guide at 390×844, 320×568 with doubled text, and 844×390, including safe-area insets. The narrow case initially exposed a 4.6px loading-state overflow; the loading content now scrolls within the available viewfinder and the full suite passes.
+
+Runtime command: `flutter test integration_test/in_app_camera_smoke_test.dart -d emulator-5554 --dart-define=CAMERA_SMOKE_SAVE_EVIDENCE=true --dart-define=CAMERA_SMOKE_PREVIEW_SECONDS=6`. This run uses actual Android camera SDK capture and dispatched inactive/paused/resumed lifecycle notifications. Its evidence flag is enabled only for the emulator's synthetic scene; default runs do not save extra original photos. Physical-device field of view, optical quality and iPhone capture were not tested. The repeat runtime run collected valid before/after JPEGs and guide metadata in `output/document-crop/runtime/`; the overlay and resulting crop were visually inspected. The document source had EXIF orientation 6 and the selfie orientation 8, exercising actual SDK rotation. An independent comparison with the expected raw crop at (91,420)–(629,800) had mean per-channel error below 1/255 from JPEG encoding. No API upload or identity-provider request was made during this camera-only runtime check.

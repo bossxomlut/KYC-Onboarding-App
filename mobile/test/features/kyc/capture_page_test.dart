@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kyc_onboarding/core/domain/result.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 import 'package:kyc_onboarding/features/kyc/domain/usecases/kyc_usecases.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/bloc/kyc_cubit.dart';
@@ -319,6 +320,7 @@ class CaptureRepository extends FakeKycRepository {
     MediaKind kind,
     String profileId, {
     DocumentType? documentType,
+    DocumentCaptureCrop? crop,
   }) async {
     captureCount++;
     return Success(

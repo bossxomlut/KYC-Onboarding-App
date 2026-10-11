@@ -1,14 +1,18 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as image;
 import 'package:integration_test/integration_test.dart';
 import 'package:kyc_onboarding/core/theme/app_theme.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_datasource.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/in_app_camera_driver.dart';
 import 'package:kyc_onboarding/features/kyc/data/repositories/capture_camera_repository_impl.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 import 'package:kyc_onboarding/features/kyc/domain/usecases/capture_camera_usecases.dart';
 import 'package:kyc_onboarding/features/kyc/presentation/bloc/capture_camera_cubit.dart';
@@ -30,12 +34,13 @@ void main() {
     testWidgets(
       '${kind.name} real camera resumes, captures, and recovers private media',
       (tester) async {
-        final driver = InAppCameraDriver();
+        final driver = _AuditedCameraDriver();
         final source = InAppCameraDataSource(driver: driver);
         final repository = CaptureCameraRepositoryImpl(driver);
         final profileId = 'camera-smoke-${kind.name}';
         CaptureCameraCubit? camera;
         CapturedMedia? captured;
+        DocumentCaptureCrop? captureCrop;
         bool? routeResult;
 
         await source.discard(profileId);
@@ -68,13 +73,15 @@ void main() {
                                     ? DocumentType.passport
                                     : null,
                                 previewBuilder: driver.buildPreview,
-                                onCapture: () async {
+                                onCapture: (crop) async {
+                                  captureCrop = crop;
                                   captured = await source.capture(
                                     kind,
                                     profileId,
                                     documentType: kind == MediaKind.document
                                         ? DocumentType.passport
                                         : null,
+                                    crop: crop,
                                   );
                                   return captured != null;
                                 },
@@ -161,6 +168,11 @@ void main() {
             photo.documentType,
             kind == MediaKind.document ? DocumentType.passport : null,
           );
+          await _expectCaptureFraming(
+            photo,
+            driver.originalBytes!,
+            captureCrop,
+          );
 
           await driver.close();
           final recovered = await source.recover(kind, profileId);
@@ -183,6 +195,109 @@ void main() {
       },
     );
   }
+}
+
+/// Intercepts only the real SDK's result for independent geometry verification.
+class _AuditedCameraDriver extends InAppCameraDriver {
+  Uint8List? originalBytes;
+
+  @override
+  Future<XFile> takePicture(MediaKind kind) async {
+    final original = await super.takePicture(kind);
+    originalBytes = await original.readAsBytes();
+    return original;
+  }
+}
+
+Future<void> _expectCaptureFraming(
+  CapturedMedia photo,
+  Uint8List originalBytes,
+  DocumentCaptureCrop? crop,
+) async {
+  final decodedOriginal = image.decodeImage(originalBytes);
+  final decodedOutput = image.decodeImage(photo.bytes);
+  expect(decodedOriginal, isNotNull);
+  expect(decodedOutput, isNotNull);
+  final original = image.bakeOrientation(decodedOriginal!);
+  final output = image.bakeOrientation(decodedOutput!);
+  if (photo.kind == MediaKind.document) {
+    expect(crop, isNotNull);
+    final framing = crop!;
+    final imageAspect = original.width / original.height;
+    // The preview and still can use different sensor aspect ratios. Find the
+    // centered still-image region visible in the preview independently here.
+    final previewWidth = imageAspect > framing.previewAspectRatio
+        ? original.height * framing.previewAspectRatio
+        : original.width.toDouble();
+    final previewHeight = imageAspect > framing.previewAspectRatio
+        ? original.height.toDouble()
+        : original.width / framing.previewAspectRatio;
+    final frameLeft =
+        (original.width - previewWidth) / 2 + framing.left * previewWidth;
+    final frameTop =
+        (original.height - previewHeight) / 2 + framing.top * previewHeight;
+    final frameWidth = framing.width * previewWidth;
+    final frameHeight = framing.height * previewHeight;
+    final borderX = frameWidth * framing.marginFraction;
+    final borderY = frameHeight * framing.marginFraction;
+    final left = (frameLeft - borderX).clamp(0, original.width).floor();
+    final top = (frameTop - borderY).clamp(0, original.height).floor();
+    final right = (frameLeft + frameWidth + borderX)
+        .clamp(0, original.width)
+        .ceil();
+    final bottom = (frameTop + frameHeight + borderY)
+        .clamp(0, original.height)
+        .ceil();
+    expect(output.width, right - left);
+    expect(output.height, bottom - top);
+    expect(output.width, lessThan(original.width));
+    expect(output.height, lessThan(original.height));
+    expect(output.width / output.height, closeTo(1.42, .006));
+  } else {
+    expect(crop, isNull);
+    expect(output.width, original.width);
+    expect(output.height, original.height);
+    expect(photo.bytes, originalBytes);
+  }
+
+  debugPrint(
+    'CAMERA_SMOKE_CAPTURE_RESULT ${photo.kind.name} '
+    '${original.width}x${original.height} -> ${output.width}x${output.height}',
+  );
+  if (!const bool.fromEnvironment('CAMERA_SMOKE_SAVE_EVIDENCE')) return;
+  // Opt in only when running against the emulator's synthetic camera scene.
+  // The host can copy these files for visual QA without an account or API.
+  final evidence = Directory(
+    '${File(photo.filePath).parent.parent.parent.path}/camera-smoke-evidence',
+  );
+  await evidence.create(recursive: true);
+  await File(
+    '${evidence.path}/${photo.kind.name}-original.jpg',
+  ).writeAsBytes(originalBytes);
+  await File(
+    '${evidence.path}/${photo.kind.name}-result.jpg',
+  ).writeAsBytes(photo.bytes);
+  await File('${evidence.path}/${photo.kind.name}.json').writeAsString(
+    jsonEncode({
+      'originalWidth': original.width,
+      'originalHeight': original.height,
+      'outputWidth': output.width,
+      'outputHeight': output.height,
+      if (crop != null)
+        'crop': {
+          'left': crop.left,
+          'top': crop.top,
+          'width': crop.width,
+          'height': crop.height,
+          'previewAspectRatio': crop.previewAspectRatio,
+          'marginFraction': crop.marginFraction,
+        },
+    }),
+  );
+  debugPrint('CAMERA_SMOKE_EVIDENCE ${evidence.path}');
+  // Flutter removes the test application when this run finishes. Leave a brief
+  // opt-in window for the host to collect the synthetic camera artifacts.
+  await Future<void>.delayed(const Duration(seconds: 5));
 }
 
 void _expectLens(WidgetTester tester, MediaKind kind) {

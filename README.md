@@ -57,7 +57,7 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.20:3000/api/v1
 
 Replace the sample address. Allow the API through the Mac firewall and grant camera/local-network permission when asked. A phone’s `localhost` refers to the phone. Only the API talks to PostgreSQL. Android Debug permits local cleartext; iOS uses a separate Debug Info.plist with local HTTP enabled. Release configuration requires an explicit **HTTPS** API URL and does not permit arbitrary HTTP.
 
-The system camera is invoked through `image_picker`, requesting rear camera for documents and front camera for selfie. On Android the external camera app can preserve its previous lens; check and switch the lens in the camera UI when needed. Camera permission denial offers retry/settings instructions. iOS Simulator has no real camera; use the integration test fixtures or an Android emulator/physical device for capture. Never use actual identity documents during a demo.
+Capture opens an in-app camera with a framing overlay, requiring the rear lens for documents and the front lens for selfies. Document photos are cropped to the displayed frame with a 3% margin on each edge before saving or uploading; selfies retain the full photo. Camera permission denial offers retry/settings instructions. Legacy `image_picker` recovery supports older interrupted captures. iOS Simulator has no real camera; use the integration test fixtures or an Android emulator/physical device for capture. Never use actual identity documents during a demo.
 
 ### Password reset
 

@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as image;
+import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
 import 'package:kyc_onboarding/core/domain/result.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/camera_datasource.dart';
 import 'package:kyc_onboarding/features/kyc/data/datasources/in_app_camera_driver.dart';
@@ -221,7 +223,9 @@ void main() {
       );
       addTearDown(() => temporary.delete(recursive: true));
       final source = File('${temporary.path}/source.jpg');
-      await source.writeAsBytes([1, 2, 3]);
+      await source.writeAsBytes(
+        image.encodeJpg(image.Image(width: 30, height: 40)),
+      );
       final driver = PictureDriver(XFile(source.path));
       final datasource = InAppCameraDataSource(
         driver: driver,
@@ -231,6 +235,15 @@ void main() {
         MediaKind.document,
         'profile_a',
         documentType: DocumentType.nationalId,
+        crop: DocumentCaptureCrop.fromViewport(
+          viewportWidth: 30,
+          viewportHeight: 40,
+          frameLeft: 3,
+          frameTop: 10,
+          frameWidth: 24,
+          frameHeight: 15,
+          previewAspectRatio: .75,
+        ),
       );
       expect(driver.kind, MediaKind.document);
       expect(captured!.captureId, matches(r'^[a-f0-9]{32}$'));

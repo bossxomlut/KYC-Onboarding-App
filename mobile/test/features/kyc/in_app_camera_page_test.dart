@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kyc_onboarding/core/domain/result.dart';
 import 'package:kyc_onboarding/core/theme/app_theme.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/capture_camera.dart';
+import 'package:kyc_onboarding/features/kyc/domain/entities/document_capture_crop.dart';
 import 'package:kyc_onboarding/features/kyc/domain/entities/kyc_profile.dart';
 import 'package:kyc_onboarding/features/kyc/domain/repositories/capture_camera_repository.dart';
 import 'package:kyc_onboarding/features/kyc/domain/usecases/capture_camera_usecases.dart';
@@ -115,7 +116,7 @@ void main() {
       await pumpCamera(
         tester,
         repository,
-        onCapture: () {
+        onCapture: (_) {
           captures++;
           return captureGate.future;
         },
@@ -143,7 +144,7 @@ void main() {
     await pumpCamera(
       tester,
       FakeCaptureCameraRepository(),
-      onCapture: () async => false,
+      onCapture: (_) async => false,
     );
     await tester.tap(find.byKey(const Key('camera-shutter')));
     await tester.pumpAndSettle();
@@ -161,7 +162,7 @@ void main() {
     await pumpCamera(
       tester,
       FakeCaptureCameraRepository(),
-      onCapture: () async => throw StateError('Unexpected camera failure'),
+      onCapture: (_) async => throw StateError('Unexpected camera failure'),
     );
     await tester.tap(find.byKey(const Key('camera-shutter')));
     await tester.pumpAndSettle();
@@ -180,7 +181,7 @@ void main() {
     await pumpCamera(
       tester,
       repository,
-      onCapture: () async {
+      onCapture: (_) async {
         captures++;
         return true;
       },
@@ -243,7 +244,7 @@ Future<void> pumpCamera(
   WidgetTester tester,
   FakeCaptureCameraRepository repository, {
   MediaKind kind = MediaKind.document,
-  Future<bool> Function()? onCapture,
+  Future<bool> Function(DocumentCaptureCrop? crop)? onCapture,
   ValueChanged<bool?>? onResult,
   bool settle = true,
   TextScaler textScaler = TextScaler.noScaling,
@@ -275,7 +276,7 @@ Future<void> pumpCamera(
             key: Key('camera-preview'),
             color: Color(0xFF62746A),
           ),
-          onCapture: onCapture ?? () async => true,
+          onCapture: onCapture ?? (_) async => true,
         ),
       ),
     ),

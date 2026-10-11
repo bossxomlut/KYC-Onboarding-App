@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/kyc_profile.dart';
+import '../../domain/entities/document_capture_crop.dart';
 import '../bloc/capture_camera_cubit.dart';
 import '../widgets/capture_camera_overlay.dart';
 
@@ -21,7 +22,7 @@ class InAppCameraPage extends StatefulWidget {
   final MediaKind kind;
   final DocumentType? documentType;
   final WidgetBuilder previewBuilder;
-  final Future<bool> Function() onCapture;
+  final Future<bool> Function(DocumentCaptureCrop? crop) onCapture;
 
   @override
   State<InAppCameraPage> createState() => _InAppCameraPageState();
@@ -30,6 +31,8 @@ class InAppCameraPage extends StatefulWidget {
 class _InAppCameraPageState extends State<InAppCameraPage>
     with WidgetsBindingObserver {
   late final CaptureCameraCubit _camera;
+  final _previewKey = GlobalKey();
+  final _documentGuideKey = GlobalKey();
   bool _capturing = false;
   bool _closing = false;
   bool _captureFailed = false;
@@ -69,7 +72,7 @@ class _InAppCameraPageState extends State<InAppCameraPage>
     });
     var success = false;
     try {
-      success = await widget.onCapture();
+      success = await widget.onCapture(_documentCrop());
       if (success) await _camera.pause();
     } catch (_) {
       success = false;
@@ -84,6 +87,31 @@ class _InAppCameraPageState extends State<InAppCameraPage>
         }
       }
     }
+  }
+
+  DocumentCaptureCrop? _documentCrop() {
+    if (!_isDocument) return null;
+    final preview = _previewKey.currentContext?.findRenderObject();
+    final guide = _documentGuideKey.currentContext?.findRenderObject();
+    final session = _camera.state.session;
+    if (preview is! RenderBox ||
+        guide is! RenderBox ||
+        !preview.hasSize ||
+        !guide.hasSize ||
+        session == null) {
+      throw StateError('Document frame is not ready.');
+    }
+    final offset =
+        guide.localToGlobal(Offset.zero) - preview.localToGlobal(Offset.zero);
+    return DocumentCaptureCrop.fromViewport(
+      viewportWidth: preview.size.width,
+      viewportHeight: preview.size.height,
+      frameLeft: offset.dx,
+      frameTop: offset.dy,
+      frameWidth: guide.size.width,
+      frameHeight: guide.size.height,
+      previewAspectRatio: session.aspectRatio,
+    );
   }
 
   Future<void> _cancel() async {
@@ -124,9 +152,15 @@ class _InAppCameraPageState extends State<InAppCameraPage>
                 fit: StackFit.expand,
                 children: [
                   if (state.isReady && state.session != null)
-                    _CameraPreview(
-                      aspectRatio: state.session!.aspectRatio,
-                      builder: widget.previewBuilder,
+                    SizedBox.expand(
+                      key: _previewKey,
+                      child: SizedBox.expand(
+                        key: const Key('capture-camera-preview-viewport'),
+                        child: _CameraPreview(
+                          aspectRatio: state.session!.aspectRatio,
+                          builder: widget.previewBuilder,
+                        ),
+                      ),
                     ),
                   DecoratedBox(
                     decoration: BoxDecoration(
@@ -311,6 +345,7 @@ class _InAppCameraPageState extends State<InAppCameraPage>
       return CaptureCameraOverlay(
         kind: widget.kind,
         documentType: widget.documentType,
+        frameKey: _isDocument ? _documentGuideKey : null,
       );
     }
     if (state.failure != null) {
@@ -356,26 +391,28 @@ class _InAppCameraPageState extends State<InAppCameraPage>
       );
     }
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(
-              color: AppTheme.cameraGuide,
-              strokeWidth: 2.5,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                color: AppTheme.cameraGuide,
+                strokeWidth: 2.5,
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            state.status == CaptureCameraStatus.paused
-                ? 'Camera paused'
-                : 'Starting camera…',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
-          ),
-        ],
+            const SizedBox(height: 14),
+            Text(
+              state.status == CaptureCameraStatus.paused
+                  ? 'Camera paused'
+                  : 'Starting camera…',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+          ],
+        ),
       ),
     );
   }

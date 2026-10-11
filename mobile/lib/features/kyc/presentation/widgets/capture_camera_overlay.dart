@@ -10,10 +10,12 @@ class CaptureCameraOverlay extends StatelessWidget {
     super.key,
     required this.kind,
     this.documentType,
+    this.frameKey,
   });
 
   final MediaKind kind;
   final DocumentType? documentType;
+  final Key? frameKey;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -57,6 +59,7 @@ class CaptureCameraOverlay extends StatelessWidget {
                         ? 'document-camera-guide'
                         : 'selfie-camera-guide',
                   ),
+                  child: SizedBox.expand(key: frameKey),
                 ),
               ),
             ],
