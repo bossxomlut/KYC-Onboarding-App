@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/back_navigation.dart';
 import '../../../../core/navigation/current_route.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/kyc_profile.dart';
@@ -129,7 +130,9 @@ class _VerificationPageState extends State<VerificationPage> {
                         if (success &&
                             context.mounted &&
                             isCurrentRoute(context)) {
-                          context.go(cubit.state.profile!.nextStep.routePath);
+                          context.pushReplacement(
+                            cubit.state.profile!.nextStep.routePath,
+                          );
                         }
                       },
                 child: const Text('Update and resubmit'),
@@ -147,7 +150,7 @@ class _VerificationPageState extends State<VerificationPage> {
             ],
             OutlinedButton.icon(
               key: const Key('view-kyc-history'),
-              onPressed: () => context.go('/kyc/history'),
+              onPressed: () => context.push('/kyc/history'),
               icon: const Icon(Icons.history, size: 20),
               label: const Text('Submission history'),
             ),
@@ -162,7 +165,7 @@ class _VerificationPageState extends State<VerificationPage> {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () => context.go('/'),
+              onPressed: () => popOrGo(context),
               child: const Text('Back to home'),
             ),
           ],

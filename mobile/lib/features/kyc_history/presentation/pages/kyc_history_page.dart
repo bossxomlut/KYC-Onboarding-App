@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/back_navigation.dart';
 import '../../../kyc/presentation/widgets/kyc_status_badge.dart';
 import '../../domain/entities/kyc_history.dart';
 import '../bloc/kyc_history_cubit.dart';
@@ -9,8 +9,13 @@ import '../widgets/history_detail_sheet.dart';
 import '../widgets/history_review_info.dart';
 
 class KycHistoryPage extends StatefulWidget {
-  const KycHistoryPage({this.reviewerUserId, super.key});
+  const KycHistoryPage({
+    this.reviewerUserId,
+    this.fromReviewQueue = false,
+    super.key,
+  });
   final String? reviewerUserId;
+  final bool fromReviewQueue;
   @override
   State<KycHistoryPage> createState() => _KycHistoryPageState();
 }
@@ -57,8 +62,8 @@ class _KycHistoryPageState extends State<KycHistoryPage> {
             overflow: TextOverflow.ellipsis,
           ),
           leading: IconButton(
-            tooltip: 'Home',
-            onPressed: () => context.go('/'),
+            tooltip: 'Back',
+            onPressed: () => popOrGo(context),
             icon: const Icon(Icons.arrow_back),
           ),
           actions: [
@@ -85,11 +90,18 @@ class _KycHistoryPageState extends State<KycHistoryPage> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
-                          onPressed: () => context.go(
-                            '/reviews/${Uri.encodeComponent(widget.reviewerUserId!)}',
+                          onPressed: () => popOrGo(
+                            context,
+                            fallback: widget.fromReviewQueue
+                                ? '/reviews'
+                                : '/reviews/${Uri.encodeComponent(widget.reviewerUserId!)}',
                           ),
                           icon: const Icon(Icons.arrow_back),
-                          label: const Text('Back to current review'),
+                          label: Text(
+                            widget.fromReviewQueue
+                                ? 'Back to review queue'
+                                : 'Back to current review',
+                          ),
                         ),
                       ),
                     const Text(

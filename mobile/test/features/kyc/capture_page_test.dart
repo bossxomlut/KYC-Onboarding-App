@@ -13,12 +13,12 @@ import 'package:kyc_onboarding/features/kyc/presentation/widgets/kyc_scaffold.da
 import 'kyc_cubit_test.dart' show FakeKycRepository;
 
 void main() {
-  testWidgets('document type selection preserves the Home navigation control', (
+  testWidgets('document type selection preserves the Back navigation control', (
     tester,
   ) async {
     final repository = CaptureRepository(MediaKind.document);
     final (_, router) = await pumpCapture(tester, repository);
-    expect(find.byTooltip('Home'), findsOneWidget);
+    expect(find.byTooltip('Back'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('document-type')));
     await tester.pumpAndSettle();
@@ -26,10 +26,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('National ID'), findsOneWidget);
-    expect(find.byTooltip('Home'), findsOneWidget);
-    await tester.tap(find.byTooltip('Home'));
+    expect(find.byTooltip('Back'), findsOneWidget);
+    await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(router.state.uri.path, '/');
     expect(find.text('Home destination'), findsOneWidget);
     expect(repository.captureCount, 0);
     expect(repository.uploadCount, 0);
@@ -60,10 +60,7 @@ void main() {
             findsOneWidget,
           );
           expect(continueButton(tester, kind).onPressed, isNotNull);
-          expect(
-            router.routeInformationProvider.value.uri.path,
-            repository.path,
-          );
+          expect(router.state.uri.path, repository.path);
         } finally {
           semantics.dispose();
         }
@@ -81,11 +78,11 @@ void main() {
       await tester.pump();
       expect(cubit.state.busy, isTrue);
       expect(continueButton(tester, kind).onPressed, isNull);
-      expect(router.routeInformationProvider.value.uri.path, repository.path);
+      expect(router.state.uri.path, repository.path);
 
       repository.uploadGate!.complete();
       await tester.pumpAndSettle();
-      expect(router.routeInformationProvider.value.uri.path, repository.path);
+      expect(router.state.uri.path, repository.path);
       expect(find.byKey(Key('capture-${kind.name}')), findsOneWidget);
       expect(find.text('Retake photo'), findsOneWidget);
       expect(cubit.state.pendingCaptures, isEmpty);
@@ -95,10 +92,7 @@ void main() {
       );
       expect(continueButton(tester, kind).onPressed, isNotNull);
       await tapContinue(tester, kind);
-      expect(
-        router.routeInformationProvider.value.uri.path,
-        repository.profile.nextStep.routePath,
-      );
+      expect(router.state.uri.path, repository.profile.nextStep.routePath);
       expect(repository.captureCount, 1);
       expect(repository.uploadCount, 1);
     });
@@ -111,7 +105,7 @@ void main() {
       await tapCapture(tester, kind);
       await tester.pumpAndSettle();
       expect(continueButton(tester, kind).onPressed, isNull);
-      expect(router.routeInformationProvider.value.uri.path, repository.path);
+      expect(router.state.uri.path, repository.path);
       expect(repository.uploadCount, 0);
     });
 
@@ -126,20 +120,17 @@ void main() {
         await tester.pumpAndSettle();
         expect(cubit.state.pendingCaptures[kind], isNotNull);
         expect(continueButton(tester, kind).onPressed, isNull);
-        expect(router.routeInformationProvider.value.uri.path, repository.path);
+        expect(router.state.uri.path, repository.path);
 
         repository.uploadFailure = false;
         await tester.ensureVisible(find.byKey(const Key('retry-upload')));
         await tester.tap(find.byKey(const Key('retry-upload')));
         await tester.pumpAndSettle();
-        expect(router.routeInformationProvider.value.uri.path, repository.path);
+        expect(router.state.uri.path, repository.path);
         expect(cubit.state.pendingCaptures, isEmpty);
         expect(continueButton(tester, kind).onPressed, isNotNull);
         await tapContinue(tester, kind);
-        expect(
-          router.routeInformationProvider.value.uri.path,
-          repository.profile.nextStep.routePath,
-        );
+        expect(router.state.uri.path, repository.profile.nextStep.routePath);
         expect(repository.captureCount, 1);
         expect(repository.uploadCount, 2);
       },
@@ -153,13 +144,10 @@ void main() {
       final (_, router) = await pumpCapture(tester, repository);
       await tapCapture(tester, kind);
       await tester.pumpAndSettle();
-      expect(router.routeInformationProvider.value.uri.path, repository.path);
+      expect(router.state.uri.path, repository.path);
       expect(continueButton(tester, kind).onPressed, isNotNull);
       await tapContinue(tester, kind);
-      expect(
-        router.routeInformationProvider.value.uri.path,
-        repository.profile.nextStep.routePath,
-      );
+      expect(router.state.uri.path, repository.profile.nextStep.routePath);
       expect(repository.uploadCount, 0);
     });
   }
@@ -177,7 +165,7 @@ void main() {
         );
       final (_, router) = await pumpCapture(tester, repository);
       await tapContinue(tester, MediaKind.document);
-      expect(router.routeInformationProvider.value.uri.path, '/kyc/review');
+      expect(router.state.uri.path, '/kyc/review');
       expect(repository.captureCount, 0);
       expect(repository.uploadCount, 0);
     },
@@ -213,11 +201,11 @@ void main() {
       tester.widget<PrivatePhoto>(find.byType(PrivatePhoto)).bytes,
       repository.image,
     );
-    expect(router.routeInformationProvider.value.uri.path, repository.path);
+    expect(router.state.uri.path, repository.path);
     repository.loadGate!.complete();
     await refresh;
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, repository.path);
+    expect(router.state.uri.path, repository.path);
     expect(repository.captureCount, 1);
     expect(repository.uploadCount, 1);
   });

@@ -113,19 +113,26 @@ class AccessRepositoryImpl implements AccessRepository {
     ),
   );
   @override
-  Future<Result<PageResult<ReviewSummary>>> reviewQueue({int offset = 0}) =>
-      _guard(() async {
-        final data = await _remote.reviewQueue(offset);
-        return PageResult(
-          items: List.unmodifiable(
-            (data['profiles'] as List).map(
-              (json) => AccessModels.summary(json as Map<String, dynamic>),
-            ),
-          ),
-          total: data['total'] as int,
-          offset: offset,
-        );
-      });
+  Future<Result<PageResult<ReviewSummary>>> reviewQueue({
+    int offset = 0,
+    ReviewFilter filter = ReviewFilter.pending,
+    String search = '',
+  }) => _guard(() async {
+    final data = await _remote.reviewQueue(
+      offset,
+      filter: filter,
+      search: search,
+    );
+    return PageResult(
+      items: List.unmodifiable(
+        (data['profiles'] as List).map(
+          (json) => AccessModels.summary(json as Map<String, dynamic>),
+        ),
+      ),
+      total: data['total'] as int,
+      offset: offset,
+    );
+  });
   @override
   Future<Result<ReviewDetail>> reviewDetail(String userId) => _guard(
     () async => AccessModels.detail(await _remote.reviewDetail(userId)),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/back_navigation.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/identity_brand.dart';
 import '../bloc/kyc_cubit.dart';
@@ -56,15 +57,14 @@ class KycScaffold extends StatelessWidget {
             : Text(title),
         titleSpacing: brandHeader ? 22 : 8,
         actions: actions,
-        leading: (ModalRoute.of(context)?.canPop ?? false)
+        automaticallyImplyLeading: false,
+        leading: GoRouterState.of(context).uri.path == '/'
             ? null
-            : (GoRouterState.of(context).uri.path == '/'
-                  ? null
-                  : IconButton(
-                      tooltip: 'Home',
-                      onPressed: () => context.go('/'),
-                      icon: const Icon(Icons.arrow_back),
-                    )),
+            : IconButton(
+                tooltip: 'Back',
+                onPressed: () => popOrGo(context),
+                icon: const Icon(Icons.arrow_back),
+              ),
       ),
       body: signature
           ? _SignatureBody(

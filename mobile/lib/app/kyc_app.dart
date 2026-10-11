@@ -56,25 +56,22 @@ class _KycAppState extends State<KycApp> with WidgetsBindingObserver {
     final di = widget.dependencies;
     _session = di<AuthSessionCubit>();
     connectSession(di, _session);
-    _refresh = _RouterRefresh(_session.stream);
+    _refresh = _RouterRefresh(
+      _session.stream,
+      redirectCurrentRoute: () {
+        if (_router.routerDelegate.currentConfiguration.isEmpty) return false;
+        final redirect = _sessionRedirect(_router.state.uri.path);
+        if (redirect == null) return false;
+        // Router refresh restores the declarative base URI. Check the pushed
+        // page too when live session/role changes revoke its access.
+        _router.go(redirect);
+        return true;
+      },
+    );
     _router = GoRouter(
       initialLocation: widget.initialLocation,
       refreshListenable: _refresh,
-      redirect: (context, state) {
-        final access = switch (_session.state) {
-          AuthInitializing() => SessionAccess.initializing,
-          AuthConnectionFailure() => SessionAccess.connectionFailure,
-          AuthSignedOut() => SessionAccess.signedOut,
-          AuthEmailVerificationRequired() => SessionAccess.verifyEmail,
-          AuthAuthenticated() => SessionAccess.authenticated,
-        };
-        final auth = _session.state;
-        return RoutePolicy.redirect(
-          access: access,
-          location: state.uri.path,
-          role: auth is AuthAuthenticated ? auth.user.role : UserRole.user,
-        );
-      },
+      redirect: (context, state) => _sessionRedirect(state.uri.path),
       routes: [
         GoRoute(
           path: '/session',
@@ -195,8 +192,7 @@ class _KycAppState extends State<KycApp> with WidgetsBindingObserver {
               create: (_) => di<AccessCubit>()..loadQueue(),
               child: _accessForegroundPage(
                 state,
-                refresh: (cubit) =>
-                    cubit.loadQueue(offset: cubit.state.queue?.offset ?? 0),
+                refresh: (cubit) => cubit.loadQueue(),
                 child: ReviewerQueuePage(
                   actorId: (_session.state as AuthAuthenticated).user.id,
                 ),
@@ -240,7 +236,10 @@ class _KycAppState extends State<KycApp> with WidgetsBindingObserver {
               create: (_) => di<KycHistoryCubit>(),
               child: _historyForegroundPage(
                 state,
-                KycHistoryPage(reviewerUserId: state.pathParameters['userId']!),
+                KycHistoryPage(
+                  reviewerUserId: state.pathParameters['userId']!,
+                  fromReviewQueue: state.uri.queryParameters['from'] == 'queue',
+                ),
               ),
             ),
           ),
@@ -346,6 +345,22 @@ class _KycAppState extends State<KycApp> with WidgetsBindingObserver {
     unawaited(_session.restore());
   }
 
+  String? _sessionRedirect(String location) {
+    final auth = _session.state;
+    final access = switch (auth) {
+      AuthInitializing() => SessionAccess.initializing,
+      AuthConnectionFailure() => SessionAccess.connectionFailure,
+      AuthSignedOut() => SessionAccess.signedOut,
+      AuthEmailVerificationRequired() => SessionAccess.verifyEmail,
+      AuthAuthenticated() => SessionAccess.authenticated,
+    };
+    return RoutePolicy.redirect(
+      access: access,
+      location: location,
+      role: auth is AuthAuthenticated ? auth.user.role : UserRole.user,
+    );
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_foreground.isBackgrounded &&
@@ -424,8 +439,13 @@ class _KycAppState extends State<KycApp> with WidgetsBindingObserver {
 }
 
 class _RouterRefresh extends ChangeNotifier {
-  _RouterRefresh(Stream<AuthSessionState> stream) {
-    _subscription = stream.listen((_) => notifyListeners());
+  _RouterRefresh(
+    Stream<AuthSessionState> stream, {
+    required bool Function() redirectCurrentRoute,
+  }) {
+    _subscription = stream.listen((_) {
+      if (!redirectCurrentRoute()) notifyListeners();
+    });
   }
   late final StreamSubscription<AuthSessionState> _subscription;
   @override
@@ -597,10 +617,8 @@ class _KycFlowGuardState extends State<_KycFlowGuard> {
       final redirect = _redirect(state.profile!);
       if (redirect != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted &&
-              GoRouter.of(context).routeInformationProvider.value.uri.path ==
-                  widget.location) {
-            context.go(redirect);
+          if (mounted && isCurrentRoute(context)) {
+            context.pushReplacement(redirect);
           }
         });
         return const Scaffold(body: Center(child: CircularProgressIndicator()));

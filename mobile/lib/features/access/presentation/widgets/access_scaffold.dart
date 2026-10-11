@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/domain/result.dart';
+import '../../../../core/navigation/back_navigation.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class AccessScaffold extends StatelessWidget {
@@ -26,9 +26,9 @@ class AccessScaffold extends StatelessWidget {
     appBar: AppBar(
       title: Text(title),
       leading: IconButton(
-        tooltip: 'Go home',
-        onPressed: () => context.go('/'),
-        icon: const Icon(Icons.home_outlined),
+        tooltip: 'Back',
+        onPressed: () => popOrGo(context),
+        icon: const Icon(Icons.arrow_back),
       ),
       actions: [
         if (onRefresh != null)

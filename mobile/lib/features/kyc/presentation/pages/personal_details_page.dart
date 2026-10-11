@@ -57,7 +57,7 @@ class _PersonalDetailsForm extends StatelessWidget {
                                 if (success &&
                                     context.mounted &&
                                     isCurrentRoute(context)) {
-                                  context.go(
+                                  context.pushReplacement(
                                     cubit.state.profile!.nextStep.routePath,
                                   );
                                 }
@@ -84,7 +84,7 @@ class _PersonalDetailsForm extends StatelessWidget {
                     'This profile is currently locked. Refresh the verification status to continue.',
                   ),
                   TextButton(
-                    onPressed: () => context.go('/kyc/status'),
+                    onPressed: () => context.pushReplacement('/kyc/status'),
                     child: const Text('View status'),
                   ),
                 ] else ...[

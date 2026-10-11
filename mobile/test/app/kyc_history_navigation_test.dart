@@ -47,11 +47,11 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('view-kyc-history')));
     await tester.tap(find.byKey(const Key('view-kyc-history')));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/kyc/history');
+    expect(router.state.uri.path, '/kyc/history');
     expect(find.text('Submission history'), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(router.state.uri.path, '/');
     expect(tester.takeException(), isNull);
   });
 
@@ -72,8 +72,11 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('view-kyc-history')));
     await tester.tap(find.byKey(const Key('view-kyc-history')));
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/kyc/history');
+    expect(router.state.uri.path, '/kyc/history');
     expect(find.text('Submission history'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, '/kyc/status');
     expect(tester.takeException(), isNull);
   });
 
@@ -88,14 +91,11 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('view-applicant-history')));
     await tester.tap(find.byKey(const Key('view-applicant-history')));
     await tester.pumpAndSettle();
-    expect(
-      router.routeInformationProvider.value.uri.path,
-      '/reviews/applicant/history',
-    );
+    expect(router.state.uri.path, '/reviews/applicant/history');
     expect(find.text('Submission history'), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(router.routeInformationProvider.value.uri.path, '/');
+    expect(router.state.uri.path, '/reviews/applicant');
     expect(tester.takeException(), isNull);
   });
 
@@ -107,7 +107,7 @@ void main() {
       location: '/kyc/history',
       loadFailure: true,
     );
-    expect(router.routeInformationProvider.value.uri.path, '/kyc/history');
+    expect(router.state.uri.path, '/kyc/history');
     expect(find.text('Submission history'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

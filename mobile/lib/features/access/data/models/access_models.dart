@@ -1,5 +1,6 @@
 import '../../../auth/data/models/user_model.dart';
 import '../../../kyc/data/models/kyc_profile_model.dart';
+import '../../../kyc/domain/entities/kyc_profile.dart';
 import '../../domain/entities/access_entities.dart';
 
 abstract final class AccessModels {
@@ -25,6 +26,12 @@ abstract final class AccessModels {
   static ReviewSummary summary(Map<String, dynamic> json) => ReviewSummary(
     userId: json['userId'] as String,
     email: json['email'] as String,
+    status: switch (json['status']) {
+      'pending_review' => KycStatus.pendingReview,
+      'verified' => KycStatus.verified,
+      'rejected' => KycStatus.rejected,
+      _ => throw const FormatException('Unknown review profile status'),
+    },
     submittedAt: DateTime.tryParse(json['submittedAt'] as String? ?? ''),
   );
   static ReviewDetail detail(Map<String, dynamic> json) {

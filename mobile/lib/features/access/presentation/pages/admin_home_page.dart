@@ -100,7 +100,7 @@ class AdminHomePage extends StatelessWidget {
                     title: 'Manage accounts',
                     description: 'Create accounts and manage reviewer access.',
                     icon: Icons.manage_accounts_outlined,
-                    onTap: isSigningOut ? null : () => context.go('/admin'),
+                    onTap: isSigningOut ? null : () => context.push('/admin'),
                   ),
                   const SizedBox(height: 12),
                   _AdminAction(
@@ -108,7 +108,7 @@ class AdminHomePage extends StatelessWidget {
                     title: 'Review profiles',
                     description: 'Approve or return submitted profiles.',
                     icon: Icons.fact_check_outlined,
-                    onTap: isSigningOut ? null : () => context.go('/reviews'),
+                    onTap: isSigningOut ? null : () => context.push('/reviews'),
                   ),
                 ],
               ),

@@ -55,7 +55,7 @@ class _AccessPageState extends State<AccessPage> {
           if (user.canManageUsers) ...[
             const SizedBox(height: 20),
             FilledButton.icon(
-              onPressed: () => context.go('/admin'),
+              onPressed: () => context.push('/admin'),
               icon: const Icon(Icons.manage_accounts_outlined),
               label: const Text('Manage accounts'),
             ),
@@ -63,7 +63,7 @@ class _AccessPageState extends State<AccessPage> {
           if (user.canReview) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: () => context.go('/reviews'),
+              onPressed: () => context.push('/reviews'),
               icon: const Icon(Icons.fact_check_outlined),
               label: const Text('Review profiles'),
             ),

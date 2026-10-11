@@ -103,7 +103,7 @@ class _CapturePageState extends State<_CaptureView> {
             FilledButton(
               key: Key('continue-${widget.kind.name}'),
               onPressed: canContinue
-                  ? () => context.go(profile.nextStep.routePath)
+                  ? () => context.pushReplacement(profile.nextStep.routePath)
                   : null,
               child: const Text('Continue'),
             ),

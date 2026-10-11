@@ -15,6 +15,9 @@ class AccessState extends Equatable {
     this.users,
     this.requests,
     this.queue,
+    this.reviewFilter = ReviewFilter.pending,
+    this.reviewSearch = '',
+    this.reviewOffset = 0,
     this.detail,
     this.media = const {},
     this.busy = false,
@@ -27,6 +30,9 @@ class AccessState extends Equatable {
   final PageResult<ManagedUser>? users;
   final PageResult<RoleRequest>? requests;
   final PageResult<ReviewSummary>? queue;
+  final ReviewFilter reviewFilter;
+  final String reviewSearch;
+  final int reviewOffset;
   final ReviewDetail? detail;
   final Map<MediaKind, Uint8List> media;
   final bool busy;
@@ -39,6 +45,10 @@ class AccessState extends Equatable {
     PageResult<ManagedUser>? users,
     PageResult<RoleRequest>? requests,
     PageResult<ReviewSummary>? queue,
+    bool clearQueue = false,
+    ReviewFilter? reviewFilter,
+    String? reviewSearch,
+    int? reviewOffset,
     ReviewDetail? detail,
     Map<MediaKind, Uint8List>? media,
     bool? busy,
@@ -50,7 +60,10 @@ class AccessState extends Equatable {
     request: request ?? this.request,
     users: users ?? this.users,
     requests: requests ?? this.requests,
-    queue: queue ?? this.queue,
+    queue: clearQueue ? null : queue ?? this.queue,
+    reviewFilter: reviewFilter ?? this.reviewFilter,
+    reviewSearch: reviewSearch ?? this.reviewSearch,
+    reviewOffset: reviewOffset ?? this.reviewOffset,
     detail: detail ?? this.detail,
     media: media ?? this.media,
     busy: busy ?? this.busy,
@@ -65,6 +78,9 @@ class AccessState extends Equatable {
     users,
     requests,
     queue,
+    reviewFilter,
+    reviewSearch,
+    reviewOffset,
     detail,
     media,
     busy,
@@ -79,6 +95,7 @@ class AccessCubit extends Cubit<AccessState> {
   AccessCubit(this._actions) : super(const AccessState());
   final AccessUseCases _actions;
   int _resumeGeneration = 0;
+  int _queueGeneration = 0;
   Future<void> Function(int)? _pendingRead;
   final List<Completer<void>> _pendingWaiters = [];
 
@@ -162,6 +179,9 @@ class AccessCubit extends Cubit<AccessState> {
       _update(
         AccessState(
           user: state.user,
+          reviewFilter: state.reviewFilter,
+          reviewSearch: state.reviewSearch,
+          reviewOffset: state.reviewOffset,
           error: error,
           needsRevalidation: state.needsRevalidation,
         ),
@@ -315,18 +335,65 @@ class AccessCubit extends Cubit<AccessState> {
     return true;
   }
 
-  Future<void> loadQueue({int offset = 0}) => _read((generation) async {
-    final result = await _actions.reviewQueue(offset: offset);
-    if (!_currentRead(generation)) return;
-    switch (result) {
-      case Success<PageResult<ReviewSummary>>(:final value):
-        _update(
-          state.copyWith(queue: value, busy: false, needsRevalidation: false),
+  Future<void> loadQueue({int? offset, ReviewFilter? filter, String? search}) {
+    if (isClosed) return Future.value();
+    final nextFilter = filter ?? state.reviewFilter;
+    final nextSearch = search?.trim() ?? state.reviewSearch;
+    final criteriaChanged =
+        nextFilter != state.reviewFilter || nextSearch != state.reviewSearch;
+    final nextOffset = criteriaChanged ? 0 : offset ?? state.reviewOffset;
+    final queueGeneration = ++_queueGeneration;
+    _update(
+      state.copyWith(
+        reviewFilter: nextFilter,
+        reviewSearch: nextSearch,
+        reviewOffset: nextOffset,
+        clearQueue: criteriaChanged,
+      ),
+    );
+    return _read((generation) async {
+      var pageOffset = nextOffset;
+      var result = await _actions.reviewQueue(
+        offset: nextOffset,
+        filter: nextFilter,
+        search: nextSearch,
+      );
+      if (!_currentRead(generation) || queueGeneration != _queueGeneration) {
+        return;
+      }
+      // A decision can remove the last row from a preserved page. Move back to
+      // the last valid page instead of displaying an empty list with matches.
+      while (result is Success<PageResult<ReviewSummary>> &&
+          result.value.total > 0 &&
+          pageOffset >= result.value.total) {
+        pageOffset = ((result.value.total - 1) ~/ 50) * 50;
+        _update(state.copyWith(reviewOffset: pageOffset, busy: true));
+        result = await _actions.reviewQueue(
+          offset: pageOffset,
+          filter: nextFilter,
+          search: nextSearch,
         );
-      case Failure<PageResult<ReviewSummary>>(:final error):
-        _failure(error);
-    }
-  });
+        if (!_currentRead(generation) || queueGeneration != _queueGeneration) {
+          return;
+        }
+      }
+      switch (result) {
+        case Success<PageResult<ReviewSummary>>(:final value):
+          _update(
+            state.copyWith(
+              queue: value.total == 0
+                  ? PageResult(items: value.items, total: 0, offset: 0)
+                  : value,
+              reviewOffset: value.total == 0 ? 0 : value.offset,
+              busy: false,
+              needsRevalidation: false,
+            ),
+          );
+        case Failure<PageResult<ReviewSummary>>(:final error):
+          _failure(error);
+      }
+    });
+  }
 
   Future<void> loadDetail(String userId) => _read((generation) async {
     final result = await _actions.reviewDetail(userId);

@@ -115,8 +115,29 @@ class AccessUseCases {
     );
   }
 
-  Future<Result<PageResult<ReviewSummary>>> reviewQueue({int offset = 0}) =>
-      _repository.reviewQueue(offset: offset);
+  Future<Result<PageResult<ReviewSummary>>> reviewQueue({
+    int offset = 0,
+    ReviewFilter filter = ReviewFilter.pending,
+    String search = '',
+  }) {
+    final text = search.trim();
+    if (text.length > 254) {
+      return Future.value(
+        const Failure(
+          AppFailure(
+            code: 'VALIDATION',
+            message: 'Search must be 254 characters or fewer.',
+          ),
+        ),
+      );
+    }
+    return _repository.reviewQueue(
+      offset: offset,
+      filter: filter,
+      search: text,
+    );
+  }
+
   Future<Result<ReviewDetail>> reviewDetail(String userId) =>
       _repository.reviewDetail(userId);
   Future<Result<KycProfile>> decideProfile(

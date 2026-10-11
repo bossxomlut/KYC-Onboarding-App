@@ -50,7 +50,7 @@ class _ReviewPageState extends State<ReviewPage> {
                   final cubit = context.read<KycCubit>();
                   final success = await cubit.submit();
                   if (success && context.mounted && isCurrentRoute(context)) {
-                    context.go('/kyc/status');
+                    context.pushReplacement('/kyc/status');
                   }
                 },
           child: const Text('Submit for verification'),
@@ -70,7 +70,7 @@ class _ReviewPageState extends State<ReviewPage> {
             KycProfileSummary(
               profile: profile,
               media: state.reviewMedia,
-              onEdit: (step) => context.go(step.routePath),
+              onEdit: (step) => context.pushReplacement(step.routePath),
             ),
             const SizedBox(height: 24),
             Text(

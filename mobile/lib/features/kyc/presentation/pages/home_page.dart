@@ -36,7 +36,7 @@ class HomePage extends StatelessWidget {
                 return;
               }
               if (!context.mounted || !isCurrentRoute(context)) return;
-              context.go(cubit.state.profile!.nextStep.routePath);
+              context.push(cubit.state.profile!.nextStep.routePath);
             };
       return KycScaffold(
         title: 'Identity',
@@ -50,7 +50,7 @@ class HomePage extends StatelessWidget {
           IconButton(
             key: const Key('account-access'),
             tooltip: 'Account access\n$email',
-            onPressed: () => context.go('/access'),
+            onPressed: () => context.push('/access'),
             icon: const Icon(Icons.person_outline_rounded),
           ),
           IconButton(
@@ -66,7 +66,7 @@ class HomePage extends StatelessWidget {
             if (canReview) ...[
               OutlinedButton.icon(
                 key: const Key('review-profiles'),
-                onPressed: () => context.go('/reviews'),
+                onPressed: () => context.push('/reviews'),
                 icon: const Icon(Icons.fact_check_outlined),
                 label: const Text('Review profiles'),
               ),
@@ -138,7 +138,7 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 4),
             TextButton(
               key: const Key('view-kyc-history'),
-              onPressed: () => context.go('/kyc/history'),
+              onPressed: () => context.push('/kyc/history'),
               child: const Text(
                 'Submission history',
                 style: TextStyle(decoration: TextDecoration.underline),

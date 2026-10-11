@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/navigation/back_navigation.dart';
 import '../../../../core/navigation/current_route.dart';
 import '../../../kyc/domain/entities/kyc_profile.dart';
 import '../../domain/entities/access_entities.dart';
@@ -41,7 +42,7 @@ class ReviewerDetailPage extends StatelessWidget {
         onRefresh: () => context.read<AccessCubit>().loadDetail(userId),
         children: [
           TextButton.icon(
-            onPressed: () => context.go('/reviews'),
+            onPressed: () => popOrGo(context, fallback: '/reviews'),
             icon: const Icon(Icons.arrow_back),
             label: const Text('Back to review queue'),
           ),
@@ -52,7 +53,7 @@ class ReviewerDetailPage extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               key: const Key('view-applicant-history'),
-              onPressed: () => context.go('/reviews/$userId/history'),
+              onPressed: () => context.push('/reviews/$userId/history'),
               icon: const Icon(Icons.history),
               label: const Text('View previous submissions'),
             ),
@@ -181,7 +182,7 @@ class ReviewerDetailPage extends StatelessWidget {
       actorId: actorId,
     );
     if (saved && context.mounted && isCurrentRoute(context)) {
-      context.go('/reviews');
+      popOrGo(context, fallback: '/reviews');
     }
   }
 
@@ -202,7 +203,7 @@ class ReviewerDetailPage extends StatelessWidget {
       requiredSteps: result.steps,
     );
     if (saved && context.mounted && isCurrentRoute(context)) {
-      context.go('/reviews');
+      popOrGo(context, fallback: '/reviews');
     }
   }
 }

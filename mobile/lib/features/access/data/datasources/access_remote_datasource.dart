@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import '../../../../core/network/api_client.dart';
+import '../../domain/entities/access_entities.dart';
 
 class AccessRemoteDataSource {
   const AccessRemoteDataSource(this._api);
@@ -25,8 +26,24 @@ class AccessRemoteDataSource {
     '/admin/role-requests/${Uri.encodeComponent(id)}/decision',
     data: body,
   );
-  Future<Map<String, dynamic>> reviewQueue(int offset) =>
-      _api.get('/reviews?limit=50&offset=$offset');
+  Future<Map<String, dynamic>> reviewQueue(
+    int offset, {
+    ReviewFilter filter = ReviewFilter.pending,
+    String search = '',
+  }) {
+    final text = search.trim();
+    final uri = Uri(
+      path: '/reviews',
+      queryParameters: {
+        'limit': '50',
+        'offset': '$offset',
+        'status': filter.apiValue,
+        if (text.isNotEmpty) 'search': text,
+      },
+    );
+    return _api.get(uri.toString());
+  }
+
   Future<Map<String, dynamic>> reviewDetail(String id) =>
       _api.get('/reviews/${Uri.encodeComponent(id)}');
   Future<Uint8List> reviewMedia(

@@ -5,6 +5,20 @@ enum RoleRequestStatus { pending, approved, rejected }
 
 enum ReviewDecision { verified, rejected }
 
+enum ReviewFilter {
+  all,
+  pending,
+  approved,
+  rejected;
+
+  String get apiValue => switch (this) {
+    ReviewFilter.all => 'all',
+    ReviewFilter.pending => 'pending_review',
+    ReviewFilter.approved => 'verified',
+    ReviewFilter.rejected => 'rejected',
+  };
+}
+
 class RoleRequest {
   const RoleRequest({
     required this.id,
@@ -49,10 +63,12 @@ class ReviewSummary {
     required this.userId,
     required this.email,
     required this.submittedAt,
+    this.status = KycStatus.pendingReview,
   });
   final String userId;
   final String email;
   final DateTime? submittedAt;
+  final KycStatus status;
 }
 
 class ReviewDetail {

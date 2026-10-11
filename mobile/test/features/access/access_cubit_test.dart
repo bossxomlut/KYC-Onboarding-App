@@ -347,6 +347,8 @@ class _DeferredQueueRepository extends FakeAccessRepository {
   @override
   Future<Result<PageResult<ReviewSummary>>> reviewQueue({
     int offset = 0,
+    ReviewFilter filter = ReviewFilter.pending,
+    String search = '',
   }) async {
     offsets.add(offset);
     final call = offsets.length;

@@ -98,7 +98,7 @@ void main() {
       await tester.tap(find.byKey(const Key('account-access')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 16));
-      expect(router.routeInformationProvider.value.uri.path, '/access');
+      expect(router.state.uri.path, '/access');
       expect(homeContext.mounted, isTrue);
 
       repository.gate.complete(_reopenedProfile);
@@ -106,7 +106,7 @@ void main() {
 
       expect(cubit.state.profile!.nextStep, KycStep.selfie);
       expect(cubit.state.busy, isFalse);
-      expect(router.routeInformationProvider.value.uri.path, '/access');
+      expect(router.state.uri.path, '/access');
       expect(find.byKey(const Key('account-access-page')), findsOneWidget);
       expect(find.byKey(const Key('selfie-page')), findsNothing);
       expect(tester.takeException(), isNull);

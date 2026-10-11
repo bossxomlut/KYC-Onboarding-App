@@ -25,7 +25,11 @@ abstract interface class AccessRepository {
     RoleRequestStatus decision, {
     String? reason,
   });
-  Future<Result<PageResult<ReviewSummary>>> reviewQueue({int offset = 0});
+  Future<Result<PageResult<ReviewSummary>>> reviewQueue({
+    int offset = 0,
+    ReviewFilter filter = ReviewFilter.pending,
+    String search = '',
+  });
   Future<Result<ReviewDetail>> reviewDetail(String userId);
   Future<Result<Uint8List>> reviewMedia(
     String userId,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Keeps feature-route system Back within the app, even without route history.
+/// Allows normal Back, with Home as the fallback for direct feature entry.
 class BackToHomeScope extends StatelessWidget {
   const BackToHomeScope({required this.child, this.enabled = true, super.key});
 
@@ -10,7 +10,7 @@ class BackToHomeScope extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PopScope<Object?>(
-    canPop: !enabled,
+    canPop: !enabled || context.canPop(),
     onPopInvokedWithResult: (didPop, _) {
       if (!didPop && enabled) context.go('/');
     },
