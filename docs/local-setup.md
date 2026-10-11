@@ -196,12 +196,20 @@ Làm theo mục 6 bên dưới.
 
 Cài [Docker Desktop cho Mac](https://docs.docker.com/desktop/setup/install/mac-install/), chọn Apple Silicon hoặc Intel đúng với máy; đưa app vào Applications và mở Docker Desktop. Docker Desktop đã kèm Docker Engine, CLI và [Compose](https://docs.docker.com/compose/install/).
 
-Kiểm tra và khởi động từ thư mục chứa `compose.yaml`:
+Kiểm tra Docker trước khi tiếp tục:
 
 ```sh
 cd /Users/vinhngo/KYC-Onboarding-App
 docker --version
 docker compose version
+```
+
+Nếu báo `command not found: docker`, cài và mở Docker Desktop hoặc dùng [cách A — không Docker](#4-cách-a--chạy-không-docker). Chỉ tiếp tục khi cả hai lệnh kiểm tra thành công.
+
+Khởi động từ thư mục chứa `compose.yaml`:
+
+```sh
+cd /Users/vinhngo/KYC-Onboarding-App
 docker compose up -d
 docker compose ps
 ```
@@ -221,6 +229,14 @@ npm run dev
 Chạy mục 3 trước nếu chưa cài dependency/tạo `.env`. Sau đó mở thêm terminal để chạy Flutter theo mục 6. Mailpit trong Compose hiện chưa cấu hình hộp thư bền vững; nếu mất email sau khi restart, dùng Resend code trong app để nhận OTP mới.
 
 ## 6. Chạy app và kiểm tra kết nối
+
+Giữ PostgreSQL, Mailpit và API chạy trong các terminal của chúng. Trước khi mở Flutter, kiểm tra trong một terminal khác:
+
+```sh
+curl --fail http://127.0.0.1:3000/health
+```
+
+Chỉ tiếp tục khi lệnh thành công và trả `{"status":"ok"}`. Endpoint này kiểm tra kết nối database; dòng `KYC API listening` một mình chưa xác nhận PostgreSQL đang hoạt động. Nếu lệnh thất bại, khởi động PostgreSQL và kiểm tra cấu hình database trước.
 
 Trong terminal của Flutter:
 
@@ -253,14 +269,6 @@ flutter run -d "ID_THIET_BI" \
 ```
 
 Cho phép API qua firewall và cấp quyền camera/local network khi được hỏi. iPhone thật cần thiết lập signing trong Xcode; Android thật cần bật Developer options/USB debugging. Release yêu cầu URL HTTPS; các lệnh local phía trên dùng Debug.
-
-Kiểm tra API từ trình duyệt hoặc terminal:
-
-```sh
-curl http://127.0.0.1:3000/health
-```
-
-Khi API và database kết nối được, kết quả là `{"status":"ok"}`. Endpoint này kiểm tra kết nối database.
 
 ### Đăng ký và lấy OTP
 
@@ -414,8 +422,10 @@ Nếu muốn cài lại cả cấu hình/OCR, chỉ sau khi đã xoá toàn bộ
 | Cổng `5432` bị chiếm                                   | Kiểm tra có đang chạy PostgreSQL cách A hoặc Docker trước đó; chọn một instance. Cách A hỗ trợ `LOCAL_DATABASE_PORT=5433 npm run db:local`, nhưng phải cập nhật `DATABASE_URL` tương ứng |
 | Cổng `1025` hoặc `8025` bị chiếm                       | Có Mailpit foreground, binary demo, Homebrew service hoặc Docker đang chạy; dừng đúng instance không dùng                                                                                |
 | Cổng `3000` bị chiếm                                   | API cũ vẫn chạy; dừng terminal cũ trước khi chạy lại                                                                                                                                     |
+| `command not found: docker`                            | Docker chưa có trong `PATH`; cài/mở Docker Desktop hoặc dùng [cách A — không Docker](#4-cách-a--chạy-không-docker). Không tiếp tục các lệnh Docker khi kiểm tra phiên bản thất bại |
 | `Cannot connect to the Docker daemon`                  | Mở Docker Desktop, chờ Engine hoạt động rồi thử lại                                                                                                                                      |
 | API lỗi kết nối database                               | Chờ database ready/healthy; đối chiếu host, port và database trong cấu hình local                                                                                                        |
+| `Let’s reconnect` kèm `Unable to complete the request. Please try again.` | API trả lỗi server khi khôi phục phiên. Chạy `curl --fail http://127.0.0.1:3000/health`; nếu thất bại, kiểm tra PostgreSQL đang chạy và cấu hình database. Sau khi health trả `{"status":"ok"}`, chọn **Retry connection**; app giữ phiên đã lưu để thử lại |
 | App báo không kết nối được API                         | Kiểm tra đúng URL theo iOS/Android/điện thoại thật, đúng `/api/v1`, và firewall                                                                                                          |
 | Admin mở Review identity gặp lỗi chung sau cập nhật app | Kiểm tra API đang chạy là bản mới: chi tiết review phải có `submissionId`. Dừng API cũ, build và khởi động lại theo mục 7, rồi chọn Retry trong app                                      |
 | Không có OTP trong Gmail                               | Email thử nghiệm nằm trong Mailpit; mở port `8025`, kiểm tra đúng người nhận                                                                                                             |

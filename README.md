@@ -10,6 +10,15 @@ Optional [OCR and face comparison](docs/identity-verification.md) run locally wi
 
 Prerequisites: Flutter **3.44.6** / its bundled Dart **3.12.2**, Node **22 LTS** (minimum **22.12**), npm, Docker Compose, Xcode for iOS or Android SDK/JDK17 for Android. Put the Flutter SDK's `bin` directory first in `PATH` if you also installed standalone Dart. Lockfiles are committed. Docker is optional if you use the embedded PostgreSQL alternative below.
 
+For the Docker setup, open Docker Desktop and check that both commands succeed:
+
+```sh
+docker --version
+docker compose version
+```
+
+If Docker is unavailable, use [Without Docker](#without-docker) or the [Vietnamese guide](docs/local-setup.md#4-cách-a--chạy-không-docker) before continuing.
+
 From the repository root (`.nvmrc` selects Node 22; run `nvm use` if you use nvm):
 
 ```sh
@@ -25,9 +34,15 @@ npm run admin:bootstrap
 npm run dev
 ```
 
-The API binds to `0.0.0.0:3000`; `GET http://127.0.0.1:3000/health` checks database connectivity. PostgreSQL and Mailpit ports are bound to localhost. Open [Mailpit](http://127.0.0.1:8025) to read OTP/reset messages; no email is sent to real recipients.
+The API binds to `0.0.0.0:3000`. Keep `npm run dev` running, then check API/database connectivity in another terminal:
 
-Start the app in another terminal:
+```sh
+curl --fail http://127.0.0.1:3000/health
+```
+
+Only start Flutter after this succeeds with `{"status":"ok"}`. The API can listen on port 3000 while PostgreSQL is unavailable. If this check fails, start PostgreSQL and verify its configuration first. PostgreSQL and Mailpit ports are bound to localhost. Open [Mailpit](http://127.0.0.1:8025) to read OTP/reset messages; no email is sent to real recipients.
+
+Start the app in another terminal, from the repository root:
 
 ```sh
 cd mobile
