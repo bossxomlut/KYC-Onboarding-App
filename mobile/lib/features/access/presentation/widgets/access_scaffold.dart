@@ -16,6 +16,7 @@ class AccessScaffold extends StatelessWidget {
     this.message,
     this.onBack,
     this.onRefresh,
+    this.keyboardDismissBehavior,
     super.key,
   });
   final String title;
@@ -27,6 +28,7 @@ class AccessScaffold extends StatelessWidget {
   final String? message;
   final VoidCallback? onBack;
   final VoidCallback? onRefresh;
+  final ScrollViewKeyboardDismissBehavior? keyboardDismissBehavior;
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -54,6 +56,7 @@ class AccessScaffold extends StatelessWidget {
             builder: (context, constraints) => Stack(
               children: [
                 SingleChildScrollView(
+                  keyboardDismissBehavior: keyboardDismissBehavior,
                   padding: _contentPadding,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

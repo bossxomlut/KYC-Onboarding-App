@@ -230,6 +230,73 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'only a user scroll hides the search keyboard and keeps its draft',
+    (tester) async {
+      final repository = _QueueRepository(
+        items: List.generate(
+          20,
+          (index) => _profile(userId: 'applicant-$index'),
+        ),
+        total: 20,
+      );
+      final cubit = await _mountQueue(tester, repository);
+      repository.calls.clear();
+      _deferQueueResponses(repository);
+      final search = find.byKey(const Key('review-search'));
+      final editable = find.descendant(
+        of: search,
+        matching: find.byType(EditableText),
+      );
+      await tester.showKeyboard(search);
+      const value = TextEditingValue(
+        text: 'alice',
+        selection: TextSelection(baseOffset: 1, extentOffset: 4),
+      );
+      tester.testTextInput.updateEditingValue(value);
+      await tester.pump();
+      final input = tester.state<EditableTextState>(editable);
+      final scrollable = tester.state<ScrollableState>(
+        find.ancestor(of: search, matching: find.byType(Scrollable)),
+      );
+
+      scrollable.position.jumpTo(40);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(input.widget.focusNode.hasFocus, isTrue);
+      expect(tester.testTextInput.isVisible, isTrue);
+      expect(input.widget.controller.value, value);
+
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -80),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        input.widget.focusNode.hasFocus,
+        isFalse,
+        reason: 'A deliberate vertical drag should dismiss the search input.',
+      );
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(input.widget.controller.text, 'alice');
+      expect(repository.calls, isEmpty);
+
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump();
+      expect(cubit.state.busy, isTrue);
+      expect(repository.calls, [
+        (offset: 0, filter: ReviewFilter.pending, search: 'alice'),
+      ]);
+      expect(input.widget.controller.text, 'alice');
+      expect(tester.testTextInput.isVisible, isFalse);
+      repository.responseGates.single.complete(_emptyQueueResult);
+      await tester.pumpAndSettle();
+      expect(cubit.state.reviewSearch, 'alice');
+      expect(input.widget.controller.text, 'alice');
+      expect(input.widget.focusNode.hasFocus, isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+    },
+  );
+
   testWidgets('typing continues through pending and trailing search requests', (
     tester,
   ) async {

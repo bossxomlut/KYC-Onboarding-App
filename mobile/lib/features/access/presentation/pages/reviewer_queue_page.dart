@@ -87,6 +87,7 @@ class _ReviewerQueuePageState extends State<ReviewerQueuePage> {
         error: state.error,
         message: state.message,
         onRefresh: _loadQueue,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         header: [
           const Text(
             'Find submitted profiles by email or review status. Check the personal details, identity document and selfie before deciding. You cannot review your own profile.',
