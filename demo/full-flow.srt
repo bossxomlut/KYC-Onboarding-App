@@ -1,0 +1,167 @@
+1
+00:00:00,000 --> 00:00:12,201
+Identity onboarding starts here
+
+2
+00:00:12,201 --> 00:00:16,256
+Create a synthetic account
+
+3
+00:00:16,256 --> 00:00:21,431
+Verify email with a local OTP
+
+4
+00:00:21,431 --> 00:00:29,793
+Email verified; profile is ready
+
+5
+00:00:29,793 --> 00:00:43,869
+Sign in to the demo account
+
+6
+00:00:43,869 --> 00:00:47,594
+Enter fictional personal details
+
+7
+00:00:47,594 --> 00:00:50,594
+Personal details are saved
+
+8
+00:00:50,594 --> 00:00:54,274
+Session and saved progress are restored
+
+9
+00:00:54,274 --> 00:00:59,096
+Continue at the identity document step
+
+10
+00:00:59,096 --> 00:01:02,896
+Synthetic document uploaded privately
+
+11
+00:01:02,896 --> 00:01:06,714
+Continue with a synthetic selfie
+
+12
+00:01:06,714 --> 00:01:10,580
+Synthetic selfie uploaded privately
+
+13
+00:01:10,580 --> 00:01:15,680
+Review details before submitting
+
+14
+00:01:15,680 --> 00:01:19,751
+Edit the address from Review
+
+15
+00:01:19,751 --> 00:01:21,993
+Check the private document preview
+
+16
+00:01:21,993 --> 00:01:25,714
+Check the private selfie preview
+
+17
+00:01:25,714 --> 00:01:35,048
+Retake the synthetic selfie before submission
+
+18
+00:01:35,048 --> 00:01:45,001
+First submission is pending review
+
+19
+00:01:45,001 --> 00:01:50,434
+Sign in as the synthetic reviewer
+
+20
+00:01:50,434 --> 00:01:54,281
+Reviewer finds the demo applicant
+
+21
+00:01:54,281 --> 00:01:56,532
+Reviewer checks personal details
+
+22
+00:01:56,532 --> 00:01:58,788
+Reviewer checks the synthetic identity document
+
+23
+00:01:58,788 --> 00:02:05,083
+Reviewer checks the synthetic selfie
+
+24
+00:02:05,083 --> 00:02:08,799
+Request a selfie update with a reason
+
+25
+00:02:08,799 --> 00:02:18,973
+Reviewer saves the rejection through the app
+
+26
+00:02:18,973 --> 00:02:22,648
+Applicant sees the selfie correction request
+
+27
+00:02:22,648 --> 00:02:26,482
+Accepted details and document remain saved
+
+28
+00:02:26,482 --> 00:02:30,332
+Replace only the requested synthetic selfie
+
+29
+00:02:30,332 --> 00:02:34,181
+Review the preserved details and replacement selfie
+
+30
+00:02:34,181 --> 00:02:47,636
+Second submission is pending review
+
+31
+00:02:47,636 --> 00:02:51,485
+Reviewer finds the demo applicant
+
+32
+00:02:51,485 --> 00:02:53,731
+Reviewer checks personal details
+
+33
+00:02:53,731 --> 00:02:55,983
+Reviewer checks the synthetic identity document
+
+34
+00:02:55,983 --> 00:02:59,580
+Reviewer checks the synthetic selfie
+
+35
+00:02:59,580 --> 00:03:03,318
+Confirm the checked identity submission
+
+36
+00:03:03,318 --> 00:03:16,486
+Reviewer approves through the app
+
+37
+00:03:16,486 --> 00:03:20,227
+Identity verified; applicant sees the result
+
+38
+00:03:20,227 --> 00:03:23,802
+Both submission rounds stay in history
+
+39
+00:03:23,802 --> 00:03:26,044
+Original rejected submission remains read only
+
+40
+00:03:26,044 --> 00:03:28,301
+Original synthetic document remains private and readable
+
+41
+00:03:28,301 --> 00:03:36,690
+Original synthetic selfie remains in submission history
+
+42
+00:03:36,690 --> 00:03:40,255
+Signed out safely at the end of the flow

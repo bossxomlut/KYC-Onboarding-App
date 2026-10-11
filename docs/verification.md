@@ -6,6 +6,12 @@ Run these checks after following [local setup](local-setup.md). Use Node 22.12+ 
 
 On 11 Oct 2026, after removing old recordings, screenshot renderers and generated artifacts: `npm run check`, `flutter analyze --no-pub`, `flutter test --no-pub test/architecture --reporter expanded` (1/1), local Markdown file-link checks and `git diff --check` passed. Production source and normal unit/integration tests were unchanged. Full behavior suites, native builds and destructive data-reset commands were not rerun for this cleanup.
 
+## Main-flow recording
+
+On 11 Oct 2026, `python3 demo/record-full-flow.py` built and ran the recording-only integration target on iPhone 17 Pro (iOS 26.2 Simulator). The real API integration passed **1/1**, including registration/OTP, explicit login, saved session/progress, private fixture uploads, edit/retake, authenticated reviewer rejection and approval, selfie-only resubmission, Verified, immutable history and logout. Focused Flutter analysis, Dart formatting, the architecture test (**1/1**), Python syntax and recorder TypeScript/JSON formatting passed. Production app/backend source was unchanged.
+
+The retained [MP4](../demo/full-flow.mp4), [chapter timestamps](../demo/full-flow.chapters.json) and [demo guide](../demo/README.md) use fictional data from `demo/scenario.json` and marked illustrations. The recording ran against a separate disposable PostgreSQL database/API/Mailpit and did not read or modify the development database. Camera capture was substituted on the simulator; session restoration recreated the app/container rather than force-killing it. This recording does not establish physical-camera, liveness or OCR/face accuracy.
+
 ## Automated checks
 
 From the repository root, after `npm ci` in `backend` and `flutter pub get` in `mobile`:
@@ -97,7 +103,7 @@ Authenticated synthetic API cases uploaded JPEGs, checked identity, submitted, t
 
 The first four cases extracted the synthetic Vietnamese name, ISO birth date and document number; the blank document returned `no_text`. A later real-Tesseract parser check recovered noisy bilingual labels while preserving number characters/leading zeroes. Invalid/ambiguous dates and unrelated phone/house/account labels remain unassigned. That parser fix did not repeat the full authenticated upload-to-review flow.
 
-On the same date, Android emulator and Samsung SM A235F debug builds were installed and launched, with API health reachable; an iPhone 17 Pro simulator build also launched. The later compact reviewer update was built/installed on Samsung. These checks confirm startup/connectivity; they did not perform the complete physical-camera-to-review interaction. Generated builds, screenshots and previous recordings are disposable development artifacts and are not retained as deliverables here.
+On the same date, Android emulator and Samsung SM A235F debug builds were installed and launched, with API health reachable; an iPhone 17 Pro simulator build also launched. The later compact reviewer update was built/installed on Samsung. These checks confirm startup/connectivity; they did not perform the complete physical-camera-to-review interaction. Generated builds, screenshots and previous recordings are disposable development artifacts. The current synthetic main-flow recording is retained separately in `demo/full-flow.mp4`.
 
 ## Remaining manual checks and limits
 

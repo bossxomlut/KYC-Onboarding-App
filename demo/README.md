@@ -1,6 +1,22 @@
 # Demo and recording
 
-Record the current app manually and save the final short video as `demo/full-flow.mp4`. The previous recording and automatic recording script were removed during repository cleanup. The final MP4 can be committed when ready; raw `.mov` files are ignored.
+The complete main-flow recording is [full-flow.mp4](full-flow.mp4). It uses the current Flutter app and real NestJS API, PostgreSQL and Mailpit, with fictional identities from [scenario.json](scenario.json) and illustrated photos in `assets/`. Public passwords in the scenario are for this disposable local demo only.
+
+The video shows registration and email OTP, login, personal details, saved session/progress restoration, document and selfie upload, private previews, editing and retaking, submission, reviewer rejection requesting only a new selfie, resubmission, reviewer approval, **Verified**, both historical submissions and logout. Review decisions are made through the authenticated reviewer screens. [Chapter timestamps](full-flow.chapters.json) and [subtitles](full-flow.srt) accompany the MP4.
+
+## Reproduce the recording
+
+On macOS, install the repository dependencies, Flutter/Xcode, FFmpeg and Mailpit, then boot an iOS Simulator. Mailpit can be on `PATH` or at `backend/.local/tools/mailpit/mailpit`. From the repository root:
+
+```sh
+python3 demo/record-full-flow.py
+# Select a specific booted simulator when necessary:
+python3 demo/record-full-flow.py --device DEVICE_ID
+```
+
+The runner starts a disposable PostgreSQL database on port **55462**, a separate API on **3300** and Mailpit on **8125/1125**, then runs `mobile/integration_test/recording_main_flow_test.dart`. It does not read `backend/.env` or touch the normal development database. Runtime data and logs stay in ignored `demo/.runtime/`; raw `demo/full-flow.mov` is ignored. Only `@kyc.example` recipients are allowed. The recorder starts after the app is ready, so the delivered video excludes build output and the desktop.
+
+iOS Simulator has no camera. This recording substitutes only camera capture with the clearly marked synthetic illustrations; it demonstrates upload and review, not physical lens capture, liveness or document authenticity. Session restoration recreates the app/container while retaining its secure refresh credential. Optional OCR/face checks are outside this main-flow recording.
 
 ## Manual recording checklist
 

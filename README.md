@@ -136,7 +136,7 @@ flutter build ios --simulator --debug
 flutter build apk --debug
 ```
 
-The submission recording will be captured manually from the current app. [Demo instructions](demo/README.md) include a recording checklist, synthetic fixtures and the real-API integration test. Save the finished recording as `demo/full-flow.mp4` before submitting the assignment. See [verification evidence](docs/verification.md) for checks and remaining physical-device coverage.
+The [complete main-flow recording](demo/full-flow.mp4) shows synthetic applicant onboarding, authenticated reviewer rejection/resubmission/approval, private submission history and logout. [Demo instructions](demo/README.md) include chapter timestamps, the fictional scenario and a reproducible recorder using an isolated real API/database. Camera capture is replaced with marked illustrations on iOS Simulator. See [verification evidence](docs/verification.md) for checks and remaining physical-device coverage.
 
 ## Assumptions and further work
 

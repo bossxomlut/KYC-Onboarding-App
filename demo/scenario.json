@@ -1,0 +1,19 @@
+{
+  "syntheticOnly": true,
+  "applicant": {
+    "email": "maya.recording@kyc.example",
+    "password": "DemoOnlyPass123!",
+    "fullName": "Maya Demo",
+    "dateOfBirth": "1995-06-15",
+    "nationality": "Vietnamese",
+    "address": "123 Demo Street, Demo City",
+    "documentNumber": "DEMO000123"
+  },
+  "reviewer": {
+    "email": "reviewer.recording@kyc.example",
+    "password": "ReviewerDemo123!"
+  },
+  "document": "assets/document.jpg",
+  "selfie": "assets/selfie.jpg",
+  "notice": "Fictional identities and public demo-only passwords. Never use these credentials in production."
+}

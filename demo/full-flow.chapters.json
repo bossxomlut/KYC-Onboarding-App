@@ -1,0 +1,312 @@
+{
+  "syntheticOnly": true,
+  "recordedAt": "2026-10-11T15:24:38+07:00",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "device": {
+    "udid": "19818BA2-6A09-45F4-8A91-19CB8AED5BFB",
+    "name": "iPhone 17 Pro (26.2)"
+  },
+  "video": "full-flow.mp4",
+  "framesPerSecond": 30,
+  "width": 720,
+  "durationSeconds": 220.255,
+  "bytes": 5325742,
+  "scenario": "scenario.json",
+  "chapters": [
+    {
+      "slug": "welcome",
+      "label": "Identity onboarding starts here",
+      "timestampSeconds": 4.017,
+      "startSeconds": 0,
+      "endSeconds": 12.201
+    },
+    {
+      "slug": "registration",
+      "label": "Create a synthetic account",
+      "timestampSeconds": 12.201,
+      "startSeconds": 12.201,
+      "endSeconds": 16.256
+    },
+    {
+      "slug": "email-otp",
+      "label": "Verify email with a local OTP",
+      "timestampSeconds": 16.256,
+      "startSeconds": 16.256,
+      "endSeconds": 21.431
+    },
+    {
+      "slug": "registered",
+      "label": "Email verified; profile is ready",
+      "timestampSeconds": 21.431,
+      "startSeconds": 21.431,
+      "endSeconds": 29.793
+    },
+    {
+      "slug": "applicant-login",
+      "label": "Sign in to the demo account",
+      "timestampSeconds": 29.793,
+      "startSeconds": 29.793,
+      "endSeconds": 43.869
+    },
+    {
+      "slug": "personal-details",
+      "label": "Enter fictional personal details",
+      "timestampSeconds": 43.869,
+      "startSeconds": 43.869,
+      "endSeconds": 47.594
+    },
+    {
+      "slug": "saved-progress",
+      "label": "Personal details are saved",
+      "timestampSeconds": 47.594,
+      "startSeconds": 47.594,
+      "endSeconds": 50.594
+    },
+    {
+      "slug": "session-restored",
+      "label": "Session and saved progress are restored",
+      "timestampSeconds": 50.594,
+      "startSeconds": 50.594,
+      "endSeconds": 54.274
+    },
+    {
+      "slug": "document-step",
+      "label": "Continue at the identity document step",
+      "timestampSeconds": 54.274,
+      "startSeconds": 54.274,
+      "endSeconds": 59.096
+    },
+    {
+      "slug": "document-uploaded",
+      "label": "Synthetic document uploaded privately",
+      "timestampSeconds": 59.096,
+      "startSeconds": 59.096,
+      "endSeconds": 62.896
+    },
+    {
+      "slug": "selfie-step",
+      "label": "Continue with a synthetic selfie",
+      "timestampSeconds": 62.896,
+      "startSeconds": 62.896,
+      "endSeconds": 66.714
+    },
+    {
+      "slug": "selfie-uploaded",
+      "label": "Synthetic selfie uploaded privately",
+      "timestampSeconds": 66.714,
+      "startSeconds": 66.714,
+      "endSeconds": 70.58
+    },
+    {
+      "slug": "review-profile",
+      "label": "Review details before submitting",
+      "timestampSeconds": 70.58,
+      "startSeconds": 70.58,
+      "endSeconds": 75.68
+    },
+    {
+      "slug": "edit-details",
+      "label": "Edit the address from Review",
+      "timestampSeconds": 75.68,
+      "startSeconds": 75.68,
+      "endSeconds": 79.751
+    },
+    {
+      "slug": "review-private-document",
+      "label": "Check the private document preview",
+      "timestampSeconds": 79.751,
+      "startSeconds": 79.751,
+      "endSeconds": 81.993
+    },
+    {
+      "slug": "review-private-selfie",
+      "label": "Check the private selfie preview",
+      "timestampSeconds": 81.993,
+      "startSeconds": 81.993,
+      "endSeconds": 85.714
+    },
+    {
+      "slug": "retake-before-submit",
+      "label": "Retake the synthetic selfie before submission",
+      "timestampSeconds": 85.714,
+      "startSeconds": 85.714,
+      "endSeconds": 95.048
+    },
+    {
+      "slug": "pending-review",
+      "label": "First submission is pending review",
+      "timestampSeconds": 95.048,
+      "startSeconds": 95.048,
+      "endSeconds": 105.001
+    },
+    {
+      "slug": "reviewer-login",
+      "label": "Sign in as the synthetic reviewer",
+      "timestampSeconds": 105.001,
+      "startSeconds": 105.001,
+      "endSeconds": 110.434
+    },
+    {
+      "slug": "review-queue",
+      "label": "Reviewer finds the demo applicant",
+      "timestampSeconds": 110.434,
+      "startSeconds": 110.434,
+      "endSeconds": 114.281
+    },
+    {
+      "slug": "review-details",
+      "label": "Reviewer checks personal details",
+      "timestampSeconds": 114.281,
+      "startSeconds": 114.281,
+      "endSeconds": 116.532
+    },
+    {
+      "slug": "review-document",
+      "label": "Reviewer checks the synthetic identity document",
+      "timestampSeconds": 116.532,
+      "startSeconds": 116.532,
+      "endSeconds": 118.788
+    },
+    {
+      "slug": "review-selfie",
+      "label": "Reviewer checks the synthetic selfie",
+      "timestampSeconds": 118.788,
+      "startSeconds": 118.788,
+      "endSeconds": 125.083
+    },
+    {
+      "slug": "request-selfie-update",
+      "label": "Request a selfie update with a reason",
+      "timestampSeconds": 125.083,
+      "startSeconds": 125.083,
+      "endSeconds": 128.799
+    },
+    {
+      "slug": "review-rejected",
+      "label": "Reviewer saves the rejection through the app",
+      "timestampSeconds": 128.799,
+      "startSeconds": 128.799,
+      "endSeconds": 138.973
+    },
+    {
+      "slug": "applicant-rejected",
+      "label": "Applicant sees the selfie correction request",
+      "timestampSeconds": 138.973,
+      "startSeconds": 138.973,
+      "endSeconds": 142.648
+    },
+    {
+      "slug": "selfie-only-resume",
+      "label": "Accepted details and document remain saved",
+      "timestampSeconds": 142.648,
+      "startSeconds": 142.648,
+      "endSeconds": 146.482
+    },
+    {
+      "slug": "replacement-selfie",
+      "label": "Replace only the requested synthetic selfie",
+      "timestampSeconds": 146.482,
+      "startSeconds": 146.482,
+      "endSeconds": 150.332
+    },
+    {
+      "slug": "resubmission-review",
+      "label": "Review the preserved details and replacement selfie",
+      "timestampSeconds": 150.332,
+      "startSeconds": 150.332,
+      "endSeconds": 154.181
+    },
+    {
+      "slug": "resubmitted",
+      "label": "Second submission is pending review",
+      "timestampSeconds": 154.181,
+      "startSeconds": 154.181,
+      "endSeconds": 167.636
+    },
+    {
+      "slug": "review-queue",
+      "label": "Reviewer finds the demo applicant",
+      "timestampSeconds": 167.636,
+      "startSeconds": 167.636,
+      "endSeconds": 171.485
+    },
+    {
+      "slug": "review-details",
+      "label": "Reviewer checks personal details",
+      "timestampSeconds": 171.485,
+      "startSeconds": 171.485,
+      "endSeconds": 173.731
+    },
+    {
+      "slug": "review-document",
+      "label": "Reviewer checks the synthetic identity document",
+      "timestampSeconds": 173.731,
+      "startSeconds": 173.731,
+      "endSeconds": 175.983
+    },
+    {
+      "slug": "review-selfie",
+      "label": "Reviewer checks the synthetic selfie",
+      "timestampSeconds": 175.983,
+      "startSeconds": 175.983,
+      "endSeconds": 179.58
+    },
+    {
+      "slug": "approve-confirmation",
+      "label": "Confirm the checked identity submission",
+      "timestampSeconds": 179.58,
+      "startSeconds": 179.58,
+      "endSeconds": 183.318
+    },
+    {
+      "slug": "review-approved",
+      "label": "Reviewer approves through the app",
+      "timestampSeconds": 183.318,
+      "startSeconds": 183.318,
+      "endSeconds": 196.486
+    },
+    {
+      "slug": "verified",
+      "label": "Identity verified; applicant sees the result",
+      "timestampSeconds": 196.486,
+      "startSeconds": 196.486,
+      "endSeconds": 200.227
+    },
+    {
+      "slug": "submission-history",
+      "label": "Both submission rounds stay in history",
+      "timestampSeconds": 200.227,
+      "startSeconds": 200.227,
+      "endSeconds": 203.802
+    },
+    {
+      "slug": "original-submission",
+      "label": "Original rejected submission remains read only",
+      "timestampSeconds": 203.802,
+      "startSeconds": 203.802,
+      "endSeconds": 206.044
+    },
+    {
+      "slug": "history-private-document",
+      "label": "Original synthetic document remains private and readable",
+      "timestampSeconds": 206.044,
+      "startSeconds": 206.044,
+      "endSeconds": 208.301
+    },
+    {
+      "slug": "history-private-selfie",
+      "label": "Original synthetic selfie remains in submission history",
+      "timestampSeconds": 208.301,
+      "startSeconds": 208.301,
+      "endSeconds": 216.69
+    },
+    {
+      "slug": "logout",
+      "label": "Signed out safely at the end of the flow",
+      "timestampSeconds": 216.69,
+      "startSeconds": 216.69,
+      "endSeconds": 220.255
+    }
+  ],
+  "notice": "Fictional identities, illustrated documents, and isolated local services only."
+}
