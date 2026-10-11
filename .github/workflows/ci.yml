@@ -18,6 +18,8 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
+      - run: python3 local-verification/test_engine.py
+      - run: python3 ../scripts/test_local_verification_setup.py
       - run: npm run check
       - run: npm test
       - run: npm run build

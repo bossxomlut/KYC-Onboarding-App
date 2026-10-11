@@ -14,6 +14,7 @@ class VerificationSummary extends StatelessWidget {
     final result = verification;
     if (result == null) return const SizedBox.shrink();
 
+    final isLocal = result.provider == 'local';
     final disabled = result.status == VerificationStatus.disabled;
     final hasResults =
         result.ocr != null ||
@@ -41,7 +42,7 @@ class VerificationSummary extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Automated checks',
+                  isLocal ? 'Local identity checks' : 'Automated checks',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -74,7 +75,7 @@ class VerificationSummary extends StatelessWidget {
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 16),
-              _face(context, result.faceMatch),
+              _face(context, result.faceMatch, isLocal: isLocal),
               const SizedBox(height: 12),
               Text(
                 'This compares the selfie with the document photo. It does not check liveness or prove identity. A reviewer makes the final decision.',
@@ -143,7 +144,11 @@ class VerificationSummary extends StatelessWidget {
     ],
   );
 
-  Widget _face(BuildContext context, FaceMatchVerification? face) => Column(
+  Widget _face(
+    BuildContext context,
+    FaceMatchVerification? face, {
+    required bool isLocal,
+  }) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text('Face comparison', style: Theme.of(context).textTheme.titleMedium),
@@ -164,6 +169,13 @@ class VerificationSummary extends StatelessWidget {
         if (face!.similarity != null && face.similarity!.isFinite)
           Text('Similarity score: ${_score(face.similarity!)} / 100'),
         Text('Match threshold: ${_score(face.threshold)} / 100'),
+        if (isLocal) ...[
+          const SizedBox(height: 8),
+          Text(
+            'The similarity score is not a probability of identity.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ],
     ],
   );

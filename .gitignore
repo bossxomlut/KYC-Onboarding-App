@@ -12,6 +12,8 @@ backend/.postgres/
 tmp/
 .dart_tool/
 build/
+__pycache__/
+*.pyc
 
 # Keep the compressed assignment recording; raw simulator video is local only.
 demo/*.mov

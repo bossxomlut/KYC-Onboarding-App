@@ -1,66 +1,92 @@
 # OCR và đối chiếu khuôn mặt
 
-Tính năng đọc văn bản trên ảnh giấy tờ bằng AWS Textract và đối chiếu ảnh selfie với khuôn mặt trên giấy tờ bằng AWS Rekognition. Ở màn hình **Review & submit**, người dùng chọn **Run identity checks** để gửi hai ảnh đã tải lên sang AWS. Kết quả xuất hiện trong hồ sơ của người dùng, màn hình duyệt và lịch sử từng lần nộp. Người dùng có thể sửa thông tin qua **Edit**; OCR không tự ghi đè dữ liệu đã nhập.
+Ứng dụng có hai chế độ kiểm tra thật: **local** dùng Tesseract và OpenCV ngay trên server của app; **aws** dùng Textract và Rekognition. Người dùng chọn **Run identity checks** ở **Review & submit** để kiểm tra hai ảnh đã tải lên. Kết quả hiển thị trong hồ sơ, màn hình duyệt và lịch sử lần nộp. OCR không ghi đè thông tin đã nhập; người dùng sửa qua **Edit**. KYC vẫn do người duyệt quyết định.
 
-## Bật tính năng
+## Chạy miễn phí với local
 
-Backend cần Node 22.12 trở lên, AWS credentials và region có cả hai dịch vụ. Cấu hình credentials ở backend bằng IAM role, AWS profile hoặc biến môi trường chuẩn của AWS SDK; không đưa khóa vào Flutter, Git hay tham số build của ứng dụng.
+Chế độ local không cần tài khoản cloud, API key hay phí theo lượt. Ảnh không gửi sang dịch vụ nhận dạng bên ngoài. Engine dùng CPU của server; khi server nằm trên Mac phát triển, toàn bộ OCR/đối chiếu chạy trên Mac, không chạy trên điện thoại. Chi phí thuê server vẫn có nếu triển khai lên máy chủ trả phí.
+
+Cài **Python 3.11+** và Tesseract. Trên macOS:
+
+```sh
+brew install tesseract
+```
+
+Trên Debian/Ubuntu, cài `python3`, `python3-venv` và `tesseract-ocr` bằng package manager. Từ thư mục gốc repo, chạy:
+
+```sh
+python3 scripts/setup-local-verification.py
+```
+
+Script tạo Python venv riêng trong `backend/.local/identity-venv`, cài các package đã pin trong `backend/local-verification/requirements.txt`, tải YuNet/SFace cùng dữ liệu ngôn ngữ `vie`/`eng` và xác nhận SHA-256 trước khi cài. File hỏng hoặc tải chưa xong không thay thế file cũ. Tổng model/ngôn ngữ khoảng 44 MB, không đưa vào Git. Cần mạng khi cài lần đầu; kiểm tra ảnh sau đó không gọi mạng. Giấy phép và nguồn tải ở [third-party notes](../backend/local-verification/THIRD_PARTY.md).
 
 Trong `backend/.env`, đặt:
+
+```dotenv
+KYC_VERIFICATION_PROVIDER=local
+KYC_FACE_MATCH_THRESHOLD=36.3
+KYC_VERIFICATION_TIMEOUT_MS=7000
+# Mặc định OCR tiếng Việt; có thể chọn eng, vie+eng hoặc eng+vie:
+KYC_LOCAL_OCR_LANGUAGES=vie
+```
+
+Không ghi đè `.env` hoặc đổi các khóa mã hóa cũ. Hai đường dẫn có mặc định tương đối với thư mục `backend`:
+
+```dotenv
+# KYC_LOCAL_PYTHON=/absolute/path/backend/.local/identity-venv/bin/python
+# KYC_LOCAL_MODELS_DIR=/absolute/path/backend/.local/identity-models
+# TESSERACT_CMD=/absolute/path/to/tesseract
+```
+
+Chạy backend từ thư mục `backend`. Nếu `.env` cũ có `KYC_FACE_MATCH_THRESHOLD=90` của AWS, đổi sang `36.3` hoặc xóa dòng để chọn mặc định theo provider. Hai engine có thang điểm khác nhau; không dùng ngưỡng AWS cho local.
+
+Kiểm tra lại cài đặt mà không tải/cài thêm:
+
+```sh
+python3 scripts/setup-local-verification.py --check
+```
+
+Sau khi thay `.env`, **khởi động lại API** để nạp cấu hình. Với lần cài mới, áp dụng migration trước:
+
+```sh
+cd backend
+npm ci
+npm run migrate
+npm run dev
+```
+
+Nếu API đang chạy, dừng phiên API đó rồi chạy lại `npm run dev`. Nếu dùng bản biên dịch, chạy `npm run build` rồi `npm start`. Khi mã Flutter thay đổi, build/chạy lại app theo [local setup](local-setup.md). Tại Review, thông báo local nói rõ ảnh xử lý trên server của app; nút **Run identity checks** chỉ chạy khi đã có cả giấy tờ và selfie được tải lên.
+
+## Bật AWS khi có tài khoản
+
+Backend cần credentials AWS và region có cả hai dịch vụ. Dùng IAM role, AWS profile hoặc biến môi trường chuẩn của AWS SDK ở backend; không đưa khóa vào Flutter hay Git.
 
 ```dotenv
 KYC_VERIFICATION_PROVIDER=aws
 AWS_REGION=ap-southeast-1
 KYC_FACE_MATCH_THRESHOLD=90
 KYC_VERIFICATION_TIMEOUT_MS=7000
-# Nếu dùng profile AWS ở máy phát triển:
-AWS_PROFILE=kyc-development
+# AWS_PROFILE=kyc-development
 ```
 
-IAM principal cần ba quyền sau trong region đã chọn. Adapter truyền bytes trực tiếp, không cần S3, face collection hay quyền lưu khuôn mặt:
+IAM principal cần các quyền `textract:DetectDocumentText`, `rekognition:DetectFaces` và `rekognition:CompareFaces` trên resource `*`. Adapter truyền bytes trực tiếp, không cần S3 hay face collection. Khởi động lại API sau khi đổi cấu hình. AWS tính phí hoặc trừ credits theo lượt sử dụng; chưa có credentials thì không chạy kiểm tra AWS thật.
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "textract:DetectDocumentText",
-        "rekognition:DetectFaces",
-        "rekognition:CompareFaces"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
-
-Áp dụng migration và khởi động lại API:
-
-```sh
-cd backend
-npm ci
-npm run migrate
-npm run build
-npm start
-```
-
-Nếu API đang chạy bằng `npm run dev`, trình theo dõi sẽ tải lại source; vẫn cần chạy migration trước. Nếu API đang chạy từ `dist`, dừng tiến trình cũ sau khi build rồi khởi động tiến trình mới. Build lại Flutter để có nút kiểm tra và phần kết quả mới. Cấu hình mặc định `KYC_VERIFICATION_PROVIDER=none` hiển thị tính năng chưa được cấu hình và không gửi ảnh ra ngoài. Chỉ bật `aws` khi đã chuẩn bị tài khoản/quyền sử dụng; mỗi lần kiểm tra có thể phát sinh phí AWS.
+`KYC_VERIFICATION_PROVIDER=none` tắt các kiểm tra mới. Đây là mặc định an toàn cho cài đặt chưa chuẩn bị engine. Bằng chứng đã lưu vẫn đọc được khi tắt provider.
 
 ## Kết quả và giới hạn
 
-- OCR trả văn bản nhận dạng, confidence trung bình của các dòng và các trường gợi ý khi tìm được nhãn English rõ ràng: full name, date of birth, document/passport/ID/licence number. Nhãn tên phải nằm riêng trên một dòng hoặc có dấu hai chấm; tên có thể ghép từ given names và surname. Nhãn tên cha/mẹ/người cấp không được dùng làm tên người nộp. Ngày hỗ trợ ISO hoặc tháng viết bằng chữ English; ngày dạng số mơ hồ được để trống. Không suy đoán trường từ vị trí hay văn bản không có nhãn.
-- Adapter yêu cầu đúng một khuôn mặt trong mỗi ảnh trước khi gọi CompareFaces. Kết quả gồm matched, not matched, no face, multiple faces hoặc failed; điểm similarity là thang 0–100. Ngưỡng mặc định 90 có thể cấu hình từ 1–100 và cần được đánh giá theo dữ liệu thực tế của sản phẩm. Điểm này không phải xác suất xác minh đúng danh tính.
-- OCR và đối chiếu khuôn mặt là tín hiệu hỗ trợ. Hồ sơ vẫn được nộp cho người duyệt, kể cả khi không khớp hoặc dịch vụ không khả dụng. Tính năng không kiểm tra tính thật của giấy tờ và không có liveness/chống ảnh chụp lại.
-- [Textract hỗ trợ sáu ngôn ngữ](https://docs.aws.amazon.com/textract/latest/dg/limits-document.html): English, French, German, Italian, Portuguese và Spanish. Tiếng Việt và đầy đủ ký tự CCCD Việt Nam chưa được hỗ trợ; để triển khai KYC cho CCCD Việt Nam cần adapter OCR phù hợp như FPT.AI. Parser trường hiện tại dùng nhãn English. [CompareFaces](https://docs.aws.amazon.com/rekognition/latest/APIReference/API_CompareFaces.html) là phép đối chiếu hai ảnh và vẫn cần người duyệt kiểm tra.
+- **Local OCR:** Tesseract đọc tiếng Việt mặc định, có thể đổi sang English hoặc phối hợp hai ngôn ngữ. Trường tên/ngày sinh/số giấy tờ chỉ được gợi ý từ nhãn rõ ràng như `Họ và tên`, `Ngày sinh`, `Số CCCD` hoặc nhãn English tương ứng. Không suy đoán thông tin thiếu; không tự sửa chính tả tên. Ngày theo nhãn giấy tờ Việt Nam dùng `dd/mm/yyyy`; ISO cũng được hỗ trợ. Đây là OCR chữ in chung, chưa phải engine kiểm tra tính thật hoặc cấu trúc của mọi mẫu CCCD.
+- **Local đối chiếu:** YuNet tìm khuôn mặt, SFace so sánh hai khuôn mặt đã căn chỉnh. `similarity` là cosine similarity ×100, giới hạn 0–100. Ngưỡng mặc định `36.3` dựa trên [ví dụ OpenCV](https://docs.opencv.org/4.x/d0/dd4/tutorial_dnn_face.html), tương ứng cosine `0.363`. Điểm này không phải phần trăm xác suất đúng danh tính, không so trực tiếp với AWS và cần đánh giá thêm trên ảnh thực tế của sản phẩm.
+- **AWS OCR:** Textract trả văn bản và confidence trung bình theo dòng; parser chỉ gợi ý trường khi có nhãn English rõ ràng. [Textract hỗ trợ sáu ngôn ngữ](https://docs.aws.amazon.com/textract/latest/dg/limits-document.html), chưa hỗ trợ tiếng Việt/đầy đủ ký tự CCCD Việt Nam.
+- Cả hai engine yêu cầu đúng một khuôn mặt trong mỗi ảnh. Kết quả có `matched`, `not_matched`, `no_face`, `multiple_faces` hoặc `failed`; OCR có `succeeded`, `no_text` hoặc `failed`. Thành phần nào lỗi không xóa thành phần còn lại đã thành công.
+- OCR phụ thuộc độ rõ, ánh sáng, kích thước chữ và bố cục ảnh. Giấy tờ/ảnh selfie bị nghiêng, che khuất hoặc quá nhỏ có thể không nhận dạng được. Các kiểm tra hỗ trợ người duyệt, không tự phê duyệt/từ chối KYC, không kiểm tra giấy tờ thật và chưa có liveness/chống ảnh chụp lại.
 
 ## Lưu trữ và xử lý lỗi
 
-Backend lấy ảnh từ media riêng tư đã được xác thực chủ sở hữu, giải mã trong bộ nhớ và gửi JPEG đã loại metadata. Ảnh gửi tới provider được giới hạn kích thước 5 MB. Kết quả OCR/đối chiếu được mã hóa AES-256-GCM bằng cùng khóa bảo vệ hồ sơ; không lưu embeddings hoặc toàn bộ phản hồi AWS. Không ghi lỗi provider chứa thông tin giấy tờ vào phản hồi HTTP hay log.
+Backend lấy ảnh riêng tư đã xác thực chủ sở hữu, giải mã trong bộ nhớ và giao cho provider. Local truyền ảnh qua stdin của tiến trình Python; Tesseract cũng đọc stdin, không tạo file ảnh plaintext tạm. Embeddings chỉ tồn tại trong bộ nhớ của lượt kiểm tra, không lưu vào database. Không log ảnh, OCR, lỗi provider hay credentials. Kết quả OCR/đối chiếu được mã hóa AES-256-GCM bằng khóa bảo vệ hồ sơ hiện có.
 
-Kiểm tra chỉ chạy khi người dùng chọn nút và hồ sơ đang chỉnh sửa, đã có đủ document/selfie. Kết quả hoàn tất được dùng lại cho đúng hai media IDs. Chụp lại một ảnh sẽ xóa kết quả đang làm việc; retry cùng capture ID giữ nguyên kết quả. Các lần nộp cũ giữ snapshot kết quả và ảnh ban đầu.
+Chỉ chạy khi người dùng chọn nút và hồ sơ đang chỉnh sửa. Kết quả hoàn tất được dùng lại cho đúng hai media IDs, provider, ngưỡng và ngôn ngữ OCR local hiện tại. Đổi provider/ngưỡng/ngôn ngữ OCR local khiến hồ sơ đang chỉnh sửa cần kiểm tra lại; snapshot của lần nộp cũ vẫn giữ bằng chứng gốc. Kết quả local cũ chưa ghi ngôn ngữ cần chạy lại một lần. Chụp lại ảnh xóa kết quả đang làm việc; retry cùng capture ID giữ kết quả.
 
-Cloud IO chạy ngoài transaction. Backend kiểm tra lại media IDs/trạng thái trước khi lưu, chặn nộp khi một lượt kiểm tra đang chạy và bỏ kết quả cũ nếu ảnh đã thay đổi. Lượt kiểm tra có timeout tổng thể tối đa 8 giây, retry lỗi có cooldown 30 giây và endpoint áp dụng rate limit. OCR lỗi không xóa kết quả đối chiếu đã thành công và ngược lại. IAM/quota/network/timeout đều hiển thị failed an toàn; người dùng có thể thử lại.
+Provider IO chạy ngoài transaction; backend kiểm tra lại media IDs/trạng thái trước khi lưu. Lượt kiểm tra có timeout tổng thể tối đa 8 giây, cooldown 30 giây và rate limit. Local timeout hủy cả nhóm tiến trình, bao gồm Tesseract. Runtime/model thiếu hoặc OCR cấu hình sai trả kết quả lỗi an toàn. Hồ sơ vẫn có thể nộp cho người duyệt khi kiểm tra không khớp/không khả dụng.
 
-Migration `006_kyc_verification.sql` chỉ thêm cột nullable, nên hồ sơ/lịch sử trước đây không bị gán kết quả mới. Khi tắt provider, bằng chứng đã lưu vẫn có thể đọc lại; việc tắt chỉ ngăn lượt kiểm tra mới.
+Migration `006_kyc_verification.sql` thêm cột nullable; hồ sơ/lịch sử trước tính năng không bị gán bằng chứng mới. Không cần migration khác cho local. Kết quả chạy thật trên máy phát triển và phạm vi kiểm chứng ở [local verification evidence](local-identity-verification-checks.md).

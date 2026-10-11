@@ -13,7 +13,7 @@ import {
   IDENTITY_VERIFIER,
 } from "../infrastructure/tokens.js";
 import type { IdentityVerifier } from "../verification/identity-verifier.js";
-import { createIdentityVerifier } from "../verification/aws-identity-verifier.js";
+import { createIdentityVerifier } from "../verification/create-identity-verifier.js";
 import { verifyProfile } from "./kyc-verification.service.js";
 import { verificationInProgress } from "./kyc-verification.repository.js";
 import { decrypt, encrypt } from "../security.js";

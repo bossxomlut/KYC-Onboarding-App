@@ -265,6 +265,204 @@ test("capture retries preserve verification; real replacement invalidates; detai
   );
 });
 
+test("editable profiles rerun checks when provider or matching threshold changes, while snapshots retain original evidence", async () => {
+  verifyImpl = async () => successful;
+  const user = await actor();
+  await draft(user);
+  const original = (await check(user)).body.profile.verification;
+  assert.equal(original.provider, "aws");
+  const beforeCalls = calls.length;
+  const localConfig: Config = {
+    ...config,
+    verification: {
+      provider: "local",
+      pythonPath: "/test/python",
+      modelsDir: "/test/models",
+      ocrLanguages: "vie",
+      faceMatchThreshold: 36.3,
+      timeoutMs: 7000,
+    },
+  };
+  const local = await buildApp(
+    localConfig,
+    pool,
+    { send: async () => {} },
+    {
+      verify: async () => {
+        calls.push({ document: image, selfie: image });
+        return {
+          ...successful,
+          faceMatch: { ...successful.faceMatch, threshold: 36.3 },
+        };
+      },
+    },
+  );
+  try {
+    const current = (await json("get", "/kyc", user, undefined, local)).body
+      .profile.verification;
+    assert.equal(current.provider, "local");
+    assert.equal(current.status, "not_started");
+    assert.equal(current.ocr, null);
+    await pool.query(
+      "UPDATE kyc_profiles SET verification_started_at=now()-interval '31 seconds' WHERE user_id=$1",
+      [user.id],
+    );
+    const result = await json(
+      "post",
+      "/kyc/verification",
+      user,
+      undefined,
+      local,
+    );
+    assert.equal(result.status, 200);
+    assert.equal(result.body.profile.verification.provider, "local");
+    assert.equal(result.body.profile.verification.faceMatch.threshold, 36.3);
+    assert.equal(calls.length, beforeCalls + 1);
+    assert.equal(
+      (await json("post", "/kyc/submit", user, undefined, local)).status,
+      200,
+    );
+    const history = await json("get", "/kyc/history", user);
+    assert.equal(
+      history.body.submissions[0].profile.verification.provider,
+      "local",
+    );
+    assert.equal(
+      history.body.submissions[0].profile.verification.faceMatch.threshold,
+      36.3,
+    );
+  } finally {
+    await local.close();
+  }
+
+  const second = await actor();
+  await draft(second);
+  await check(second);
+  const changedConfig: Config = {
+    ...config,
+    verification: {
+      provider: "aws",
+      region: "ap-southeast-1",
+      faceMatchThreshold: 95,
+      timeoutMs: 7000,
+    },
+  };
+  const changed = await buildApp(
+    changedConfig,
+    pool,
+    { send: async () => {} },
+    {
+      verify: async () => ({
+        ...successful,
+        faceMatch: { ...successful.faceMatch, threshold: 95 },
+      }),
+    },
+  );
+  try {
+    const current = (await json("get", "/kyc", second, undefined, changed)).body
+      .profile.verification;
+    assert.equal(current.status, "not_started");
+    await pool.query(
+      "UPDATE kyc_profiles SET verification_started_at=now()-interval '31 seconds' WHERE user_id=$1",
+      [second.id],
+    );
+    const result = await json(
+      "post",
+      "/kyc/verification",
+      second,
+      undefined,
+      changed,
+    );
+    assert.equal(result.status, 200);
+    assert.equal(result.body.profile.verification.faceMatch.threshold, 95);
+  } finally {
+    await changed.close();
+  }
+});
+
+test("changing local OCR language invalidates draft evidence and reruns, while submission history keeps its original language", async () => {
+  const user = await actor();
+  await draft(user);
+  let localCalls = 0;
+  const configured = (ocrLanguages: "vie" | "eng"): Config => ({
+    ...config,
+    verification: {
+      provider: "local",
+      pythonPath: "/test/python",
+      modelsDir: "/test/models",
+      ocrLanguages,
+      faceMatchThreshold: 36.3,
+      timeoutMs: 7000,
+    },
+  });
+  const localVerifier = {
+    verify: async () => {
+      localCalls++;
+      return {
+        ...successful,
+        faceMatch: { ...successful.faceMatch, threshold: 36.3 },
+      };
+    },
+  };
+  const vietnamese = await buildApp(
+    configured("vie"),
+    pool,
+    { send: async () => {} },
+    localVerifier,
+  );
+  const english = await buildApp(
+    configured("eng"),
+    pool,
+    { send: async () => {} },
+    localVerifier,
+  );
+  try {
+    const first = await json(
+      "post",
+      "/kyc/verification",
+      user,
+      undefined,
+      vietnamese,
+    );
+    assert.equal(first.status, 200);
+    assert.equal(first.body.profile.verification.ocrLanguages, "vie");
+    await json("post", "/kyc/verification", user, undefined, vietnamese);
+    assert.equal(localCalls, 1);
+    const current = (await json("get", "/kyc", user, undefined, english)).body
+      .profile.verification;
+    assert.equal(current.status, "not_started");
+    assert.equal(current.ocr, null);
+    await pool.query(
+      "UPDATE kyc_profiles SET verification_started_at=now()-interval '31 seconds' WHERE user_id=$1",
+      [user.id],
+    );
+    const changed = await json(
+      "post",
+      "/kyc/verification",
+      user,
+      undefined,
+      english,
+    );
+    assert.equal(changed.status, 200);
+    assert.equal(changed.body.profile.verification.ocrLanguages, "eng");
+    assert.equal(localCalls, 2);
+    assert.equal(
+      (await json("post", "/kyc/submit", user, undefined, english)).status,
+      200,
+    );
+    const history = (
+      await json("get", "/kyc/history", user, undefined, vietnamese)
+    ).body;
+    assert.equal(
+      history.submissions[0].profile.verification.ocrLanguages,
+      "eng",
+    );
+  } finally {
+    await vietnamese.close();
+    await english.close();
+  }
+});
+
 test("a profile read overlapping media replacement never pairs old verification with the new photos", async () => {
   verifyImpl = async () => successful;
   const user = await actor();

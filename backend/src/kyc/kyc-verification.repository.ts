@@ -1,15 +1,30 @@
-import type { Config } from "../config.js";
+import type { Config, LocalOcrLanguages } from "../config.js";
 import { decrypt } from "../security.js";
 import type { IdentityCheckResult } from "../verification/identity-verifier.js";
 
 export interface KycVerification {
-  provider: "aws" | "none";
+  provider: "aws" | "local" | "none";
+  ocrLanguages?: LocalOcrLanguages;
   status: "disabled" | "not_started" | "completed" | "failed";
   documentId: string | null;
   selfieId: string | null;
   checkedAt: string | null;
   ocr: IdentityCheckResult["ocr"] | null;
   faceMatch: IdentityCheckResult["faceMatch"] | null;
+}
+
+export function verificationMatchesConfig(
+  verification: KycVerification,
+  config: Config,
+): boolean {
+  const active = config.verification;
+  return (
+    !active ||
+    (verification.provider === active.provider &&
+      verification.faceMatch?.threshold === active.faceMatchThreshold &&
+      (active.provider !== "local" ||
+        verification.ocrLanguages === active.ocrLanguages))
+  );
 }
 
 export function verificationView(

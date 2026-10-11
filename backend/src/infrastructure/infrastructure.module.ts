@@ -17,7 +17,7 @@ import {
   IDENTITY_VERIFIER,
 } from "./tokens.js";
 import type { IdentityVerifier } from "../verification/identity-verifier.js";
-import { createIdentityVerifier } from "../verification/aws-identity-verifier.js";
+import { createIdentityVerifier } from "../verification/create-identity-verifier.js";
 
 @Injectable()
 export class EmailOutboxWorker implements OnModuleInit, OnModuleDestroy {

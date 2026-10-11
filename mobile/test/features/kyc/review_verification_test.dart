@@ -73,6 +73,35 @@ void main() {
   );
 
   testWidgets(
+    'local checks explain server processing and need explicit intent',
+    (tester) async {
+      final checks = completedJson()
+        ..['provider'] = 'local'
+        ..['status'] = 'not_started';
+      final repository = _ReviewVerificationRepository()
+        ..profile = KycProfileModel.fromJson(profileJson(checks));
+      await _pumpReview(tester, repository);
+      expect(repository.verificationCalls, 0);
+      expect(
+        find.textContaining('processed on the app server'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('No external identity service is used.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('sent to AWS'), findsNothing);
+      expect(find.text('Local identity checks'), findsOneWidget);
+      final run = find.byKey(const Key('run-identity-checks'));
+      await tester.ensureVisible(run);
+      await tester.tap(run);
+      await tester.pumpAndSettle();
+      expect(repository.verificationCalls, 1);
+      expect(find.byType(ReviewPage), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'checking disables submission until completion and retains the page',
     (tester) async {
       final repository = _ReviewVerificationRepository()

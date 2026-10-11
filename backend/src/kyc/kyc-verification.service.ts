@@ -18,6 +18,7 @@ import {
 } from "./kyc.repository.js";
 import {
   verificationInProgress,
+  verificationMatchesConfig,
   verificationView,
   type KycVerification,
 } from "./kyc-verification.repository.js";
@@ -57,6 +58,7 @@ export async function verifyProfile(
     const previous = verificationView(profile.verification, config);
     if (
       previous.status === "completed" &&
+      verificationMatchesConfig(previous, config) &&
       previous.documentId === document.id &&
       previous.selfieId === selfie.id
     ) {
@@ -114,7 +116,10 @@ export async function verifyProfile(
     };
   }
   const verification: KycVerification = {
-    provider: "aws",
+    provider: config.verification!.provider,
+    ...(config.verification!.provider === "local"
+      ? { ocrLanguages: config.verification!.ocrLanguages }
+      : {}),
     status:
       result.ocr.status === "failed" || result.faceMatch.status === "failed"
         ? "failed"

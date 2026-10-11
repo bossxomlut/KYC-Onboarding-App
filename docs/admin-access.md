@@ -57,7 +57,7 @@ Người nộp hồ sơ mở màn hình kết quả và **Refresh status**. Nế
 
 Trạng thái KYC có màu nhất quán trên Home, màn hình kết quả và phần xem hồ sơ: **Not started** xám, **In progress** xanh dương, **Pending review** vàng nâu, **Verified** xanh lá, **Rejected** đỏ. Mỗi trạng thái có nhãn và biểu tượng, nền nhạt và viền; màu chữ đạt tương phản ít nhất 4.5:1.
 
-`npm run review` cũ đã ngừng ghi trực tiếp database và hướng dẫn dùng app. Duyệt là thủ công. Nếu đã [bật OCR và đối chiếu khuôn mặt](identity-verification.md), người duyệt xem văn bản/trường nhận dạng, trạng thái đối chiếu và similarity của đúng lần nộp. Kết quả hỗ trợ việc kiểm tra; chưa có liveness và Textract chưa hỗ trợ OCR CCCD tiếng Việt.
+`npm run review` cũ đã ngừng ghi trực tiếp database và hướng dẫn dùng app. Duyệt là thủ công. Nếu đã [bật OCR và đối chiếu khuôn mặt](identity-verification.md), người duyệt xem văn bản/trường nhận dạng, trạng thái đối chiếu và similarity của đúng lần nộp. Chế độ local đọc tiếng Việt/English và chạy trên server của app; AWS Textract chưa hỗ trợ tiếng Việt. Kết quả hỗ trợ việc kiểm tra và chưa có liveness.
 
 ## API và lịch sử
 

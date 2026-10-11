@@ -5,7 +5,7 @@ abstract final class KycVerificationModel {
     final ocr = json['ocr'] as Map<String, dynamic>?;
     final face = json['faceMatch'] as Map<String, dynamic>?;
     final provider = json['provider'] as String;
-    if (provider != 'aws' && provider != 'none') {
+    if (provider != 'aws' && provider != 'local' && provider != 'none') {
       throw const FormatException('Unknown identity checks provider');
     }
     return KycVerification(

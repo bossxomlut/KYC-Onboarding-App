@@ -40,6 +40,10 @@ class _ReviewPageState extends State<ReviewPage> {
           (profile?.canEdit ?? false) &&
           (verificationStatus == VerificationStatus.notStarted ||
               verificationStatus == VerificationStatus.failed);
+      final processingDisclosure = profile?.verification?.provider == 'local'
+          ? 'Your document and selfie are processed on the app server when you run identity checks. '
+                'No external identity service is used.'
+          : 'Your document and selfie are sent to AWS when you run identity checks.';
       return KycScaffold(
         title: 'Review & submit',
         signatureHeader: const KycSignatureIntro(
@@ -82,8 +86,8 @@ class _ReviewPageState extends State<ReviewPage> {
             ),
             if (canRunChecks) ...[
               const SizedBox(height: 16),
-              const Text(
-                'Your document and selfie are sent to AWS when you run identity checks. '
+              Text(
+                '$processingDisclosure '
                 'Review any extracted details before submitting. These checks do not '
                 'include liveness detection; a reviewer makes the final decision.',
               ),

@@ -2,6 +2,8 @@ import "dotenv/config";
 import { resolve } from "node:path";
 import { z } from "zod";
 
+export type LocalOcrLanguages = "vie" | "eng" | "vie+eng" | "eng+vie";
+
 export interface Config {
   nodeEnv: string;
   host: string;
@@ -20,12 +22,21 @@ export interface Config {
   resetLink: string;
   rateLimitMax: number;
   maxUploadBytes: number;
-  verification?: {
-    provider: "aws";
-    region: string;
-    faceMatchThreshold: number;
-    timeoutMs: number;
-  };
+  verification?:
+    | {
+        provider: "aws";
+        region: string;
+        faceMatchThreshold: number;
+        timeoutMs: number;
+      }
+    | {
+        provider: "local";
+        pythonPath: string;
+        modelsDir: string;
+        ocrLanguages: LocalOcrLanguages;
+        faceMatchThreshold: number;
+        timeoutMs: number;
+      };
 }
 
 function key(name: string): Buffer {
@@ -52,9 +63,16 @@ export function loadConfig(): Config {
       SMTP_PORT: z.coerce.number().int().default(1025),
       SMTP_SECURE: z.enum(["true", "false"]).default("false"),
       RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(12),
-      KYC_VERIFICATION_PROVIDER: z.enum(["none", "aws"]).default("none"),
+      KYC_VERIFICATION_PROVIDER: z
+        .enum(["none", "aws", "local"])
+        .default("none"),
       AWS_REGION: z.string().trim().min(1).optional(),
-      KYC_FACE_MATCH_THRESHOLD: z.coerce.number().min(1).max(100).default(90),
+      KYC_LOCAL_PYTHON: z.string().trim().min(1).optional(),
+      KYC_LOCAL_MODELS_DIR: z.string().trim().min(1).optional(),
+      KYC_LOCAL_OCR_LANGUAGES: z
+        .enum(["vie", "eng", "vie+eng", "eng+vie"])
+        .default("vie"),
+      KYC_FACE_MATCH_THRESHOLD: z.coerce.number().min(1).max(100).optional(),
       KYC_VERIFICATION_TIMEOUT_MS: z.coerce
         .number()
         .int()
@@ -98,10 +116,25 @@ export function loadConfig(): Config {
           verification: {
             provider: "aws" as const,
             region: env.AWS_REGION!,
-            faceMatchThreshold: env.KYC_FACE_MATCH_THRESHOLD,
+            faceMatchThreshold: env.KYC_FACE_MATCH_THRESHOLD ?? 90,
             timeoutMs: env.KYC_VERIFICATION_TIMEOUT_MS,
           },
         }
-      : {}),
+      : env.KYC_VERIFICATION_PROVIDER === "local"
+        ? {
+            verification: {
+              provider: "local" as const,
+              pythonPath: resolve(
+                env.KYC_LOCAL_PYTHON ?? ".local/identity-venv/bin/python",
+              ),
+              modelsDir: resolve(
+                env.KYC_LOCAL_MODELS_DIR ?? ".local/identity-models",
+              ),
+              ocrLanguages: env.KYC_LOCAL_OCR_LANGUAGES,
+              faceMatchThreshold: env.KYC_FACE_MATCH_THRESHOLD ?? 36.3,
+              timeoutMs: env.KYC_VERIFICATION_TIMEOUT_MS,
+            },
+          }
+        : {}),
   };
 }

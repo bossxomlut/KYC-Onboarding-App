@@ -113,6 +113,47 @@ void main() {
   });
 
   testWidgets(
+    'local results identify their source without identity confidence',
+    (tester) async {
+      await _pump(
+        tester,
+        const VerificationSummary(
+          verification: KycVerification(
+            provider: 'local',
+            status: VerificationStatus.completed,
+            ocr: OcrVerification(
+              status: OcrStatus.succeeded,
+              text: 'Họ và tên: NGUYỄN VĂN AN',
+              fields: OcrFields(fullName: 'NGUYỄN VĂN AN'),
+              confidence: 87.5,
+            ),
+            faceMatch: FaceMatchVerification(
+              status: FaceMatchStatus.matched,
+              similarity: 62.8,
+              threshold: 45,
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Local identity checks'), findsOneWidget);
+      expect(find.text('NGUYỄN VĂN AN'), findsOneWidget);
+      expect(find.text('OCR confidence: 87.5%'), findsOneWidget);
+      expect(find.text('Similarity score: 62.8 / 100'), findsOneWidget);
+      expect(find.text('Match threshold: 45 / 100'), findsOneWidget);
+      expect(
+        find.textContaining('not a probability of identity'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('does not check liveness'), findsOneWidget);
+      expect(
+        find.textContaining('reviewer makes the final decision'),
+        findsOneWidget,
+      );
+      expect(find.byType(TextField), findsNothing);
+    },
+  );
+
+  testWidgets(
     'partial OCR keeps the extracted value without inventing others',
     (tester) async {
       await _pump(

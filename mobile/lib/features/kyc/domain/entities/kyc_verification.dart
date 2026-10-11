@@ -42,7 +42,7 @@ class OcrVerification {
   final String text;
   final OcrFields fields;
 
-  /// AWS confidence on a 0–100 scale; not a guarantee of correctness.
+  /// OCR engine confidence on a 0–100 scale; not a guarantee of correctness.
   final double? confidence;
 }
 

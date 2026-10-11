@@ -124,6 +124,10 @@ flutter pub get
 
 Các giá trị local mặc định trong `.env.example` khớp với hai cách chạy bên dưới: database `kyc`, user `kyc`, password mẫu `local-development-only`, port `5432`; SMTP `localhost:1025`; API port `3000`; `MEDIA_DIR=./media`. Khởi động backend từ thư mục `backend` để đường dẫn `.env` và media được resolve đúng.
 
+### 3.1. Bật OCR và đối chiếu miễn phí
+
+Cài Tesseract (`brew install tesseract`) và Python 3.11+, chạy `python3 scripts/setup-local-verification.py` từ thư mục gốc. Đặt `KYC_VERIFICATION_PROVIDER=local` và `KYC_FACE_MATCH_THRESHOLD=36.3` trong `backend/.env`, sau đó khởi động lại API. Engine chạy trên Mac/backend, không cần tài khoản AWS hay phí API. Xem [hướng dẫn OCR/đối chiếu](identity-verification.md) cho cấu hình và giới hạn.
+
 ## 4. Cách A — chạy không Docker
 
 ### Terminal 1: PostgreSQL

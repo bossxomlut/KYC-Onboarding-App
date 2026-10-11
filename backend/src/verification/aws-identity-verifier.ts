@@ -295,7 +295,8 @@ export class AwsIdentityVerifier implements IdentityVerifier {
 export function createIdentityVerifier(
   config: Config,
 ): IdentityVerifier | null {
-  if (!config.verification) return null;
+  if (!config.verification || config.verification.provider !== "aws")
+    return null;
   const { region, faceMatchThreshold, timeoutMs } = config.verification;
   const clientConfig = { region, maxAttempts: 1 };
   // Standard SDK credential chain: IAM role or local AWS profile/env. Never

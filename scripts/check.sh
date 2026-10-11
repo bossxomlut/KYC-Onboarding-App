@@ -4,6 +4,9 @@ repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 # Use Flutter's bundled Dart even when a standalone SDK appears first in PATH.
 flutter_sdk_bin="$(node -e 'process.stdout.write(require("node:path").dirname(require("node:fs").realpathSync(process.argv[1])))' "$(command -v flutter)")"
 export PATH="$flutter_sdk_bin:$PATH"
+cd "$repo_root"
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/test_local_verification_setup.py
+PYTHONDONTWRITEBYTECODE=1 python3 backend/local-verification/test_engine.py
 cd "$repo_root/backend"
 npm run check
 npm test

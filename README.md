@@ -4,7 +4,7 @@ Flutter iOS/Android onboarding with a real TypeScript/NestJS 12.1.2 API (Express
 
 **Hướng dẫn tiếng Việt:** [Cài đặt và khởi động từ đầu trên macOS](docs/local-setup.md) — cài công cụ, PostgreSQL/Mailpit, các terminal cần chạy, lấy OTP, dừng và khởi động lại.
 
-Optional [OCR and face comparison](docs/identity-verification.md) use real AWS Textract and Rekognition. Applicants run checks explicitly from Review; extracted text/fields and selfie-to-document similarity remain available to reviewers and in each immutable submission. Configure backend AWS credentials to enable checks. Textract does not support Vietnamese CCCD text; results assist manual review and do not include liveness.
+Optional [OCR and face comparison](docs/identity-verification.md) run locally with Tesseract Vietnamese/English OCR and OpenCV YuNet/SFace, with no cloud account or API fee. An AWS Textract/Rekognition adapter is also available. Applicants run checks explicitly from Review; extracted text/fields and selfie-to-document similarity remain available to reviewers and in each immutable submission. The local engine needs a one-time model/runtime setup. Results assist manual review and do not include liveness; AWS Textract does not support Vietnamese text.
 
 ## Run locally
 
@@ -127,4 +127,4 @@ flutter build apk --debug
 
 Email verification uses OTP; the UI is English to match the assignment. Applicants are adults aged 18–120; a passport/national ID/driving licence uses one document image in this scope (front/back support is future work). Local email goes to Mailpit only. Review is manual through authorized accounts in the app. There is no legal terms checkbox because the assignment supplies no product terms.
 
-With more time: real-device camera/lifecycle matrix, screenshot protection/app-switcher redaction, encrypted local drafts, Vietnamese OCR provider integration and liveness, distributed rate limiting and a separately deployed email worker, accessible/localized copy, back-side documents, push result notifications, operational monitoring and deletion/retention tooling. The API already retries the durable email outbox in process. Native store signing and production deployment are environment-specific follow-up work.
+With more time: real-device camera/lifecycle matrix, screenshot protection/app-switcher redaction, encrypted local drafts, production OCR/face accuracy evaluation and liveness, distributed rate limiting and a separately deployed email worker, accessible/localized copy, back-side documents, push result notifications, operational monitoring and deletion/retention tooling. The API already retries the durable email outbox in process. Native store signing and production deployment are environment-specific follow-up work.

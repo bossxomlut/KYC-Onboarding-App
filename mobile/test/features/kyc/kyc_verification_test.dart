@@ -113,6 +113,36 @@ void main() {
       expect(profile.canSubmit, isTrue);
     });
 
+    test('local evidence retains Vietnamese fields and advisory scores', () {
+      final json = completedJson()
+        ..['provider'] = 'local'
+        ..['ocr'] = {
+          'status': 'succeeded',
+          'text': 'Họ và tên: NGUYỄN VĂN AN\nSố: 012345678901',
+          'fields': {
+            'fullName': 'NGUYỄN VĂN AN',
+            'dateOfBirth': '1995-04-15',
+            'documentNumber': '012345678901',
+          },
+          'confidence': 87.5,
+        }
+        ..['faceMatch'] = {
+          'status': 'matched',
+          'similarity': 62.8,
+          'threshold': 45,
+        };
+      final profile = KycProfileModel.fromJson(profileJson(json));
+      final checks = profile.verification!;
+      expect(checks.provider, 'local');
+      expect(checks.ocr!.fields.fullName, 'NGUYỄN VĂN AN');
+      expect(checks.ocr!.fields.documentNumber, '012345678901');
+      expect(checks.ocr!.confidence, 87.5);
+      expect(checks.faceMatch!.similarity, 62.8);
+      expect(checks.faceMatch!.threshold, 45);
+      expect(profile.status, KycStatus.inProgress);
+      expect(profile.canSubmit, isTrue);
+    });
+
     test('maps disabled and failed checks, and rejects unknown statuses', () {
       final disabled = KycProfileModel.fromJson(
         profileJson({

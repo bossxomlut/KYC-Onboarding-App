@@ -16,7 +16,10 @@ import {
   type PersonalDetails,
   type RequiredStep,
 } from "./kyc.schemas.js";
-import { verificationView } from "./kyc-verification.repository.js";
+import {
+  verificationMatchesConfig,
+  verificationView,
+} from "./kyc-verification.repository.js";
 
 export type KycStatus =
   "not_started" | "in_progress" | "pending_review" | "verified" | "rejected";
@@ -104,7 +107,10 @@ export async function getProfile(
   const verification =
     row.verification &&
     (storedVerification.documentId !== document?.id ||
-      storedVerification.selfieId !== selfie?.id)
+      storedVerification.selfieId !== selfie?.id ||
+      (["not_started", "in_progress"].includes(row.status) &&
+        config.verification &&
+        !verificationMatchesConfig(storedVerification, config)))
       ? verificationView(null, config)
       : storedVerification;
   const personalDetails: PersonalDetails | null = row.personal_details
