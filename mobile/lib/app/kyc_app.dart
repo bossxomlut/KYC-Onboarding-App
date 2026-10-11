@@ -263,10 +263,7 @@ class _KycAppState extends State<KycApp> with WidgetsBindingObserver {
               create: (_) => di<KycHistoryCubit>(),
               child: _historyForegroundPage(
                 state,
-                KycHistoryPage(
-                  reviewerUserId: state.pathParameters['userId']!,
-                  fromReviewQueue: state.uri.queryParameters['from'] == 'queue',
-                ),
+                KycHistoryPage(reviewerUserId: state.pathParameters['userId']!),
               ),
             ),
           ),

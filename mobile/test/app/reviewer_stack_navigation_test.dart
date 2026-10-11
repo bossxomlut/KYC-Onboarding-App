@@ -162,6 +162,10 @@ void main() {
     await tester.tap(find.byKey(const Key('view-applicant-history')));
     await tester.pumpAndSettle();
 
+    expect(find.text('Back to review queue'), findsNothing);
+    expect(find.text('Back to current review'), findsNothing);
+    expect(find.byTooltip('Back'), findsOneWidget);
+
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(router.state.uri.path, '/reviews/applicant');

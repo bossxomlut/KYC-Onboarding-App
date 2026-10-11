@@ -9,13 +9,8 @@ import '../widgets/history_detail_sheet.dart';
 import '../widgets/history_review_info.dart';
 
 class KycHistoryPage extends StatefulWidget {
-  const KycHistoryPage({
-    this.reviewerUserId,
-    this.fromReviewQueue = false,
-    super.key,
-  });
+  const KycHistoryPage({this.reviewerUserId, super.key});
   final String? reviewerUserId;
-  final bool fromReviewQueue;
   @override
   State<KycHistoryPage> createState() => _KycHistoryPageState();
 }
@@ -90,24 +85,6 @@ class _KycHistoryPageState extends State<KycHistoryPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (widget.reviewerUserId != null)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () => popOrGo(
-                            context,
-                            fallback: widget.fromReviewQueue
-                                ? '/reviews'
-                                : '/reviews/${Uri.encodeComponent(widget.reviewerUserId!)}',
-                          ),
-                          icon: const Icon(Icons.arrow_back),
-                          label: Text(
-                            widget.fromReviewQueue
-                                ? 'Back to review queue'
-                                : 'Back to current review',
-                          ),
-                        ),
-                      ),
                     const Text(
                       'Each submission keeps the information, photos and review result from that round.',
                     ),
