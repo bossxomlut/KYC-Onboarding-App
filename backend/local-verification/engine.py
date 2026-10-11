@@ -149,8 +149,10 @@ def normalize_label(value):
 
 
 _NAME = r"(?:ho\s+va\s+ten(?:\s+khai\s+sinh)?|ho\s+ten|full\s+name|name)"
-_BIRTH = r"(?:ngay\s*,?\s*thang\s*,?\s*nam\s+sinh|ngay\s+sinh|date\s+of\s+birth|birth\s+date|dob)"
-_NUMBER = r"(?:so(?:\s+(?:can\s+cuoc(?:\s+cong\s+dan)?|dinh\s+danh\s+ca\s+nhan|cmnd|cccd))?|no\.?|(?:document|passport|id|identity)\s*(?:number|no\.?|#))"
+_BIRTH_VN = r"(?:ngay\s*,?\s*thang\s*,?\s*nam\s+sinh|ngay\s+sinh)"
+_NUMBER_VN = r"so(?:\s*(?:can\s+cuoc(?:\s+cong\s+dan)?|dinh\s+danh\s+ca\s+nhan|cmnd|cccd))?"
+_BIRTH = rf"(?:{_BIRTH_VN}|date\s+of\s+birth|birth\s+date|dob)"
+_NUMBER = rf"(?:{_NUMBER_VN}|no\.?|(?:document|passport|id|identity)\s*(?:number|no\.?|#))"
 LABELS = {
     "fullName": re.compile(
         rf"^{_NAME}(?:\s*/\s*{_NAME})?\s*(?::\s*(.*)|$)", re.IGNORECASE
@@ -160,6 +162,25 @@ LABELS = {
     ),
     "documentNumber": re.compile(
         rf"^{_NUMBER}(?:\s*/\s*{_NUMBER})?\s*(?::\s*(.*)|$)", re.IGNORECASE
+    ),
+}
+
+# A readable Vietnamese label remains useful when OCR damages its secondary
+# English translation. Recovery is anchored to that label and accepts only a
+# small secondary-label errors; values still undergo their normal validation.
+# A generic 'Số / Phone' must not be mistaken for an identity document number.
+_BIRTH_SECONDARY = r"(?:\s*/\s*(?:d[a-z]{2,4}\s+of\s+birth|birth\s+date|dob))?"
+_NUMBER_SECONDARY = r"(?:\s*/\s*(?:no|ao)[ .-]{0,4})?"
+_LABEL_BOUNDARY = r"(?=[\s/:;.\-]|$)"
+_SEPARATOR = r"\s*[:;.\-–—]?\s*"
+RECOVERY_LABELS = {
+    "dateOfBirth": re.compile(
+        rf"^{_BIRTH_VN}{_LABEL_BOUNDARY}{_BIRTH_SECONDARY}{_SEPARATOR}(.*)$",
+        re.IGNORECASE,
+    ),
+    "documentNumber": re.compile(
+        rf"^{_NUMBER_VN}{_LABEL_BOUNDARY}{_NUMBER_SECONDARY}{_SEPARATOR}([0-9][0-9 -]{{3,39}})\s*$",
+        re.IGNORECASE,
     ),
 }
 
@@ -179,7 +200,10 @@ def labeled_value(lines, label):
         if (
             candidate
             and ":" not in candidate
-            and not any(pattern.match(normalized) for pattern in LABELS.values())
+            and not any(
+                pattern.match(normalized)
+                for pattern in (*LABELS.values(), *RECOVERY_LABELS.values())
+            )
         ):
             return candidate
     return None
@@ -188,6 +212,8 @@ def labeled_value(lines, label):
 def birth_date(value):
     if not value:
         return None
+    # Remove separator punctuation only, never repair OCR letters or digits.
+    value = value.lstrip(" \t:;.\u002d–—")
     match = re.fullmatch(r"(\d{1,2})\s*[/.-]\s*(\d{1,2})\s*[/.-]\s*(\d{4})", value)
     iso = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", value)
     if match:
@@ -248,7 +274,12 @@ def parse_tsv(value):
             "confidence": None,
         }
     name = labeled_value(text_lines, LABELS["fullName"])
-    number = labeled_value(text_lines, LABELS["documentNumber"])
+    number = labeled_value(text_lines, LABELS["documentNumber"]) or labeled_value(
+        text_lines, RECOVERY_LABELS["documentNumber"]
+    )
+    birth = birth_date(labeled_value(text_lines, LABELS["dateOfBirth"]))
+    if birth is None:
+        birth = birth_date(labeled_value(text_lines, RECOVERY_LABELS["dateOfBirth"]))
     return {
         "status": "succeeded",
         "text": text,
@@ -258,7 +289,7 @@ def parse_tsv(value):
             and 2 <= len(name) <= 120
             and any(character.isalpha() for character in name)
             else None,
-            "dateOfBirth": birth_date(labeled_value(text_lines, LABELS["dateOfBirth"])),
+            "dateOfBirth": birth,
             "documentNumber": number
             if number and re.fullmatch(r"[A-Za-z0-9 -]{4,40}", number)
             else None,

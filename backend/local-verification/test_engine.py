@@ -89,6 +89,90 @@ class OcrParsingTests(unittest.TestCase):
         result = engine.parse_tsv(tsv(["Số CCCD: 001090000001"]))
         self.assertEqual(result["fields"]["documentNumber"], "001090000001")
 
+    def test_noisy_bilingual_cccd_labels_preserve_values_from_ocr(self):
+        result = engine.parse_tsv(
+            tsv(
+                [
+                    "CĂN CƯỚC CÔNG DÂN",
+                    "Số/Ao-. 000000000000",
+                    "Họ và tên / Full name:",
+                    "NGUYỄN VĂN MẪU",
+                    "Ngày sinh / Dafe of birth: - 15/06/1995",
+                ]
+            )
+        )
+        self.assertEqual(
+            result["fields"],
+            {
+                "fullName": "NGUYỄN VĂN MẪU",
+                "dateOfBirth": "1995-06-15",
+                "documentNumber": "000000000000",
+            },
+        )
+
+    def test_missing_space_in_cccd_label_preserves_digit_spacing_and_zeros(self):
+        result = engine.parse_tsv(tsv(["SốCCCD: 0001 23456789"]))
+        self.assertEqual(result["fields"]["documentNumber"], "0001 23456789")
+
+    def test_noise_before_labeled_birth_date_is_only_separator_punctuation(self):
+        result = engine.parse_tsv(
+            tsv(["Ngày sinh / Date of birth: - 15/06/1995"])
+        )
+        self.assertEqual(result["fields"]["dateOfBirth"], "1995-06-15")
+
+    def test_noisy_birth_labels_do_not_accept_impossible_or_ambiguous_dates(self):
+        for value in (
+            "- 31/02/1995",
+            "- 15/06/1995 16/06/1995",
+            "- 15/06/1995 hoặc 16/06/1995",
+            "- 15/06/2090",
+            "- Có giá trị đến / Date of expiry: 15/06/1995",
+        ):
+            with self.subTest(value=value):
+                result = engine.parse_tsv(
+                    tsv([f"Ngày sinh / Dafe of birth: {value}"])
+                )
+                self.assertIsNone(result["fields"]["dateOfBirth"])
+
+    def test_noisy_labels_do_not_guess_unlabeled_or_expiry_values(self):
+        result = engine.parse_tsv(
+            tsv(
+                [
+                    "Số điện thoại: 0901234567",
+                    "Số nhà: 123456789012",
+                    "Có giá trị đến / Date of expiry: 15/06/1995",
+                    "000000000000",
+                    "15/06/1995",
+                ]
+            )
+        )
+        self.assertEqual(result["fields"], engine.empty_fields())
+
+    def test_noisy_number_label_does_not_repair_ocr_digit_characters(self):
+        result = engine.parse_tsv(tsv(["Số/Ao-. 00012345678O"]))
+        self.assertIsNone(result["fields"]["documentNumber"])
+
+    def test_secondary_number_label_does_not_reinterpret_other_number_fields(self):
+        for label in ("Phone", "Tel.", "Điện thoại", "House no.", "Account no."):
+            with self.subTest(label=label):
+                result = engine.parse_tsv(tsv([f"Số / {label}: 123456789012"]))
+                self.assertIsNone(result["fields"]["documentNumber"])
+
+    def test_empty_name_does_not_consume_recovered_field_on_next_line(self):
+        for following in (
+            "Số/Ao-. 000000000000",
+            "Ngày sinh / Dafe of birth - 15/06/1995",
+        ):
+            with self.subTest(following=following):
+                result = engine.parse_tsv(tsv(["Họ và tên:", following]))
+                self.assertIsNone(result["fields"]["fullName"])
+
+    def test_noisy_birth_label_does_not_repair_ocr_date_characters(self):
+        result = engine.parse_tsv(
+            tsv(["Ngày sinh / Dafe of birth: 15/O6/1995"])
+        )
+        self.assertIsNone(result["fields"]["dateOfBirth"])
+
     def test_bounds_persisted_text_and_ignores_nonfinite_confidence(self):
         result = engine.parse_tsv(tsv(["A" * 600] * 300).replace("91.5", "nan"))
         self.assertLessEqual(len(result["text"]), 20_000)

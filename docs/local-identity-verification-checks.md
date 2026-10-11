@@ -95,3 +95,15 @@ Reviewer detail and reviewer history retain real encrypted evidence in a compact
 | Android LAN build and Samsung installation | Debug APK built with the Mac LAN API, installed retaining data and launched; phone API health HTTP200. Compiled artifact contains the compact reviewer title and no old Local-title/Run-action strings |
 
 The backend OCR/face algorithms, authenticated endpoint and encrypted snapshot format are unchanged for this presentation/workflow update. Flutter tests cover applicant hiding for both AWS/local and every check status, ordinary Submit sequencing and duplicate taps, optional failures, stale media/details, authority loss, closure/background and reviewer-only history opt-in. The real-data preview uses the prior live local API result; a full physical-camera-to-review interaction was not rerun for this update. Unrelated shared-checkout changes were preserved separately.
+
+## Noisy CCCD field-label recovery
+
+On 11 October 2026, reproduced the applicant-supplied OCR text with `Số/Ao-. 000000000000` and `Ngày sinh / Dafe of birth: - 15/06/1995`. Tesseract had returned the values, but strict bilingual-label matching and date validation left the structured fields empty. Local parsing now accepts those small secondary-label errors under a readable Vietnamese label, a missing space in `SốCCCD`, and separator punctuation before a date. Number characters and leading zeros are preserved without correction; invalid/ambiguous dates, expiry dates and unrelated phone/house/account labels stay unassigned.
+
+- Focused regression tests failed before the changes; a subsequent boundary review also exposed phone/house/account false positives, fixed by limiting number-label recovery to `No`/`Ao` variants.
+- Final Python engine suite: **45/45 passed**. Local TypeScript adapter suite: **10/10 passed**.
+- Replayed the screenshot's transcribed lines through the actual TSV parser: name `NGUYỄN VĂN MẪU`, date `1995-06-15`, number `000000000000`.
+- Ran installed Tesseract Vietnamese OCR and the real parser on the generated `cccd-vietnam-sample-v2.png`: all three fields populated. Its OCR number is retained verbatim, including the earlier image's shorter zero sequence. This test does not claim OCR repairs missing digits. The synthetic report is `output/identity-verification/ocr-parser-regression.json`.
+- Running API health returned HTTP200. The adapter starts a new Python engine process for each uncached check, so fresh checks load this parser without an Android rebuild. Stored verification and submission-history snapshots remain unchanged; an editable profile needs a fresh photo upload and Submit to create new evidence.
+
+No Flutter, AWS, face-comparison or database-format changes were made for this parser fix. Confidence remains the mean OCR word confidence, not a field-completeness score. A full authenticated upload-to-review or physical-camera flow was not repeated for this fix.
