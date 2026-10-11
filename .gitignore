@@ -14,6 +14,14 @@ tmp/
 build/
 __pycache__/
 *.pyc
+.idea/
+*.iml
+*.ipr
+*.iws
+.ruff_cache/
+.pytest_cache/
+output/
+bugreport*.zip
 
-# Keep the compressed assignment recording; raw simulator video is local only.
+# Raw recordings stay local; add the final MP4 when it is ready for submission.
 demo/*.mov

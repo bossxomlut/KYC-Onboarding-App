@@ -2,7 +2,7 @@
 
 Flutter iOS/Android onboarding with a real TypeScript/NestJS 12.1.2 API (Express adapter) and PostgreSQL. Material 3, primary green `#026220`. Registration and email OTP, login, secure session restore, password reset, personal details, camera document/selfie upload, review/edit, submission with a read-only profile preview, rejection/resubmission and saved progress are implemented. There is no production mock API or unrelated dashboard.
 
-**Hướng dẫn tiếng Việt:** [Cài đặt và khởi động từ đầu trên macOS](docs/local-setup.md) — cài công cụ, PostgreSQL/Mailpit, các terminal cần chạy, lấy OTP, dừng và khởi động lại.
+**Hướng dẫn tiếng Việt:** [Cài đặt và khởi động từ đầu trên macOS](docs/local-setup.md) — cài công cụ, PostgreSQL/Mailpit, các terminal cần chạy, lấy OTP, dừng và khởi động lại. [Xoá toàn bộ dữ liệu local để chạy lại từ đầu](docs/local-setup.md#9-xoá-toàn-bộ-dữ-liệu-local-và-chạy-lại-từ-đầu) gồm database, media, email, tài khoản admin và dữ liệu app trên thiết bị.
 
 Optional [OCR and face comparison](docs/identity-verification.md) run locally with Tesseract Vietnamese/English OCR and OpenCV YuNet/SFace, with no cloud account or API fee. An AWS Textract/Rekognition adapter is also available. Applicants run checks explicitly from Review; extracted text/fields and selfie-to-document similarity remain available to reviewers and in each immutable submission. The local engine needs a one-time model/runtime setup. Results assist manual review and do not include liveness; AWS Textract does not support Vietnamese text.
 
@@ -121,7 +121,7 @@ flutter build ios --simulator --debug
 flutter build apk --debug
 ```
 
-[Watch the 46-second demo](demo/full-flow.mp4), recorded against the compiled NestJS API, real PostgreSQL and Mailpit. [Demo instructions](demo/README.md) describe the real-API integration test, synthetic fixtures, reviewer coordination and screen recording. See [verification evidence](docs/verification.md) for actual commands/results and remaining physical-device checks; do not treat unperformed checks as passed.
+The submission recording will be captured manually from the current app. [Demo instructions](demo/README.md) include a recording checklist, synthetic fixtures and the real-API integration test. Save the finished recording as `demo/full-flow.mp4` before submitting the assignment. See [verification evidence](docs/verification.md) for checks and remaining physical-device coverage.
 
 ## Assumptions and further work
 

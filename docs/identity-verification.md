@@ -108,4 +108,4 @@ Bằng chứng cũ chưa có `selfieFace` không được suy ra là đã phát 
 
 Provider IO chạy ngoài transaction; backend kiểm tra lại media IDs/trạng thái trước khi lưu. Lượt kiểm tra có timeout tổng thể tối đa 8 giây, cooldown 30 giây và rate limit. Local timeout hủy cả nhóm tiến trình, bao gồm Tesseract. Runtime/model thiếu hoặc OCR cấu hình sai trả kết quả lỗi an toàn. Hồ sơ vẫn có thể nộp cho người duyệt khi kiểm tra không khớp/không khả dụng.
 
-Migration `006_kyc_verification.sql` thêm cột nullable; hồ sơ/lịch sử trước tính năng không bị gán bằng chứng mới. Không cần migration khác cho local. Kết quả chạy thật trên máy phát triển và phạm vi kiểm chứng ở [local verification evidence](local-identity-verification-checks.md).
+Migration `006_kyc_verification.sql` thêm cột nullable; hồ sơ/lịch sử trước tính năng không bị gán bằng chứng mới. Không cần migration khác cho local. Kết quả chạy thật trên máy phát triển và phạm vi kiểm chứng ở [verification evidence](verification.md#local-ocr-and-face-comparison).

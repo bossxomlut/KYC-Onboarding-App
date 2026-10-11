@@ -1,6 +1,6 @@
 # Cài đặt và khởi động dự án KYC trên macOS
 
-Hướng dẫn này bao gồm cài công cụ, chạy các service, mở app, lấy OTP, dừng và khởi động lại. Các lệnh minh họa dùng checkout hiện tại tại `/Users/vinhngo/KYC-Onboarding-App`; nếu checkout ở nơi khác, thay đường dẫn này.
+Hướng dẫn này bao gồm cài công cụ, chạy các service, mở app, lấy OTP, dừng, khởi động lại và [xoá toàn bộ dữ liệu local](#9-xoá-toàn-bộ-dữ-liệu-local-và-chạy-lại-từ-đầu). Các lệnh minh họa dùng checkout hiện tại tại `/Users/vinhngo/KYC-Onboarding-App`; nếu checkout ở nơi khác, thay đường dẫn này.
 
 ## 1. Các thành phần cần chạy
 
@@ -149,7 +149,7 @@ Cài một lần theo [hướng dẫn Mailpit](https://mailpit.axllent.org/docs/
 
 ```sh
 brew install mailpit
-mailpit --version
+mailpit version
 ```
 
 Khởi động Mailpit với địa chỉ loopback và hộp thư lưu bền vững trong thư mục local đã được Git ignore:
@@ -163,7 +163,7 @@ mailpit --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025 \
 
 Giữ terminal này chạy. Mở <http://127.0.0.1:8025>. `--database` giữ hộp thư qua các lần restart; không có tùy chọn này, Mailpit dùng database tạm. Xem [các tùy chọn runtime](https://mailpit.axllent.org/docs/configuration/runtime-options/).
 
-Binary `/Users/vinhngo/KYC-Onboarding-App/tmp/mailpit/mailpit` được tải tạm cho phiên demo trước, không phải dependency do `npm ci` cài và không nằm trong Git. Cài bằng Homebrew để có lệnh `mailpit` độc lập với thư mục tạm. Nếu binary demo vẫn chạy, dừng phiên đó trước khi mở Mailpit mới để tránh chiếm cùng cổng.
+Trên máy này, binary Mailpit tải cho các lần thử trước được giữ tại `backend/.local/tools/mailpit/mailpit` (Git ignore). Nếu chưa cài Mailpit qua Homebrew, có thể thay `mailpit` trong lệnh trên bằng `./backend/.local/tools/mailpit/mailpit`. Binary này chỉ có trên checkout hiện tại; khi clone repo mới, cài bằng Homebrew. Dừng phiên Mailpit cũ trước khi mở phiên mới để tránh chiếm cùng cổng.
 
 ### Terminal 3: NestJS API
 
@@ -271,7 +271,7 @@ Khi API và database kết nối được, kết quả là `{"status":"ok"}`. En
 
 Email local chỉ vào Mailpit, không gửi đến Gmail/hộp thư thật. Nếu chưa thấy email, kiểm tra Mailpit và API đều đang chạy; email worker sẽ thử gửi lại thư đang chờ. Sau restart Mailpit mà thư cũ đã mất hoặc OTP hết hạn, yêu cầu mã mới.
 
-iOS Simulator không có camera thật. Để thử chụp ảnh, dùng Android emulator có camera hoặc điện thoại thật; dùng giấy tờ/ảnh giả cho assignment. Kiểm thử iOS với ảnh giả và video mẫu được mô tả trong [hướng dẫn demo](../demo/README.md).
+iOS Simulator không có camera thật. Để thử chụp ảnh, dùng Android emulator có camera hoặc điện thoại thật; dùng giấy tờ/ảnh giả cho assignment. Kiểm thử iOS với ảnh giả và cách tự quay video được mô tả trong [hướng dẫn demo](../demo/README.md).
 
 ### Admin và quyền duyệt hồ sơ
 
@@ -318,9 +318,95 @@ Sau khi PostgreSQL healthy, chạy `npm run migrate` trong `backend` để áp d
 
 DBeaver là công cụ xem database tùy chọn; cài từ [trang chính thức](https://dbeaver.io/download/). Kết nối PostgreSQL với host `127.0.0.1`, port `5432`, database `kyc`, username `kyc`, password mẫu `local-development-only`. Các bảng ở `Schemas → public → Tables`.
 
-Ảnh trên ổ đĩa có tên UUID, nội dung mã hóa, không thể mở bằng cách đổi đuôi `.jpg`. Bảng `kyc_media.storage_key` tham chiếu tới tên file. Xem ảnh qua Review trong app hoặc API có access token của chủ ảnh; backend giải mã và trả JPEG. Không xóa file media để dọn dữ liệu thử nghiệm: database vẫn có thể còn tham chiếu.
+Ảnh trên ổ đĩa có tên UUID, nội dung mã hóa, không thể mở bằng cách đổi đuôi `.jpg`. Bảng `kyc_media.storage_key` tham chiếu tới tên file. Xem ảnh qua Review trong app hoặc API có access token của chủ ảnh; backend giải mã và trả JPEG. Khi reset, xoá cả database và media theo mục 9 để không còn tham chiếu tới ảnh đã bị xoá.
 
-## 9. Lỗi thường gặp
+## 9. Xoá toàn bộ dữ liệu local và chạy lại từ đầu
+
+Các lệnh dưới đây xoá tài khoản, mật khẩu/OTP, phiên đăng nhập, hồ sơ KYC, lịch sử nộp/duyệt, quyền/audit, ảnh upload và email thử nghiệm. Sau đó đăng ký tài khoản mới từ đầu. Việc dọn repo ngày 11/10/2026 chưa chạy các lệnh reset này.
+
+### 9.1. Đăng xuất và dừng dịch vụ
+
+1. **Logout thành công trên các thiết bị khi API còn chạy.** Bước này xoá refresh token trong secure storage, đặc biệt cần cho iOS vì Keychain có thể còn sau khi gỡ app.
+2. Dừng `flutter run` bằng `q`; đóng app trên thiết bị.
+3. Dừng API, PostgreSQL embedded và Mailpit bằng `Ctrl+C` ở terminal tương ứng. Nếu dùng Docker, dừng API rồi làm bước Docker bên dưới.
+4. Với cách A, kiểm tra không còn service local nghe các cổng trước khi xoá:
+
+```sh
+lsof -nP -iTCP:3000 -iTCP:5432 -iTCP:1025 -iTCP:8025 -sTCP:LISTEN
+```
+
+Nếu còn tiến trình của dự án, dừng đúng tiến trình đó trước. Không xoá thư mục PostgreSQL hoặc file Mailpit khi service đang chạy.
+
+### 9.2. Xoá dữ liệu backend
+
+**Cách A đang dùng trên máy này: PostgreSQL embedded và Mailpit trực tiếp.** Chạy từ thư mục gốc repo sau khi đã dừng service:
+
+```sh
+cd /Users/vinhngo/KYC-Onboarding-App
+rm -rf backend/.local/postgres \
+  backend/.local/runner-smoke \
+  backend/.local/identity-smoke \
+  backend/media
+rm -f backend/.local/super-admin.json \
+  backend/.local/mailpit.db \
+  backend/.local/mailpit.db-wal \
+  backend/.local/mailpit.db-shm \
+  backend/.local/mailpit.log
+```
+
+Xoá cả `super-admin.json` để bootstrap tạo mật khẩu mới cho database mới. Giữ `backend/.env`, `.local/identity-models`, `.local/identity-venv` và `.local/tools`: đây là cấu hình/công cụ, không phải dữ liệu người dùng. Không cần cài lại Node, Flutter hoặc OCR chỉ để reset dữ liệu.
+
+**Cách B nếu dùng Docker Compose:** chạy từ cùng repo và cùng Compose project đã dùng lúc khởi động:
+
+```sh
+cd /Users/vinhngo/KYC-Onboarding-App
+docker compose down --volumes
+```
+
+[`down --volumes`](https://docs.docker.com/reference/cli/docker/compose/down/) xoá volume PostgreSQL của Compose và container Mailpit. Sau đó chạy khối `rm` của cách A để xoá media, credentials và dữ liệu embedded/Mailpit cũ nếu đã từng dùng cả hai cách. Không dùng lệnh prune toàn bộ Docker.
+
+Các đường dẫn trên khớp cấu hình local hiện tại. Nếu đã đổi `MEDIA_DIR`, dùng `LOCAL_DATABASE_DIR` khi khởi động database, hoặc chọn database khác trong `DATABASE_URL`, phải reset đúng nơi lưu dữ liệu đó. `db:local` đọc `LOCAL_DATABASE_DIR` từ biến môi trường terminal, không tự đọc `.env`.
+
+### 9.3. Xoá dữ liệu app trên thiết bị
+
+**Android emulator hoặc điện thoại Android:** lấy ID từ `adb devices`, thay `ID_THIET_BI` rồi chạy:
+
+```sh
+adb devices
+adb -s "ID_THIET_BI" shell pm clear com.example.kyc_onboarding
+```
+
+Lệnh [`pm clear`](https://developer.android.com/tools/adb) xoá dữ liệu app, token và ảnh tạm; thành công trả `Success`. Không cần gỡ APK. Làm trên từng thiết bị đã dùng.
+
+**iOS Simulator:** sau khi Logout thành công, gỡ app trên simulator đang mở:
+
+```sh
+xcrun simctl uninstall booted com.example.kycOnboarding
+```
+
+Nếu có nhiều simulator đang boot, thay `booted` bằng UUID từ `xcrun simctl list devices booted`. **iPhone thật:** Logout rồi chọn **Delete App**, không dùng Offload App. Logout xoá token; gỡ app xoá sandbox/ảnh tạm. [Keychain có thể còn sau uninstall](https://developer.apple.com/forums/thread/36442), nên gỡ app một mình chưa bảo đảm xoá token. Nếu đã xoá server trước khi Logout, khởi động API mới rồi mở app cũ: refresh token hết hiệu lực sẽ được app xoá khi server trả lỗi xác thực; sau đó gỡ/cài lại. Không cần reset toàn bộ simulator.
+
+### 9.4. Khởi động với dữ liệu trống
+
+1. Tại repo, chạy `nvm use` (hoặc `nvm install` nếu chưa có Node 22), `node scripts/init-env.mjs`. Script giữ cấu hình hiện có.
+2. Nếu thiếu dependency backend, chạy `npm ci` trong `backend` trước, dù chọn cách A hay B. **Terminal PostgreSQL:** `cd backend` rồi `npm run db:local`; chờ thông báo ready. Nó tạo database mới và áp dụng migration. Với Docker, thay bước này bằng `docker compose up -d` tại repo và chờ PostgreSQL healthy.
+3. **Terminal Mailpit (cách A):** chạy lệnh mục 4, hoặc tại repo dùng binary `./backend/.local/tools/mailpit/mailpit` như hướng dẫn. Với Docker, Mailpit đã chạy ở bước 2.
+4. **Terminal API:** tại repo chạy `nvm use`, vào `backend`, lần lượt chạy:
+
+```sh
+npm run migrate
+npm run admin:bootstrap
+npm run dev
+```
+
+5. Kiểm tra `curl http://127.0.0.1:3000/health` trả `{"status":"ok"}`. Email admin mặc định là `admin@kyc.com` (trừ khi đã đặt `BOOTSTRAP_ADMIN_EMAIL`); mật khẩu mới ở `backend/.local/super-admin.json`.
+6. **Terminal Flutter:** vào `mobile`, chạy `flutter pub get`, rồi lệnh `flutter run` đúng thiết bị ở mục 6. Đăng ký email thử nghiệm mới; lấy OTP trong Mailpit. Không chạy `npm run demo` nếu muốn quay từ bước tự đăng ký.
+
+Database vừa tạo không còn tài khoản/hồ sơ cũ; sau bootstrap chỉ có admin và dữ liệu khởi tạo của admin. Hộp thư Mailpit trống trước khi đăng ký mới.
+
+Nếu muốn cài lại cả cấu hình/OCR, chỉ sau khi đã xoá toàn bộ dữ liệu và dừng service mới xoá `backend/.env` và `backend/.local`; chạy lại `init-env.mjs` và mục 3.1 để cài/bật OCR. Việc này cũng xoá binary Mailpit local, nên cần cài Mailpit bằng Homebrew. Reset dữ liệu thông thường không cần bước này.
+
+## 10. Lỗi thường gặp
 
 | Hiện tượng                                             | Kiểm tra và xử lý                                                                                                                                                                        |
 | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
