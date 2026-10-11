@@ -45,3 +45,35 @@ The documents are clearly labeled synthetic test images, and portraits come from
 The LAN APK is preserved at `output/android/app-local-lan-debug.apk`. Existing app data was retained. Local-provider strings and each target's API address were checked in the compiled artifacts; startup checks found no unhandled parser errors. The phone must stay on the same network as the Mac while its backend and PostgreSQL are running.
 
 The feature's real API flow and production result panel were tested separately from native installation/startup. A complete camera-to-result interaction on the physical phone was not performed. Liveness, document authenticity checks, real-user accuracy evaluation and live AWS calls remain outside this verification. See [setup and behavior](identity-verification.md) to run the local feature or configure AWS later.
+
+## Independent selfie face check
+
+Verified later on 11 October 2026 (Asia/Ho_Chi_Minh). Results now include a separate `selfieFace` presence check followed by document/selfie comparison. A detected selfie face stays detected when the document has no face or recognition fails. Missing, multiple or failed selfie detection prevents comparison. Human-face detection does not establish liveness.
+
+| Check | Actual result |
+| --- | --- |
+| Backend full suite, TypeScript check/build, affected-file Prettier | 102/102 passed; check/build/format passed |
+| AWS adapter focused suite | 25/25 passed, including independent image preparation, missing document faces, detection/comparison failure and timeout, and late responses; no live AWS calls |
+| Local adapter and authenticated KYC persistence focused suite | 24/24 passed; new cases were observed failing before implementation |
+| Python engine unit suite and Ruff | 36/36 passed; format/check passed; new detection cases were observed failing first |
+| Actual Python CLI using installed models | Six cases passed: same/different faces, blank/multiple-face selfies, blank document and invalid document |
+| Flutter KYC and architecture focused suite | 58/58 passed, including strict parsing, stale evidence, legacy history, independent results and narrow/large-text layout |
+| Flutter full suite and analyzer | 397/397 passed; no analyzer issues. This shared checkout included the committed in-app camera-guide work; later unrelated document-crop edits were preserved separately |
+| Production summary renderer with the new live API result | 1/1 passed; inspected both `local-completed-checks.png` and scrolled `local-face-checks.png` at 390×844 logical pixels |
+| Android LAN APK | Built, installed with existing data retained and launched on Samsung; API health HTTP200 and both face-check labels confirmed in the compiled artifact |
+
+Five authenticated API cases using actual local inference all returned HTTP200 with completed evidence:
+
+| Fixture | Selfie face check | Face comparison |
+| --- | --- | --- |
+| Document and transformed same portrait | `detected` | `matched`, similarity `90.53` |
+| Document and different portrait | `detected` | `not_matched`, similarity `8.94` |
+| Document and blank selfie | `no_face` | `no_face` |
+| Document and two sample portraits in the selfie | `multiple_faces` | `multiple_faces` |
+| Blank document and valid selfie portrait | `detected` | `no_face` |
+
+Each API case also verified cache reuse, encrypted evidence, submission-history preservation and reviewer-detail equality, then removed its temporary accounts, sessions and media. The first four cases retained the same Vietnamese OCR fields shown above; the blank document correctly returned `no_text`. Synthetic fixtures demonstrate the independent integration without claiming real-user accuracy calibration.
+
+Historical evidence without `selfieFace` is normalized to null and displays “Selfie face check was not recorded.” Editable profiles invalidate that legacy evidence and can run checks again; immutable history keeps the original comparison. No database migration is needed. New provider failures preserve other completed checks, and stale-photo guards also reject leftover selfie-detection evidence.
+
+The physical-device checks cover installation, startup and backend connectivity; the complete camera-to-result interaction on Samsung was not performed. The updated LAN APK remains at `output/android/app-local-lan-debug.apk`.

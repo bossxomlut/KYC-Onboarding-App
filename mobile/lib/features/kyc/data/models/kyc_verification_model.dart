@@ -3,6 +3,7 @@ import '../../domain/entities/kyc_verification.dart';
 abstract final class KycVerificationModel {
   static KycVerification fromJson(Map<String, dynamic> json) {
     final ocr = json['ocr'] as Map<String, dynamic>?;
+    final selfieFace = json['selfieFace'] as Map<String, dynamic>?;
     final face = json['faceMatch'] as Map<String, dynamic>?;
     final provider = json['provider'] as String;
     if (provider != 'aws' && provider != 'local' && provider != 'none') {
@@ -21,9 +22,21 @@ abstract final class KycVerificationModel {
       selfieId: json['selfieId'] as String?,
       checkedAt: DateTime.tryParse(json['checkedAt'] as String? ?? ''),
       ocr: ocr == null ? null : _ocr(ocr),
+      selfieFace: selfieFace == null ? null : _selfieFace(selfieFace),
       faceMatch: face == null ? null : _face(face),
     );
   }
+
+  static SelfieFaceVerification _selfieFace(Map<String, dynamic> json) =>
+      SelfieFaceVerification(
+        status: switch (json['status']) {
+          'detected' => SelfieFaceStatus.detected,
+          'no_face' => SelfieFaceStatus.noFace,
+          'multiple_faces' => SelfieFaceStatus.multipleFaces,
+          'failed' => SelfieFaceStatus.failed,
+          _ => throw const FormatException('Unknown selfie face check status'),
+        },
+      );
 
   static OcrVerification _ocr(Map<String, dynamic> json) {
     final fields = json['fields'] as Map<String, dynamic>;

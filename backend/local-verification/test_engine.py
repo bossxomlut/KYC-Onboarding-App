@@ -128,6 +128,7 @@ class RequestTests(unittest.TestCase):
         engine.main(stdin=stdin, stdout=stdout)
         result = json.loads(stdout.getvalue())
         self.assertEqual(result["ocr"]["status"], "failed")
+        self.assertEqual(result["selfieFace"], {"status": "failed"})
         self.assertEqual(result["faceMatch"]["status"], "failed")
         self.assertNotIn("SECRET", stdout.getvalue())
 
@@ -140,9 +141,23 @@ class RequestTests(unittest.TestCase):
 
 
 class FakeOperations:
-    def __init__(self, ocr_error=False, face_error=False):
+    def __init__(
+        self,
+        ocr_error=False,
+        face_error=False,
+        document_faces=1,
+        selfie_faces=1,
+        document_error=False,
+        selfie_error=False,
+    ):
         self.ocr_error = ocr_error
         self.face_error = face_error
+        self.document_faces = document_faces
+        self.selfie_faces = selfie_faces
+        self.document_error = document_error
+        self.selfie_error = selfie_error
+        self.detections = []
+        self.comparisons = []
 
     def decode(self, data):
         return data
@@ -156,6 +171,96 @@ class FakeOperations:
         if self.face_error:
             raise RuntimeError("private path or provider detail")
         return {"status": "matched", "similarity": 87.2, "threshold": threshold}
+
+    def detect_faces(self, image):
+        self.detections.append(image)
+        selfie = image == b"selfie"
+        error = self.selfie_error if selfie else self.document_error
+        if error:
+            raise RuntimeError("private face detector detail")
+        count = self.selfie_faces if selfie else self.document_faces
+        return image, [f"face-{number}" for number in range(count)]
+
+    def compare_faces(self, document, selfie, threshold):
+        self.comparisons.append((document, selfie))
+        return self.compare(document, selfie, threshold)
+
+
+class SelfiePresenceTests(unittest.TestCase):
+    def test_single_selfie_remains_detected_when_document_has_no_face(self):
+        operations = FakeOperations(document_faces=0)
+        result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "detected"})
+        self.assertEqual(result["faceMatch"]["status"], "no_face")
+        self.assertEqual(operations.comparisons, [])
+
+    def test_single_selfie_remains_detected_when_document_cannot_decode(self):
+        operations = FakeOperations()
+        operations.decode = (
+            lambda data: data
+            if data == b"selfie"
+            else (_ for _ in ()).throw(ValueError())
+        )
+        result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "detected"})
+        self.assertEqual(result["ocr"]["status"], "failed")
+        self.assertEqual(result["faceMatch"]["status"], "failed")
+        self.assertEqual(operations.detections, [b"selfie"])
+
+    def test_blank_selfie_reports_no_face_and_skips_document_detection(self):
+        operations = FakeOperations(selfie_faces=0, document_error=True)
+        result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "no_face"})
+        self.assertEqual(result["faceMatch"]["status"], "no_face")
+        self.assertEqual(result["ocr"]["status"], "succeeded")
+        self.assertEqual(operations.detections, [b"selfie"])
+        self.assertEqual(operations.comparisons, [])
+
+    def test_multiple_selfie_faces_report_multiple_faces_and_skip_comparison(self):
+        operations = FakeOperations(selfie_faces=2, document_faces=0)
+        result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "multiple_faces"})
+        self.assertEqual(result["faceMatch"]["status"], "multiple_faces")
+        self.assertEqual(operations.detections, [b"selfie"])
+        self.assertEqual(operations.comparisons, [])
+
+    def test_document_detector_error_does_not_erase_valid_selfie(self):
+        operations = FakeOperations(document_error=True)
+        result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "detected"})
+        self.assertEqual(result["faceMatch"]["status"], "failed")
+        self.assertEqual(operations.detections, [b"selfie", b"doc"])
+
+    def test_multiple_document_faces_preserve_valid_selfie_and_skip_comparison(self):
+        operations = FakeOperations(document_faces=2)
+        result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "detected"})
+        self.assertEqual(result["faceMatch"]["status"], "multiple_faces")
+        self.assertEqual(operations.comparisons, [])
+
+    def test_comparison_error_does_not_erase_valid_selfie(self):
+        operations = FakeOperations(face_error=True)
+        result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "detected"})
+        self.assertEqual(result["faceMatch"]["status"], "failed")
+        self.assertEqual(operations.detections, [b"selfie", b"doc"])
+
+    def test_selfie_detector_error_preserves_ocr_and_skips_comparison(self):
+        operations = FakeOperations(selfie_error=True)
+        result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "failed"})
+        self.assertEqual(result["faceMatch"]["status"], "failed")
+        self.assertEqual(result["ocr"]["status"], "succeeded")
+        self.assertEqual(operations.detections, [b"selfie"])
+        self.assertEqual(operations.comparisons, [])
+
+    def test_success_detects_each_image_once(self):
+        operations = FakeOperations()
+        result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "detected"})
+        self.assertEqual(result["faceMatch"]["status"], "matched")
+        self.assertEqual(operations.detections, [b"selfie", b"doc"])
+        self.assertEqual(len(operations.comparisons), 1)
 
 
 class PartialFailureTests(unittest.TestCase):
@@ -171,6 +276,7 @@ class PartialFailureTests(unittest.TestCase):
             b"doc", b"selfie", 36.3, FakeOperations(face_error=True)
         )
         self.assertEqual(result["ocr"]["status"], "succeeded")
+        self.assertEqual(result["selfieFace"], {"status": "detected"})
         self.assertEqual(result["faceMatch"]["status"], "failed")
 
     def test_invalid_selfie_preserves_document_ocr(self):
@@ -180,12 +286,13 @@ class PartialFailureTests(unittest.TestCase):
         )
         result = engine.verify_images(b"doc", b"invalid", 36.3, operations)
         self.assertEqual(result["ocr"]["status"], "succeeded")
+        self.assertEqual(result["selfieFace"], {"status": "failed"})
         self.assertEqual(result["faceMatch"]["status"], "failed")
 
     def test_independent_checks_run_concurrently_within_request_deadline(self):
         operations = FakeOperations()
         barrier = threading.Barrier(2)
-        original_ocr, original_compare = operations.ocr, operations.compare
+        original_ocr, original_compare = operations.ocr, operations.compare_faces
 
         def ocr(image):
             barrier.wait(timeout=1)
@@ -195,7 +302,7 @@ class PartialFailureTests(unittest.TestCase):
             barrier.wait(timeout=1)
             return original_compare(document, selfie, threshold)
 
-        operations.ocr, operations.compare = ocr, compare
+        operations.ocr, operations.compare_faces = ocr, compare
         result = engine.verify_images(b"doc", b"selfie", 36.3, operations)
         self.assertEqual(result["ocr"]["status"], "succeeded")
         self.assertEqual(result["faceMatch"]["status"], "matched")
@@ -224,7 +331,8 @@ class NativeBoundaryTests(unittest.TestCase):
         )
         image = SimpleNamespace(shape=(100, 100, 3))
         operations.decode = lambda data: image
-        operations.compare = (
+        operations.detect_faces = lambda image: (image, ["face"])
+        operations.compare_faces = (
             lambda document, selfie, threshold: engine.face_score_result(0.8, threshold)
         )
         with patch.dict(engine.os.environ, {"KYC_LOCAL_OCR_LANGUAGES": "invalid"}):
@@ -260,26 +368,67 @@ class NativeBoundaryTests(unittest.TestCase):
         return operations, sizes, crops
 
     def test_landmark_aligned_faces_only_after_exactly_one_detection(self):
-        operations, sizes, crops = self.operations([["document-face"], ["selfie-face"]])
+        operations, sizes, crops = self.operations([["selfie-face"], ["document-face"]])
         document = SimpleNamespace(shape=(500, 800, 3))
         selfie = SimpleNamespace(shape=(800, 600, 3))
-        result = operations.compare(document, selfie, 36.3)
-        self.assertEqual(sizes, [(800, 500), (600, 800)])
+        result = engine.verify_faces(document, selfie, 36.3, operations)["faceMatch"]
+        self.assertEqual(sizes, [(600, 800), (800, 500)])
         self.assertEqual(crops, [(document, "document-face"), (selfie, "selfie-face")])
         self.assertEqual(result["status"], "matched")
         self.assertEqual(result["similarity"], 80)
 
+    def test_selfie_detection_survives_native_recognizer_creation_failure(self):
+        operations, sizes, crops = self.operations([["selfie-face"], ["document-face"]])
+        image = SimpleNamespace(shape=(500, 800, 3))
+        with patch.object(
+            operations.cv.FaceRecognizerSF,
+            "create",
+            side_effect=RuntimeError("private model path"),
+        ):
+            result = engine.verify_faces(image, image, 36.3, operations)
+        self.assertEqual(result["selfieFace"], {"status": "detected"})
+        self.assertEqual(result["faceMatch"]["status"], "failed")
+        self.assertEqual(len(sizes), 2)
+        self.assertEqual(crops, [])
+
+    def test_selfie_landmarks_are_copied_before_document_detection_reuses_buffer(self):
+        shared_faces = ["selfie-face"]
+        operations, sizes, crops = self.operations([shared_faces, shared_faces])
+        detector = operations.cv.FaceDetectorYN.create()
+        calls = 0
+
+        def detect(image):
+            nonlocal calls
+            if calls:
+                shared_faces[0] = "document-face"
+            calls += 1
+            return 1, shared_faces
+
+        detector.detect = detect
+        image = SimpleNamespace(shape=(500, 800, 3))
+        with patch.object(
+            operations.cv.FaceDetectorYN, "create", return_value=detector
+        ) as create:
+            result = engine.verify_faces(image, image, 36.3, operations)
+            create.assert_called_once()
+        self.assertEqual(result["selfieFace"], {"status": "detected"})
+        self.assertEqual(result["faceMatch"]["status"], "matched")
+        self.assertEqual(crops, [(image, "document-face"), (image, "selfie-face")])
+
     def test_multi_face_image_never_extracts_or_compares_embedding(self):
         operations, sizes, crops = self.operations([["face1", "face2"], ["face3"]])
         image = SimpleNamespace(shape=(500, 800, 3))
-        result = operations.compare(image, image, 36.3)
+        result = engine.verify_faces(image, image, 36.3, operations)["faceMatch"]
         self.assertEqual(result["status"], "multiple_faces")
         self.assertEqual(crops, [])
 
     def test_missing_face_never_extracts_embedding(self):
         operations, sizes, crops = self.operations([None, ["face"]])
         image = SimpleNamespace(shape=(500, 800, 3))
-        self.assertEqual(operations.compare(image, image, 36.3)["status"], "no_face")
+        self.assertEqual(
+            engine.verify_faces(image, image, 36.3, operations)["faceMatch"]["status"],
+            "no_face",
+        )
         self.assertEqual(crops, [])
 
     def test_tesseract_exec_has_deadline_and_uses_memory_only(self):

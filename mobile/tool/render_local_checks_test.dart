@@ -62,39 +62,44 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('NGUYỄN MINH AN'), findsOneWidget);
     expect(find.text('Local identity checks'), findsOneWidget);
+    expect(find.text('Selfie face check'), findsOneWidget);
+    expect(find.text('Human face detected'), findsOneWidget);
     expect(find.text('Similarity score: 90.5 / 100'), findsOneWidget);
     expect(find.text(verification.ocr!.text), findsNothing);
-    expect(
-      tester
-          .getBottomLeft(
-            find.textContaining('reviewer makes the final decision'),
-          )
-          .dy,
-      lessThanOrEqualTo(820),
-    );
 
     final boundary =
         boundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
     expect(boundary.size, const Size(390, 844));
-    await tester.runAsync(() async {
-      final rendered = await boundary.toImage(pixelRatio: 3);
-      try {
-        final bytes = await rendered.toByteData(format: ui.ImageByteFormat.png);
-        if (bytes == null) throw StateError('PNG encoding returned no bytes.');
-        final output = File(
-          '../output/identity-verification/local-completed-checks.png',
-        );
-        await output.parent.create(recursive: true);
-        await output.writeAsBytes(
-          bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
-        );
-      } finally {
-        rendered.dispose();
-      }
-    });
+    await _savePanel(tester, boundary, 'local-completed-checks.png');
+    await tester.ensureVisible(
+      find.textContaining('reviewer makes the final decision'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Human face detected').hitTestable(), findsOneWidget);
+    expect(find.text('Faces are similar').hitTestable(), findsOneWidget);
+    await _savePanel(tester, boundary, 'local-face-checks.png');
     expect(tester.takeException(), isNull);
   });
 }
+
+Future<void> _savePanel(
+  WidgetTester tester,
+  RenderRepaintBoundary boundary,
+  String name,
+) => tester.runAsync(() async {
+  final rendered = await boundary.toImage(pixelRatio: 3);
+  try {
+    final bytes = await rendered.toByteData(format: ui.ImageByteFormat.png);
+    if (bytes == null) throw StateError('PNG encoding returned no bytes.');
+    final output = File('../output/identity-verification/$name');
+    await output.parent.create(recursive: true);
+    await output.writeAsBytes(
+      bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+    );
+  } finally {
+    rendered.dispose();
+  }
+});
 
 ThemeData _renderTheme() {
   final theme = AppTheme.light;

@@ -18,6 +18,7 @@ class VerificationSummary extends StatelessWidget {
     final disabled = result.status == VerificationStatus.disabled;
     final hasResults =
         result.ocr != null ||
+        result.selfieFace != null ||
         result.faceMatch != null ||
         result.status == VerificationStatus.completed ||
         result.status == VerificationStatus.failed;
@@ -72,6 +73,10 @@ class VerificationSummary extends StatelessWidget {
             ],
             if (hasResults) ...[
               _ocr(context, result.ocr),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+              _selfieFace(context, result.selfieFace),
               const SizedBox(height: 16),
               const Divider(),
               const SizedBox(height: 16),
@@ -141,6 +146,24 @@ class VerificationSummary extends StatelessWidget {
             ),
           ),
       ],
+    ],
+  );
+
+  Widget _selfieFace(
+    BuildContext context,
+    SelfieFaceVerification? selfieFace,
+  ) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text('Selfie face check', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 8),
+      Text(switch (selfieFace?.status) {
+        null => 'Selfie face check was not recorded.',
+        SelfieFaceStatus.detected => 'Human face detected',
+        SelfieFaceStatus.noFace => 'No human face detected',
+        SelfieFaceStatus.multipleFaces => 'Multiple human faces detected',
+        SelfieFaceStatus.failed => 'Selfie face check could not complete.',
+      }),
     ],
   );
 

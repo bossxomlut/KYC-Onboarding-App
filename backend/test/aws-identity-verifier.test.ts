@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import sharp from "sharp";
+import type { DetectFacesCommandOutput } from "@aws-sdk/client-rekognition";
 import {
   AwsIdentityVerifier,
   createIdentityVerifier,
@@ -9,6 +10,11 @@ import {
 
 const image = await sharp({
   create: { width: 100, height: 100, channels: 3, background: "white" },
+})
+  .jpeg()
+  .toBuffer();
+const selfieImage = await sharp({
+  create: { width: 120, height: 100, channels: 3, background: "blue" },
 })
   .jpeg()
   .toBuffer();
@@ -37,6 +43,26 @@ function operations(
   };
 }
 
+const faces = (count: number): DetectFacesCommandOutput => ({
+  FaceDetails: Array.from({ length: count }, () => ({ Confidence: 99 })),
+  $metadata: {},
+});
+
+type Detection = (signal: AbortSignal) => Promise<DetectFacesCommandOutput>;
+function independentOperations(
+  documentFaces: Detection,
+  selfieFaces: Detection,
+  overrides: Partial<AwsIdentityOperations> = {},
+): AwsIdentityOperations {
+  return operations({
+    detectFaces: async (bytes, signal) =>
+      (await sharp(bytes).metadata()).width === 120
+        ? selfieFaces(signal)
+        : documentFaces(signal),
+    ...overrides,
+  });
+}
+
 test("real provider boundary extracts labeled OCR fields and applies configured face threshold", async () => {
   const result = await new AwsIdentityVerifier(operations(), 95, 7000).verify(
     image,
@@ -50,11 +76,219 @@ test("real provider boundary extracts labeled OCR fields and applies configured 
     documentNumber: "AB123456",
   });
   assert.equal(result.ocr.confidence, 98);
+  assert.deepEqual(result.selfieFace, { status: "detected" });
   assert.deepEqual(result.faceMatch, {
     status: "matched",
     similarity: 96.5,
     threshold: 95,
   });
+});
+
+test("a detected selfie face is retained when the document has no face", async () => {
+  let detections = 0;
+  let comparisons = 0;
+  const result = await new AwsIdentityVerifier(
+    independentOperations(
+      async () => {
+        detections++;
+        return faces(0);
+      },
+      async () => {
+        detections++;
+        return faces(1);
+      },
+      {
+        compareFaces: async () => {
+          comparisons++;
+          throw new Error("should not compare");
+        },
+      },
+    ),
+    90,
+    7000,
+  ).verify(image, selfieImage);
+  assert.deepEqual(result.selfieFace, { status: "detected" });
+  assert.equal(result.faceMatch.status, "no_face");
+  assert.equal(result.ocr.status, "succeeded");
+  assert.equal(detections, 2);
+  assert.equal(comparisons, 0);
+});
+
+for (const count of [0, 2]) {
+  test(`selfie with ${count} faces is a separate failed prerequisite for comparison`, async () => {
+    let comparisons = 0;
+    const result = await new AwsIdentityVerifier(
+      independentOperations(
+        async () => faces(count === 0 ? 2 : 0),
+        async () => faces(count),
+        {
+          compareFaces: async () => {
+            comparisons++;
+            throw new Error("should not compare");
+          },
+        },
+      ),
+      90,
+      7000,
+    ).verify(image, selfieImage);
+    const status = count === 0 ? "no_face" : "multiple_faces";
+    assert.deepEqual(result.selfieFace, { status });
+    assert.equal(result.faceMatch.status, status);
+    assert.equal(result.faceMatch.similarity, null);
+    assert.equal(result.ocr.status, "succeeded");
+    assert.equal(comparisons, 0);
+  });
+}
+
+for (const failure of ["reject", "stall"] as const) {
+  test(`document detection ${failure} preserves a completed selfie check and OCR`, async () => {
+    let comparisons = 0;
+    let documentSignal: AbortSignal | undefined;
+    const result = await new AwsIdentityVerifier(
+      independentOperations(
+        async (signal) => {
+          documentSignal = signal;
+          if (failure === "reject") throw new Error("private document error");
+          return new Promise(() => {});
+        },
+        async () => faces(1),
+        {
+          compareFaces: async () => {
+            comparisons++;
+            throw new Error("should not compare");
+          },
+        },
+      ),
+      90,
+      500,
+    ).verify(image, selfieImage);
+    assert.deepEqual(result.selfieFace, { status: "detected" });
+    assert.equal(result.faceMatch.status, "failed");
+    assert.equal(result.ocr.status, "succeeded");
+    assert.equal(comparisons, 0);
+    assert.equal(documentSignal?.aborted, true);
+    assert.ok(!JSON.stringify(result).includes("private"));
+  });
+
+  test(`face comparison ${failure} preserves completed selfie detection and OCR`, async () => {
+    let detections = 0;
+    let comparisonSignal: AbortSignal | undefined;
+    const detect: Detection = async () => {
+      detections++;
+      return faces(1);
+    };
+    const result = await new AwsIdentityVerifier(
+      independentOperations(detect, detect, {
+        compareFaces: async (_document, _selfie, signal) => {
+          comparisonSignal = signal;
+          if (failure === "reject") throw new Error("private comparison error");
+          return new Promise(() => {});
+        },
+      }),
+      90,
+      500,
+    ).verify(image, selfieImage);
+    assert.deepEqual(result.selfieFace, { status: "detected" });
+    assert.equal(result.faceMatch.status, "failed");
+    assert.equal(result.ocr.status, "succeeded");
+    assert.equal(detections, 2);
+    assert.equal(comparisonSignal?.aborted, true);
+    assert.ok(!JSON.stringify(result).includes("private"));
+  });
+}
+
+test("invalid document encoding does not suppress a valid selfie face check", async () => {
+  let detections = 0;
+  const result = await new AwsIdentityVerifier(
+    operations({
+      detectFaces: async () => {
+        detections++;
+        return faces(1);
+      },
+    }),
+    90,
+    7000,
+  ).verify(Buffer.from("invalid document bytes"), selfieImage);
+  assert.deepEqual(result.selfieFace, { status: "detected" });
+  assert.equal(result.ocr.status, "failed");
+  assert.equal(result.faceMatch.status, "failed");
+  assert.equal(detections, 1);
+});
+
+test("invalid selfie encoding does not suppress independently completed OCR", async () => {
+  let comparisons = 0;
+  const result = await new AwsIdentityVerifier(
+    operations({
+      compareFaces: async () => {
+        comparisons++;
+        throw new Error("should not compare");
+      },
+    }),
+    90,
+    7000,
+  ).verify(image, Buffer.from("invalid selfie bytes"));
+  assert.deepEqual(result.selfieFace, { status: "failed" });
+  assert.equal(result.ocr.status, "succeeded");
+  assert.equal(result.faceMatch.status, "failed");
+  assert.equal(comparisons, 0);
+});
+
+test("incomplete selfie detection is a failure even if document ambiguity is known", async () => {
+  const result = await new AwsIdentityVerifier(
+    independentOperations(
+      async () => faces(2),
+      async () => ({ $metadata: {} }),
+    ),
+    90,
+    7000,
+  ).verify(image, selfieImage);
+  assert.deepEqual(result.selfieFace, { status: "failed" });
+  assert.equal(result.faceMatch.status, "failed");
+  assert.equal(result.ocr.status, "succeeded");
+});
+
+test("selfie face absence remains known even if document detection stalls", async () => {
+  const result = await new AwsIdentityVerifier(
+    independentOperations(
+      async () => new Promise(() => {}),
+      async () => faces(0),
+    ),
+    90,
+    500,
+  ).verify(image, selfieImage);
+  assert.deepEqual(result.selfieFace, { status: "no_face" });
+  assert.equal(result.faceMatch.status, "no_face");
+  assert.equal(result.ocr.status, "succeeded");
+});
+
+test("provider completion after global timeout cannot update returned evidence or launch comparison", async () => {
+  let finishSelfie: ((value: DetectFacesCommandOutput) => void) | undefined;
+  let comparisons = 0;
+  const result = await new AwsIdentityVerifier(
+    independentOperations(
+      async () => faces(1),
+      async () =>
+        new Promise((resolve) => {
+          finishSelfie = resolve;
+        }),
+      {
+        compareFaces: async () => {
+          comparisons++;
+          return { FaceMatches: [{ Similarity: 99 }], $metadata: {} };
+        },
+      },
+    ),
+    90,
+    500,
+  ).verify(image, selfieImage);
+  const returned = structuredClone(result);
+  assert.deepEqual(result.selfieFace, { status: "failed" });
+  assert.equal(result.ocr.status, "succeeded");
+  assert.ok(finishSelfie);
+  finishSelfie(faces(1));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(result, returned);
+  assert.equal(comparisons, 0);
 });
 
 test("empty document and a low score never manufacture successful evidence", async () => {

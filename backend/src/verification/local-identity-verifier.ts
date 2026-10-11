@@ -35,6 +35,11 @@ const resultSchema = z
         confidence: score.nullable(),
       })
       .strict(),
+    selfieFace: z
+      .object({
+        status: z.enum(["detected", "no_face", "multiple_faces", "failed"]),
+      })
+      .strict(),
     faceMatch: z
       .object({
         status: z.enum([
@@ -78,6 +83,7 @@ export class LocalIdentityVerifier implements IdentityVerifier {
         fields: { fullName: null, dateOfBirth: null, documentNumber: null },
         confidence: null,
       },
+      selfieFace: { status: "failed" },
       faceMatch: {
         status: "failed",
         similarity: null,
@@ -151,10 +157,12 @@ export class LocalIdentityVerifier implements IdentityVerifier {
               JSON.parse(Buffer.concat(chunks).toString("utf8")),
             );
             const face = result.faceMatch;
+            const selfie = result.selfieFace;
             const hasScore =
               face.status === "matched" || face.status === "not_matched";
             if (
               face.threshold !== this.threshold ||
+              (selfie.status !== "detected" && face.status !== selfie.status) ||
               (hasScore &&
                 (face.similarity === null ||
                   face.status !==

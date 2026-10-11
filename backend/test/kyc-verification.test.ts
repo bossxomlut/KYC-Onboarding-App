@@ -11,7 +11,7 @@ import request from "supertest";
 import { buildApp } from "../src/app.js";
 import type { Config } from "../src/config.js";
 import { migrate } from "../src/database.js";
-import { accessToken } from "../src/security.js";
+import { accessToken, decrypt, encrypt } from "../src/security.js";
 import { getProfile } from "../src/kyc/kyc.repository.js";
 import type { IdentityCheckResult } from "../src/verification/identity-verifier.js";
 
@@ -33,6 +33,7 @@ const successful = {
     },
     confidence: 98,
   },
+  selfieFace: { status: "detected" as const },
   faceMatch: { status: "matched" as const, similarity: 99, threshold: 90 },
 };
 let verifyImpl: () => Promise<IdentityCheckResult> = async () => successful;
@@ -207,6 +208,7 @@ test("verification persists encrypted evidence tied to media IDs and caches comp
   assert.equal(profile.verification.documentId, profile.document.id);
   assert.equal(profile.verification.selfieId, profile.selfie.id);
   assert.deepEqual(profile.verification.ocr, successful.ocr);
+  assert.deepEqual(profile.verification.selfieFace, successful.selfieFace);
   assert.deepEqual(profile.verification.faceMatch, successful.faceMatch);
   assert.equal(calls.length, beforeCalls + 1);
   assert.equal(calls.at(-1)!.document.subarray(0, 3).toString("hex"), "ffd8ff");
@@ -595,6 +597,10 @@ test("partial provider failures preserve successful OCR; semantic mismatch still
   const failed = await check(partial);
   assert.equal(failed.body.profile.verification.status, "failed");
   assert.deepEqual(failed.body.profile.verification.ocr, successful.ocr);
+  assert.deepEqual(
+    failed.body.profile.verification.selfieFace,
+    successful.selfieFace,
+  );
   assert.equal((await json("post", "/kyc/submit", partial)).status, 200);
 
   const mismatch = await actor();
@@ -610,6 +616,75 @@ test("partial provider failures preserve successful OCR; semantic mismatch still
     "pending_review",
   );
   verifyImpl = async () => successful;
+});
+
+test("selfie detection is persisted independently when the document has no face", async () => {
+  const user = await actor();
+  await draft(user);
+  verifyImpl = async () => ({
+    ...successful,
+    faceMatch: { status: "no_face", similarity: null, threshold: 90 },
+  });
+  const checked = await check(user);
+  assert.equal(checked.status, 200);
+  assert.equal(checked.body.profile.verification.status, "completed");
+  assert.deepEqual(checked.body.profile.verification.selfieFace, {
+    status: "detected",
+  });
+  assert.equal(checked.body.profile.verification.faceMatch.status, "no_face");
+  const submitted = await json("post", "/kyc/submit", user);
+  assert.equal(submitted.status, 200);
+  const history = await json("get", "/kyc/history", user);
+  assert.deepEqual(
+    history.body.submissions[0].profile.verification.selfieFace,
+    { status: "detected" },
+  );
+  verifyImpl = async () => successful;
+});
+
+test("legacy evidence has no invented selfie check and editable profiles rerun once", async () => {
+  const user = await actor();
+  await draft(user);
+  verifyImpl = async () => successful;
+  await check(user);
+  const stored = (
+    await pool.query("SELECT verification FROM kyc_profiles WHERE user_id=$1", [
+      user.id,
+    ])
+  ).rows[0].verification;
+  const legacy = JSON.parse(
+    decrypt(Buffer.from(stored, "base64"), config.mediaKey).toString("utf8"),
+  );
+  delete legacy.selfieFace;
+  const legacyEncrypted = encrypt(
+    Buffer.from(JSON.stringify(legacy)),
+    config.mediaKey,
+  ).toString("base64");
+  await pool.query(
+    "UPDATE kyc_profiles SET verification=$2,verification_started_at=now()-interval '31 seconds' WHERE user_id=$1",
+    [user.id, legacyEncrypted],
+  );
+  const current = (await json("get", "/kyc", user)).body.profile.verification;
+  assert.equal(current.status, "not_started");
+  assert.equal(current.selfieFace, null);
+  const beforeCalls = calls.length;
+  const refreshed = await check(user);
+  assert.equal(refreshed.status, 200);
+  assert.deepEqual(refreshed.body.profile.verification.selfieFace, {
+    status: "detected",
+  });
+  assert.equal(calls.length, beforeCalls + 1);
+
+  await json("post", "/kyc/submit", user);
+  await pool.query(
+    "UPDATE kyc_submissions SET verification=$2 WHERE user_id=$1",
+    [user.id, legacyEncrypted],
+  );
+  const history = await json("get", "/kyc/history", user);
+  const old = history.body.submissions[0].profile.verification;
+  assert.equal(old.status, "completed");
+  assert.equal(old.selfieFace, null);
+  assert.deepEqual(old.faceMatch, successful.faceMatch);
 });
 
 test("verification snapshots survive manual rejection, resubmission and later checks", async () => {

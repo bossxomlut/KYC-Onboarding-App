@@ -10,6 +10,7 @@ export interface KycVerification {
   selfieId: string | null;
   checkedAt: string | null;
   ocr: IdentityCheckResult["ocr"] | null;
+  selfieFace: IdentityCheckResult["selfieFace"] | null;
   faceMatch: IdentityCheckResult["faceMatch"] | null;
 }
 
@@ -21,6 +22,7 @@ export function verificationMatchesConfig(
   return (
     !active ||
     (verification.provider === active.provider &&
+      verification.selfieFace != null &&
       verification.faceMatch?.threshold === active.faceMatchThreshold &&
       (active.provider !== "local" ||
         verification.ocrLanguages === active.ocrLanguages))
@@ -32,11 +34,14 @@ export function verificationView(
   config: Config,
 ): KycVerification {
   if (encrypted) {
-    return JSON.parse(
+    const stored = JSON.parse(
       decrypt(Buffer.from(encrypted, "base64"), config.mediaKey).toString(
         "utf8",
       ),
     ) as KycVerification;
+    // Historical evidence predates the separate selfie check. Never infer it
+    // from a combined faceMatch status, which may describe the document.
+    return { ...stored, selfieFace: stored.selfieFace ?? null };
   }
   return {
     provider: config.verification?.provider ?? "none",
@@ -45,6 +50,7 @@ export function verificationView(
     selfieId: null,
     checkedAt: null,
     ocr: null,
+    selfieFace: null,
     faceMatch: null,
   };
 }

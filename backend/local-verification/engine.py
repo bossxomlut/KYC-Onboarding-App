@@ -364,27 +364,35 @@ class LocalOperations:
         )
         return parse_tsv(completed.stdout.decode("utf-8", errors="replace"))
 
-    def compare(self, document, selfie, threshold):
+    def detect_faces(self, image):
+        detector = getattr(self, "_face_detector", None)
+        if detector is None:
+            detector = self.cv.FaceDetectorYN.create(
+                str(models_directory() / MODEL_NAMES[0]),
+                "",
+                (320, 320),
+                0.8,
+                0.3,
+                5000,
+            )
+            self._face_detector = detector
+        image = self.resize(image, 1600)
+        height, width = image.shape[:2]
+        detector.setInputSize((width, height))
+        _, detected = detector.detect(image)
+        # A later detector inference can reuse its output buffer. Keep the
+        # selfie landmarks valid for comparison after document detection.
+        return image, detected.copy() if detected is not None else []
+
+    def compare_faces(self, document, selfie, threshold):
         cv = self.cv
-        directory = models_directory()
-        detector = cv.FaceDetectorYN.create(
-            str(directory / MODEL_NAMES[0]), "", (320, 320), 0.8, 0.3, 5000
+        recognizer = cv.FaceRecognizerSF.create(
+            str(models_directory() / MODEL_NAMES[1]), ""
         )
-        recognizer = cv.FaceRecognizerSF.create(str(directory / MODEL_NAMES[1]), "")
-        images = [self.resize(image, 1600) for image in (document, selfie)]
-        faces = []
-        for image in images:
-            height, width = image.shape[:2]
-            detector.setInputSize((width, height))
-            _, detected = detector.detect(image)
-            faces.append(detected if detected is not None else [])
-        status = face_count_status([len(value) for value in faces])
-        if status:
-            return {"status": status, "similarity": None, "threshold": threshold}
         # OpenCV Net output buffers may be reused by the next inference.
         features = [
             recognizer.feature(recognizer.alignCrop(image, detected[0])).copy()
-            for image, detected in zip(images, faces)
+            for image, detected in (document, selfie)
         ]
         cosine = float(
             recognizer.match(features[0], features[1], cv.FaceRecognizerSF_FR_COSINE)
@@ -392,13 +400,57 @@ class LocalOperations:
         return face_score_result(cosine, threshold)
 
 
-def verify_images(document_bytes, selfie_bytes, threshold, operations=None):
-    result = {"ocr": failed_ocr(), "faceMatch": failed_face(threshold)}
+def verify_faces(document, selfie, threshold, operations):
+    result = {
+        "selfieFace": {"status": "failed"},
+        "faceMatch": failed_face(threshold),
+    }
+    if selfie is None:
+        return result
     try:
-        operations = operations or LocalOperations()
-        document = operations.decode(document_bytes)
+        selfie_faces = operations.detect_faces(selfie)
+        status = face_count_status([len(selfie_faces[1])])
+        result["selfieFace"] = {"status": status or "detected"}
     except Exception:
         return result
+    # A missing or ambiguous selfie face prevents comparison regardless of
+    # document quality. Detect it once and share its landmarks with matching.
+    if status:
+        result["faceMatch"] = {
+            "status": status,
+            "similarity": None,
+            "threshold": threshold,
+        }
+        return result
+    if document is None:
+        return result
+    try:
+        document_faces = operations.detect_faces(document)
+        status = face_count_status([len(document_faces[1])])
+        result["faceMatch"] = (
+            {"status": status, "similarity": None, "threshold": threshold}
+            if status
+            else operations.compare_faces(document_faces, selfie_faces, threshold)
+        )
+    except Exception:
+        pass
+    return result
+
+
+def verify_images(document_bytes, selfie_bytes, threshold, operations=None):
+    result = {
+        "ocr": failed_ocr(),
+        "selfieFace": {"status": "failed"},
+        "faceMatch": failed_face(threshold),
+    }
+    try:
+        operations = operations or LocalOperations()
+    except Exception:
+        return result
+    try:
+        document = operations.decode(document_bytes)
+    except Exception:
+        document = None
     try:
         selfie = operations.decode(selfie_bytes)
     except Exception:
@@ -406,25 +458,17 @@ def verify_images(document_bytes, selfie_bytes, threshold, operations=None):
 
     def ocr():
         try:
-            return operations.ocr(document)
+            return operations.ocr(document) if document is not None else failed_ocr()
         except Exception:
             return failed_ocr()
 
-    def compare():
-        try:
-            return (
-                operations.compare(document, selfie, threshold)
-                if selfie is not None
-                else failed_face(threshold)
-            )
-        except Exception:
-            return failed_face(threshold)
-
     with ThreadPoolExecutor(max_workers=2) as executor:
         ocr_task = executor.submit(ocr)
-        face_task = executor.submit(compare)
+        face_task = executor.submit(
+            verify_faces, document, selfie, threshold, operations
+        )
         result["ocr"] = ocr_task.result()
-        result["faceMatch"] = face_task.result()
+        result.update(face_task.result())
     return result
 
 
@@ -460,7 +504,11 @@ def prerequisite_check():
 def main(stdin=None, stdout=None):
     stdin = stdin or sys.stdin
     stdout = stdout or sys.stdout
-    result = {"ocr": failed_ocr(), "faceMatch": failed_face(DEFAULT_THRESHOLD)}
+    result = {
+        "ocr": failed_ocr(),
+        "selfieFace": {"status": "failed"},
+        "faceMatch": failed_face(DEFAULT_THRESHOLD),
+    }
     try:
         value = stdin.read(MAX_REQUEST_BYTES + 1)
         if len(value.encode("utf-8")) > MAX_REQUEST_BYTES:

@@ -2,6 +2,11 @@
 
 Ứng dụng có hai chế độ kiểm tra thật: **local** dùng Tesseract và OpenCV ngay trên server của app; **aws** dùng Textract và Rekognition. Người dùng chọn **Run identity checks** ở **Review & submit** để kiểm tra hai ảnh đã tải lên. Kết quả hiển thị trong hồ sơ, màn hình duyệt và lịch sử lần nộp. OCR không ghi đè thông tin đã nhập; người dùng sửa qua **Edit**. KYC vẫn do người duyệt quyết định.
 
+Selfie có **hai kết quả riêng**:
+
+1. **Selfie face check:** phát hiện một khuôn mặt người, không có khuôn mặt, nhiều khuôn mặt hoặc không kiểm tra được. Đây là phát hiện khuôn mặt trong ảnh, chưa xác nhận người đang hiện diện trực tiếp.
+2. **Face comparison:** đối chiếu khuôn mặt selfie với khuôn mặt trên giấy tờ. Chỉ đối chiếu khi mỗi ảnh có đúng một khuôn mặt. Nếu selfie có khuôn mặt nhưng giấy tờ thiếu khuôn mặt hoặc đối chiếu bị lỗi, kết quả phát hiện selfie vẫn được giữ.
+
 ## Chạy miễn phí với local
 
 Chế độ local không cần tài khoản cloud, API key hay phí theo lượt. Ảnh không gửi sang dịch vụ nhận dạng bên ngoài. Engine dùng CPU của server; khi server nằm trên Mac phát triển, toàn bộ OCR/đối chiếu chạy trên Mac, không chạy trên điện thoại. Chi phí thuê server vẫn có nếu triển khai lên máy chủ trả phí.
@@ -78,7 +83,7 @@ IAM principal cần các quyền `textract:DetectDocumentText`, `rekognition:Det
 - **Local OCR:** Tesseract đọc tiếng Việt mặc định, có thể đổi sang English hoặc phối hợp hai ngôn ngữ. Trường tên/ngày sinh/số giấy tờ chỉ được gợi ý từ nhãn rõ ràng như `Họ và tên`, `Ngày sinh`, `Số CCCD` hoặc nhãn English tương ứng. Không suy đoán thông tin thiếu; không tự sửa chính tả tên. Ngày theo nhãn giấy tờ Việt Nam dùng `dd/mm/yyyy`; ISO cũng được hỗ trợ. Đây là OCR chữ in chung, chưa phải engine kiểm tra tính thật hoặc cấu trúc của mọi mẫu CCCD.
 - **Local đối chiếu:** YuNet tìm khuôn mặt, SFace so sánh hai khuôn mặt đã căn chỉnh. `similarity` là cosine similarity ×100, giới hạn 0–100. Ngưỡng mặc định `36.3` dựa trên [ví dụ OpenCV](https://docs.opencv.org/4.x/d0/dd4/tutorial_dnn_face.html), tương ứng cosine `0.363`. Điểm này không phải phần trăm xác suất đúng danh tính, không so trực tiếp với AWS và cần đánh giá thêm trên ảnh thực tế của sản phẩm.
 - **AWS OCR:** Textract trả văn bản và confidence trung bình theo dòng; parser chỉ gợi ý trường khi có nhãn English rõ ràng. [Textract hỗ trợ sáu ngôn ngữ](https://docs.aws.amazon.com/textract/latest/dg/limits-document.html), chưa hỗ trợ tiếng Việt/đầy đủ ký tự CCCD Việt Nam.
-- Cả hai engine yêu cầu đúng một khuôn mặt trong mỗi ảnh. Kết quả có `matched`, `not_matched`, `no_face`, `multiple_faces` hoặc `failed`; OCR có `succeeded`, `no_text` hoặc `failed`. Thành phần nào lỗi không xóa thành phần còn lại đã thành công.
+- Cả hai engine trả `selfieFace` độc lập với `faceMatch`. Selfie có `detected`, `no_face`, `multiple_faces` hoặc `failed`; đối chiếu có `matched`, `not_matched`, `no_face`, `multiple_faces` hoặc `failed`; OCR có `succeeded`, `no_text` hoặc `failed`. Selfie thiếu/nhiều khuôn mặt hoặc lỗi chặn bước đối chiếu; lỗi giấy tờ/đối chiếu không xóa kết quả phát hiện selfie đã thành công. Mỗi ảnh cần đúng một khuôn mặt để đối chiếu.
 - OCR phụ thuộc độ rõ, ánh sáng, kích thước chữ và bố cục ảnh. Giấy tờ/ảnh selfie bị nghiêng, che khuất hoặc quá nhỏ có thể không nhận dạng được. Các kiểm tra hỗ trợ người duyệt, không tự phê duyệt/từ chối KYC, không kiểm tra giấy tờ thật và chưa có liveness/chống ảnh chụp lại.
 
 ## Lưu trữ và xử lý lỗi
@@ -86,6 +91,8 @@ IAM principal cần các quyền `textract:DetectDocumentText`, `rekognition:Det
 Backend lấy ảnh riêng tư đã xác thực chủ sở hữu, giải mã trong bộ nhớ và giao cho provider. Local truyền ảnh qua stdin của tiến trình Python; Tesseract cũng đọc stdin, không tạo file ảnh plaintext tạm. Embeddings chỉ tồn tại trong bộ nhớ của lượt kiểm tra, không lưu vào database. Không log ảnh, OCR, lỗi provider hay credentials. Kết quả OCR/đối chiếu được mã hóa AES-256-GCM bằng khóa bảo vệ hồ sơ hiện có.
 
 Chỉ chạy khi người dùng chọn nút và hồ sơ đang chỉnh sửa. Kết quả hoàn tất được dùng lại cho đúng hai media IDs, provider, ngưỡng và ngôn ngữ OCR local hiện tại. Đổi provider/ngưỡng/ngôn ngữ OCR local khiến hồ sơ đang chỉnh sửa cần kiểm tra lại; snapshot của lần nộp cũ vẫn giữ bằng chứng gốc. Kết quả local cũ chưa ghi ngôn ngữ cần chạy lại một lần. Chụp lại ảnh xóa kết quả đang làm việc; retry cùng capture ID giữ kết quả.
+
+Bằng chứng cũ chưa có `selfieFace` không được suy ra là đã phát hiện khuôn mặt từ trạng thái đối chiếu chung. Hồ sơ đang chỉnh sửa cần chạy lại một lần; lịch sử cũ hiển thị **Selfie face check was not recorded** và giữ nguyên kết quả đối chiếu gốc.
 
 Provider IO chạy ngoài transaction; backend kiểm tra lại media IDs/trạng thái trước khi lưu. Lượt kiểm tra có timeout tổng thể tối đa 8 giây, cooldown 30 giây và rate limit. Local timeout hủy cả nhóm tiến trình, bao gồm Tesseract. Runtime/model thiếu hoặc OCR cấu hình sai trả kết quả lỗi an toàn. Hồ sơ vẫn có thể nộp cho người duyệt khi kiểm tra không khớp/không khả dụng.
 

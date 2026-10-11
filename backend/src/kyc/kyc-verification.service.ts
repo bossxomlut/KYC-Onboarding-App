@@ -108,6 +108,7 @@ export async function verifyProfile(
         fields: { fullName: null, dateOfBirth: null, documentNumber: null },
         confidence: null,
       },
+      selfieFace: { status: "failed" },
       faceMatch: {
         status: "failed",
         similarity: null,
@@ -121,13 +122,16 @@ export async function verifyProfile(
       ? { ocrLanguages: config.verification!.ocrLanguages }
       : {}),
     status:
-      result.ocr.status === "failed" || result.faceMatch.status === "failed"
+      result.ocr.status === "failed" ||
+      result.selfieFace.status === "failed" ||
+      result.faceMatch.status === "failed"
         ? "failed"
         : "completed",
     documentId: input.documentId!,
     selfieId: input.selfieId!,
     checkedAt: new Date().toISOString(),
     ocr: result.ocr,
+    selfieFace: result.selfieFace,
     faceMatch: result.faceMatch,
   };
   return transaction(pool, async (client) => {

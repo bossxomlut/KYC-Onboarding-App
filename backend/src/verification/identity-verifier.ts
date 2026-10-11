@@ -15,8 +15,15 @@ export interface FaceMatchResult {
   threshold: number;
 }
 
+/** Face presence in the selfie, independently of the document/comparison.
+ * Detection is not a liveness or identity authenticity check. */
+export interface SelfieFaceResult {
+  status: "detected" | "no_face" | "multiple_faces" | "failed";
+}
+
 export interface IdentityCheckResult {
   ocr: OcrResult;
+  selfieFace: SelfieFaceResult;
   faceMatch: FaceMatchResult;
 }
 

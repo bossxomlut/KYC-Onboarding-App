@@ -19,6 +19,7 @@ const valid = () => ({
     },
     confidence: 92,
   },
+  selfieFace: { status: "detected" },
   faceMatch: { status: "matched", similarity: 86, threshold: 36.3 },
 });
 
@@ -135,6 +136,7 @@ test("timeout terminates local processing without exposing stderr or private inp
   );
   assert.equal(adapter.child.killed, true);
   assert.equal(result.ocr.status, "failed");
+  assert.equal(result.selfieFace.status, "failed");
   assert.equal(result.faceMatch.status, "failed");
   assert.equal(JSON.stringify(result).includes("secret"), false);
 });
@@ -210,6 +212,7 @@ test("no-text and missing-face outcomes remain semantic results, and partial OCR
   for (const expected of [
     {
       ocr: noText,
+      selfieFace: { status: "no_face" },
       faceMatch: { status: "no_face", similarity: null, threshold: 36.3 },
     },
     {
@@ -225,6 +228,56 @@ test("no-text and missing-face outcomes remain semantic results, and partial OCR
       await adapter.verifier.verify(Buffer.from("image"), Buffer.from("image")),
       expected,
     );
+  }
+});
+
+test("selfie presence is separate from comparison and must agree with comparison prerequisites", async () => {
+  for (const [selfieStatus, comparisonStatus] of [
+    ["detected", "no_face"], // A valid selfie with no face in the document.
+    ["detected", "failed"], // Comparison failure does not erase detection.
+    ["no_face", "no_face"],
+    ["multiple_faces", "multiple_faces"],
+    ["failed", "failed"],
+  ]) {
+    const expected = {
+      ...valid(),
+      selfieFace: { status: selfieStatus },
+      faceMatch: {
+        status: comparisonStatus,
+        similarity: null,
+        threshold: 36.3,
+      },
+    };
+    const adapter = boundary((child) => {
+      child.stdout.end(JSON.stringify(expected));
+      child.emit("close", 0);
+    });
+    assert.deepEqual(
+      await adapter.verifier.verify(Buffer.from("image"), Buffer.from("image")),
+      expected,
+    );
+  }
+});
+
+test("missing or contradictory selfie evidence is never accepted as a face match", async () => {
+  const { selfieFace: _legacy, ...legacy } = valid();
+  for (const response of [
+    legacy,
+    { ...valid(), selfieFace: { status: "unknown" } },
+    { ...valid(), selfieFace: { status: "no_face" } },
+    { ...valid(), selfieFace: { status: "multiple_faces" } },
+    { ...valid(), selfieFace: { status: "failed" } },
+  ]) {
+    const adapter = boundary((child) => {
+      child.stdout.end(JSON.stringify(response));
+      child.emit("close", 0);
+    });
+    const result = await adapter.verifier.verify(
+      Buffer.from("image"),
+      Buffer.from("image"),
+    );
+    assert.equal(result.selfieFace.status, "failed");
+    assert.equal(result.faceMatch.status, "failed");
   }
 });
 

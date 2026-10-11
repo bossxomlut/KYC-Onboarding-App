@@ -203,6 +203,7 @@ export class AwsIdentityVerifier implements IdentityVerifier {
   async verify(document: Buffer, selfie: Buffer): Promise<IdentityCheckResult> {
     const controller = new AbortController();
     let ocr = failedOcr();
+    let selfieFace: IdentityCheckResult["selfieFace"] = { status: "failed" };
     let faceMatch: FaceMatchResult = {
       status: "failed",
       similarity: null,
@@ -216,33 +217,90 @@ export class AwsIdentityVerifier implements IdentityVerifier {
       }, this.timeoutMs);
     });
     const work = async () => {
-      const [documentBytes, selfieBytes] = await Promise.all([
-        prepare(document),
-        prepare(selfie),
-      ]);
-      if (controller.signal.aborted) return;
+      // Preparation and detection are independent: document failures must not
+      // erase a completed selfie check, and selfie failures must not erase OCR.
+      const documentBytes = prepare(document).catch(() => null);
+      const selfieBytes = prepare(selfie).catch(() => null);
+      const documentFaces = this.detect(documentBytes, controller.signal);
+      const selfieFaces = this.detect(selfieBytes, controller.signal).then(
+        (detection) => {
+          if (controller.signal.aborted) return null;
+          const status = !detection
+            ? "failed"
+            : detection.count === 0
+              ? "no_face"
+              : detection.count > 1
+                ? "multiple_faces"
+                : "detected";
+          selfieFace = { status };
+          if (status !== "detected")
+            faceMatch = {
+              status,
+              similarity: null,
+              threshold: this.threshold,
+            };
+          return detection;
+        },
+      );
+      const comparison = async () => {
+        const target = await selfieFaces;
+        if (!target || target.count !== 1 || controller.signal.aborted) return;
+        const source = await documentFaces;
+        if (!source || controller.signal.aborted) return;
+        if (source.count !== 1) {
+          faceMatch = {
+            status: source.count === 0 ? "no_face" : "multiple_faces",
+            similarity: null,
+            threshold: this.threshold,
+          };
+          return;
+        }
+        const result = await this.compare(
+          source.bytes,
+          target.bytes,
+          controller.signal,
+        );
+        if (!controller.signal.aborted) faceMatch = result;
+      };
       await Promise.all([
-        this.operations
-          .detectText(documentBytes, controller.signal)
-          .then((response) => {
-            ocr = parsedOcr(response);
+        documentBytes
+          .then(async (bytes) => {
+            if (!bytes || controller.signal.aborted) return;
+            const response = await this.operations.detectText(
+              bytes,
+              controller.signal,
+            );
+            if (!controller.signal.aborted) ocr = parsedOcr(response);
           })
           .catch(() => {}),
-        this.compare(documentBytes, selfieBytes, controller.signal)
-          .then((result) => {
-            faceMatch = result;
-          })
-          .catch(() => {}),
+        documentFaces,
+        selfieFaces,
+        comparison().catch(() => {}),
       ]);
     };
     try {
       // Covers encoding, credentials lookup and every SDK operation together.
       // Even an SDK/credential source which ignores abort cannot stall HTTP.
       await Promise.race([work().catch(() => {}), timeout]);
-      return { ocr, faceMatch };
+      return { ocr, selfieFace, faceMatch };
     } finally {
       if (timer) clearTimeout(timer);
       controller.abort();
+    }
+  }
+
+  private async detect(
+    prepared: Promise<Buffer | null>,
+    signal: AbortSignal,
+  ): Promise<{ bytes: Buffer; count: number } | null> {
+    try {
+      const bytes = await prepared;
+      if (!bytes || signal.aborted) return null;
+      const response = await this.operations.detectFaces(bytes, signal);
+      if (signal.aborted || !Array.isArray(response.FaceDetails)) return null;
+      return { bytes, count: response.FaceDetails.length };
+    } catch {
+      return null;
     }
   }
 
@@ -251,21 +309,6 @@ export class AwsIdentityVerifier implements IdentityVerifier {
     selfie: Buffer,
     signal: AbortSignal,
   ): Promise<FaceMatchResult> {
-    const [source, target] = await Promise.all([
-      this.operations.detectFaces(document, signal),
-      this.operations.detectFaces(selfie, signal),
-    ]);
-    if (!source.FaceDetails || !target.FaceDetails)
-      throw new Error("Incomplete face detection response.");
-    const count = [source.FaceDetails.length, target.FaceDetails.length];
-    if (count.some((value) => value > 1))
-      return {
-        status: "multiple_faces",
-        similarity: null,
-        threshold: this.threshold,
-      };
-    if (count.some((value) => value === 0))
-      return { status: "no_face", similarity: null, threshold: this.threshold };
     if (signal.aborted) throw new Error("Timed out.");
     const result = await this.operations.compareFaces(document, selfie, signal);
     if (!result.FaceMatches)

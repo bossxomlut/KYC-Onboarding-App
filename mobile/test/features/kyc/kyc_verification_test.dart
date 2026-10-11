@@ -18,6 +18,79 @@ import 'kyc_cubit_test.dart' show FakeKycRepository, captured;
 
 void main() {
   group('verification contract', () {
+    test('maps each independent selfie face outcome', () {
+      for (final entry in {
+        'detected': SelfieFaceStatus.detected,
+        'no_face': SelfieFaceStatus.noFace,
+        'multiple_faces': SelfieFaceStatus.multipleFaces,
+        'failed': SelfieFaceStatus.failed,
+      }.entries) {
+        final json = completedJson()..['selfieFace'] = {'status': entry.key};
+        final checks = KycProfileModel.fromJson(
+          profileJson(json),
+        ).verification!;
+        expect(checks.selfieFace!.status, entry.value);
+        expect(checks.faceMatch!.status, FaceMatchStatus.matched);
+      }
+    });
+
+    test('legacy and null selfie checks remain unrecorded', () {
+      for (final json in [
+        completedJson(),
+        completedJson()..['selfieFace'] = null,
+      ]) {
+        final checks = KycProfileModel.fromJson(
+          profileJson(json),
+        ).verification!;
+        expect(checks.selfieFace, isNull);
+        expect(checks.faceMatch!.status, FaceMatchStatus.matched);
+      }
+    });
+
+    test('unknown selfie face status is rejected', () {
+      final json = completedJson()..['selfieFace'] = {'status': 'live'};
+      expect(
+        () => KycProfileModel.fromJson(profileJson(json)),
+        throwsFormatException,
+      );
+    });
+
+    test('a detected selfie stays separate from a missing document face', () {
+      final json = completedJson()
+        ..['selfieFace'] = {'status': 'detected'}
+        ..['faceMatch'] = {
+          'status': 'no_face',
+          'similarity': null,
+          'threshold': 90,
+        };
+      final checks = KycProfileModel.fromJson(profileJson(json)).verification!;
+      expect(checks.selfieFace!.status, SelfieFaceStatus.detected);
+      expect(checks.faceMatch!.status, FaceMatchStatus.noFace);
+      expect(checks.faceMatch!.similarity, isNull);
+    });
+
+    test('unchecked states cannot retain an earlier selfie face check', () {
+      final checks = KycProfileModel.fromJson(
+        profileJson({
+          'provider': 'local',
+          'status': 'not_started',
+          'selfieFace': {'status': 'detected'},
+        }),
+      ).verification!;
+      expect(checks.status, VerificationStatus.notStarted);
+      expect(checks.selfieFace, isNull);
+    });
+
+    test('changed photos clear both independent checks', () {
+      final json = completedJson()
+        ..['selfieId'] = 'old-selfie'
+        ..['selfieFace'] = {'status': 'detected'};
+      final checks = KycProfileModel.fromJson(profileJson(json)).verification!;
+      expect(checks.status, VerificationStatus.notStarted);
+      expect(checks.selfieFace, isNull);
+      expect(checks.faceMatch, isNull);
+    });
+
     for (final status in ['completed', 'failed']) {
       test(
         '$status evidence with changed or unknown source IDs is invalidated at the profile boundary',
@@ -201,8 +274,8 @@ void main() {
     test(
       'review detail and immutable history parse the same evidence contract',
       () {
-        final json = profileJson(completedJson())
-          ..['status'] = 'pending_review';
+        final checks = completedJson()..['selfieFace'] = {'status': 'detected'};
+        final json = profileJson(checks)..['status'] = 'pending_review';
         final detail = AccessModels.detail({
           'submissionId': 'submission-1',
           'user': {'id': 'u', 'email': 'u@example.test'},
@@ -215,6 +288,14 @@ void main() {
           'review': null,
         });
         expect(detail.profile.verification!.faceMatch!.similarity, 97);
+        expect(
+          detail.profile.verification!.selfieFace!.status,
+          SelfieFaceStatus.detected,
+        );
+        expect(
+          history.profile.verification!.selfieFace!.status,
+          SelfieFaceStatus.detected,
+        );
         expect(
           history.profile.verification!.ocr!.fields.documentNumber,
           'DEMO1234',

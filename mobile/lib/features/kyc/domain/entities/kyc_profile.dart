@@ -155,6 +155,7 @@ class KycProfile {
     }
     if (checks.status == VerificationStatus.notStarted) {
       if (checks.ocr == null &&
+          checks.selfieFace == null &&
           checks.faceMatch == null &&
           checks.checkedAt == null) {
         return checks;

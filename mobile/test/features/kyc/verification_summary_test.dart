@@ -22,6 +22,7 @@ const _completed = KycVerification(
   status: VerificationStatus.completed,
   documentId: 'document',
   selfieId: 'selfie',
+  selfieFace: SelfieFaceVerification(status: SelfieFaceStatus.detected),
   ocr: OcrVerification(
     status: OcrStatus.succeeded,
     text: _recognizedText,
@@ -40,6 +41,104 @@ const _completed = KycVerification(
 );
 
 void main() {
+  testWidgets('selfie presence and document comparison appear separately', (
+    tester,
+  ) async {
+    await _pump(tester, const VerificationSummary(verification: _completed));
+    expect(find.text('Selfie face check'), findsOneWidget);
+    expect(find.text('Human face detected'), findsOneWidget);
+    expect(find.text('Face comparison'), findsOneWidget);
+    expect(find.text('Faces are similar'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Selfie face check')).dy,
+      lessThan(tester.getTopLeft(find.text('Face comparison')).dy),
+    );
+    expect(find.textContaining('does not check liveness'), findsOneWidget);
+  });
+
+  for (final entry in {
+    SelfieFaceStatus.noFace: 'No human face detected',
+    SelfieFaceStatus.multipleFaces: 'Multiple human faces detected',
+    SelfieFaceStatus.failed: 'Selfie face check could not complete.',
+  }.entries) {
+    testWidgets('${entry.key.name} selfie result is explicit', (tester) async {
+      await _pump(
+        tester,
+        VerificationSummary(
+          verification: KycVerification(
+            provider: 'local',
+            status: entry.key == SelfieFaceStatus.failed
+                ? VerificationStatus.failed
+                : VerificationStatus.completed,
+            selfieFace: SelfieFaceVerification(status: entry.key),
+            faceMatch: FaceMatchVerification(
+              status: entry.key == SelfieFaceStatus.multipleFaces
+                  ? FaceMatchStatus.multipleFaces
+                  : entry.key == SelfieFaceStatus.failed
+                  ? FaceMatchStatus.failed
+                  : FaceMatchStatus.noFace,
+              threshold: 36.3,
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Selfie face check'), findsOneWidget);
+      expect(find.text(entry.value), findsOneWidget);
+      expect(find.text('Human face detected'), findsNothing);
+      expect(find.text('Faces are similar'), findsNothing);
+      expect(find.textContaining('Similarity score:'), findsNothing);
+      expect(find.textContaining('does not check liveness'), findsOneWidget);
+    });
+  }
+
+  testWidgets('selfie detection can succeed when document comparison cannot', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const VerificationSummary(
+        verification: KycVerification(
+          provider: 'local',
+          status: VerificationStatus.completed,
+          selfieFace: SelfieFaceVerification(status: SelfieFaceStatus.detected),
+          faceMatch: FaceMatchVerification(
+            status: FaceMatchStatus.noFace,
+            threshold: 36.3,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Human face detected'), findsOneWidget);
+    expect(
+      find.text('A face could not be detected in one or both photos.'),
+      findsOneWidget,
+    );
+    expect(find.text('Faces are similar'), findsNothing);
+    expect(find.textContaining('Similarity score:'), findsNothing);
+  });
+
+  testWidgets('legacy checks never infer recorded selfie face evidence', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const VerificationSummary(
+        verification: KycVerification(
+          provider: 'aws',
+          status: VerificationStatus.completed,
+          faceMatch: FaceMatchVerification(
+            status: FaceMatchStatus.matched,
+            threshold: 90,
+            similarity: 97,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Selfie face check was not recorded.'), findsOneWidget);
+    expect(find.text('Human face detected'), findsNothing);
+    expect(find.text('Faces are similar'), findsOneWidget);
+  });
+
   testWidgets('legacy profiles do not show an empty automated checks panel', (
     tester,
   ) async {

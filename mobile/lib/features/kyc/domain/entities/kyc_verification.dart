@@ -2,6 +2,8 @@ enum VerificationStatus { disabled, notStarted, completed, failed }
 
 enum OcrStatus { succeeded, noText, failed }
 
+enum SelfieFaceStatus { detected, noFace, multipleFaces, failed }
+
 enum FaceMatchStatus { matched, notMatched, noFace, multipleFaces, failed }
 
 /// Advisory checks on the photos; a reviewer still decides the KYC outcome.
@@ -13,6 +15,7 @@ class KycVerification {
     this.selfieId,
     this.checkedAt,
     this.ocr,
+    this.selfieFace,
     this.faceMatch,
   });
   final String provider;
@@ -21,7 +24,14 @@ class KycVerification {
   final String? selfieId;
   final DateTime? checkedAt;
   final OcrVerification? ocr;
+  final SelfieFaceVerification? selfieFace;
   final FaceMatchVerification? faceMatch;
+}
+
+/// Face detection in the selfie; it does not establish liveness or identity.
+class SelfieFaceVerification {
+  const SelfieFaceVerification({required this.status});
+  final SelfieFaceStatus status;
 }
 
 class OcrFields {
