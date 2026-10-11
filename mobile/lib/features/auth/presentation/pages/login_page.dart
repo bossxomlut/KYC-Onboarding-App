@@ -100,6 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 16),
                 AuthSubmitButton(
                   label: 'Sign in',
+                  loadingLabel: 'Signing in…',
                   isLoading: state.isLoading,
                   onPressed: _submit,
                 ),

@@ -97,22 +97,56 @@ class AuthSubmitButton extends StatelessWidget {
     required this.label,
     required this.isLoading,
     required this.onPressed,
+    this.loadingLabel,
   });
   final String label;
+  final String? loadingLabel;
   final bool isLoading;
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => FilledButton(
-    onPressed: isLoading ? null : onPressed,
-    child: isLoading
-        ? const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-        : Text(label),
-  );
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final progress = SizedBox.square(
+      dimension: 22,
+      child: isLoading
+          ? CircularProgressIndicator(strokeWidth: 2, color: colors.onPrimary)
+          : null,
+    );
+    return FilledButton(
+      onPressed: isLoading ? null : onPressed,
+      style: isLoading
+          ? FilledButton.styleFrom(
+              disabledBackgroundColor: colors.primary,
+              disabledForegroundColor: colors.onPrimary,
+            )
+          : null,
+      child: Semantics(
+        liveRegion: isLoading,
+        // Measure both states so changing content never resizes the button.
+        child: IndexedStack(
+          index: isLoading ? 1 : 0,
+          alignment: Alignment.center,
+          children: [
+            Text(label),
+            if (loadingLabel == null)
+              progress
+            else
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  progress,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(loadingLabel!, textAlign: TextAlign.center),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 String? validateEmail(String? value) {
