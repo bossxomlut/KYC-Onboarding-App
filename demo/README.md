@@ -1,5 +1,7 @@
 # Demo and recording
 
+View the [18 main-flow screenshots in the project README](../README.md#main-flow-screenshots) for an inline walkthrough on GitHub. The PNG images in [screenshots/](screenshots/) are extracted from the recording below; [manifest.json](screenshots/manifest.json) records each source chapter and timestamp. They use the same three separate fictional accounts and synthetic illustrations.
+
 The complete main-flow recording with a Vietnamese male voice is [full-flow-voiced.mp4](full-flow-voiced.mp4). The [original silent recording](full-flow.mp4) is also retained. Both play for **10m55s (655.300 seconds)** with **63 chapters**. Both use the current Flutter app and real NestJS API, PostgreSQL and Mailpit, with fictional identities from [scenario.json](scenario.json) and illustrated photos in `assets/`. Public passwords in the scenario are for this disposable local demo only.
 
 The video shows registration and email OTP, login, personal details, saved session/progress restoration, document and selfie upload, private previews, editing and retaking, submission, a normal User requesting Reviewer access, super admin approval of that request, reviewer rejection requesting only a new selfie, resubmission, reviewer approval, **Verified**, both historical submissions and logout. Access grants and review decisions are made through authenticated production app screens and persisted by the real API. [Chapter timestamps](full-flow.chapters.json) and [subtitles](full-flow.srt) accompany the MP4.

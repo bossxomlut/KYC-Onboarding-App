@@ -6,6 +6,48 @@ Flutter iOS/Android onboarding with a real TypeScript/NestJS 12.1.2 API (Express
 
 Optional [OCR and face comparison](docs/identity-verification.md) run locally with Tesseract Vietnamese/English OCR and OpenCV YuNet/SFace, with no cloud account or API fee. An AWS Textract/Rekognition adapter is also available. Applicants run checks explicitly from Review; extracted text/fields and selfie-to-document similarity remain available to reviewers and in each immutable submission. The local engine needs a one-time model/runtime setup. Results assist manual review and do not include liveness; AWS Textract does not support Vietnamese text.
 
+## Main-flow screenshots
+
+Follow the main flow directly on GitHub below. Click any screenshot to view it at full size. These frames come from the [complete demo recording](demo/full-flow-voiced.mp4); all personal details and document/selfie illustrations are fictional. Images and their [source timestamps](demo/screenshots/manifest.json) are stored in `demo/screenshots/`.
+
+The applicant (`applicant.demo@kyc.example`), reviewer candidate (`reviewer.demo@kyc.example`) and super admin (`admin.demo@kyc.example`) use separate accounts. The reviewer candidate starts as a **User** and receives **Reviewer** access after admin approval. Personal details, progress, uploaded images, permissions, decisions and submission history are persisted on the **server** and loaded by the app.
+
+**Register and enter personal details**
+
+| 1. Create account | 2. Verify email with OTP | 3. Save personal details |
+| --- | --- | --- |
+| <a href="demo/screenshots/01-register.png"><img src="demo/screenshots/01-register.png" width="220" alt="Registration with the fictional applicant email and masked password"></a> | <a href="demo/screenshots/02-verify-email.png"><img src="demo/screenshots/02-verify-email.png" width="220" alt="Six-digit email verification screen for the applicant"></a> | <a href="demo/screenshots/03-personal-details.png"><img src="demo/screenshots/03-personal-details.png" width="220" alt="Fictional name, birth date, nationality, address and document number"></a> |
+
+**Upload synthetic photos and review the profile**
+
+| 4. Identity document | 5. Selfie | 6. Review before submitting |
+| --- | --- | --- |
+| <a href="demo/screenshots/04-document-upload.png"><img src="demo/screenshots/04-document-upload.png" width="220" alt="Uploaded illustrated document marked synthetic and not valid for identification"></a> | <a href="demo/screenshots/05-selfie-upload.png"><img src="demo/screenshots/05-selfie-upload.png" width="220" alt="Uploaded illustrated selfie marked demo and not a real person"></a> | <a href="demo/screenshots/06-review-profile.png"><img src="demo/screenshots/06-review-profile.png" width="220" alt="Applicant reviews saved personal details before submitting for verification"></a> |
+
+**Submit the profile and grant Reviewer access**
+
+| 7. Pending review | 8. User requests Reviewer access | 9. Admin grants access |
+| --- | --- | --- |
+| <a href="demo/screenshots/07-pending-review.png"><img src="demo/screenshots/07-pending-review.png" width="220" alt="Applicant submission is pending review with profile and history actions"></a> | <a href="demo/screenshots/08-request-reviewer-access.png"><img src="demo/screenshots/08-request-reviewer-access.png" width="220" alt="Separate reviewer candidate email, current User role and pending access request"></a> | <a href="demo/screenshots/09-admin-grants-reviewer.png"><img src="demo/screenshots/09-admin-grants-reviewer.png" width="220" alt="Admin account management shows three distinct emails and the candidate promoted to Reviewer"></a> |
+
+**Open the reviewer queue and request a correction**
+
+| 10. Review profiles from Home | 11. Applicant in the queue | 12. Request a new selfie |
+| --- | --- | --- |
+| <a href="demo/screenshots/10-reviewer-home.png"><img src="demo/screenshots/10-reviewer-home.png" width="220" alt="Reviewer Home with the visible Review profiles button after permission is granted"></a> | <a href="demo/screenshots/11-reviewer-queue.png"><img src="demo/screenshots/11-reviewer-queue.png" width="220" alt="Reviewer queue lists the applicant email and pending submission"></a> | <a href="demo/screenshots/12-request-selfie-update.png"><img src="demo/screenshots/12-request-selfie-update.png" width="220" alt="Reviewer enters a rejection reason and requests only the Selfie step to be updated"></a> |
+
+**Correct the requested step and resubmit**
+
+| 13. Applicant sees the reason | 14. Replace only the selfie | 15. Resubmit for review |
+| --- | --- | --- |
+| <a href="demo/screenshots/13-applicant-changes-requested.png"><img src="demo/screenshots/13-applicant-changes-requested.png" width="220" alt="Rejected applicant profile shows the reason, Selfie update required and accepted steps completed"></a> | <a href="demo/screenshots/14-replace-selfie.png"><img src="demo/screenshots/14-replace-selfie.png" width="220" alt="Replacement illustrated selfie while personal details and document remain saved"></a> | <a href="demo/screenshots/15-resubmitted.png"><img src="demo/screenshots/15-resubmitted.png" width="220" alt="Resubmitted applicant profile is pending review again"></a> |
+
+**Approve and view the result and history**
+
+| 16. Reviewer confirms approval | 17. Applicant is Verified | 18. Both submissions in history |
+| --- | --- | --- |
+| <a href="demo/screenshots/16-reviewer-approval.png"><img src="demo/screenshots/16-reviewer-approval.png" width="220" alt="Reviewer confirms approval after checking the submitted identity details, document and selfie"></a> | <a href="demo/screenshots/17-verified.png"><img src="demo/screenshots/17-verified.png" width="220" alt="Applicant verification result is Verified"></a> | <a href="demo/screenshots/18-submission-history.png"><img src="demo/screenshots/18-submission-history.png" width="220" alt="Submission history preserves the second Verified submission and the first Rejected submission with reviewer email and reason"></a> |
+
 ## Run locally
 
 Prerequisites: Flutter **3.44.6** / its bundled Dart **3.12.2**, Node **22 LTS** (minimum **22.12**), npm, Docker Compose, Xcode for iOS or Android SDK/JDK17 for Android. Put the Flutter SDK's `bin` directory first in `PATH` if you also installed standalone Dart. Lockfiles are committed. Docker is optional if you use the embedded PostgreSQL alternative below.
@@ -149,7 +191,7 @@ flutter build ios --simulator --debug
 flutter build apk --debug
 ```
 
-The [complete main-flow recording with a Vietnamese male voice](demo/full-flow-voiced.mp4) lasts 10m55s with 63 chapters, showing synthetic applicant onboarding, a normal user requesting Reviewer access, super admin approval through the app, and authenticated reviewer rejection/resubmission/approval, private submission history and logout. Three separate fictional accounts use `applicant.demo@kyc.example`, `reviewer.demo@kyc.example` and `admin.demo@kyc.example`. Applicant/reviewer switches display the current email and role in **Account access**; the admin identity appears on the native **Super admin** Home screen. Both Home and Account access open the reviewer list after permission is granted. [Demo instructions](demo/README.md) include the silent original, 25 narration passages using the male `vi-VN-NamMinhNeural` voice at `-10%`, subtitles, chapter timestamps, the fictional scenario and reproducible recording/voiceover commands. The recording holds forms and photo previews for six seconds and important statuses/identities for eight seconds. The recorder uses an isolated real API/database, and camera capture is replaced with marked illustrations on iOS Simulator. The developer has also manually tested the app on a physical device. See [verification evidence](docs/verification.md) for recorded checks and their scope.
+The [main-flow screenshots](#main-flow-screenshots) provide an inline walkthrough on GitHub. The downloadable [complete main-flow recording with a Vietnamese male voice](demo/full-flow-voiced.mp4) lasts 10m55s with 63 chapters, showing synthetic applicant onboarding, a normal user requesting Reviewer access, super admin approval through the app, and authenticated reviewer rejection/resubmission/approval, private submission history and logout. Three separate fictional accounts use `applicant.demo@kyc.example`, `reviewer.demo@kyc.example` and `admin.demo@kyc.example`. Applicant/reviewer switches display the current email and role in **Account access**; the admin identity appears on the native **Super admin** Home screen. Both Home and Account access open the reviewer list after permission is granted. [Demo instructions](demo/README.md) include the silent original, 25 narration passages using the male `vi-VN-NamMinhNeural` voice at `-10%`, subtitles, chapter timestamps, the fictional scenario and reproducible recording/voiceover commands. The recording holds forms and photo previews for six seconds and important statuses/identities for eight seconds. The recorder uses an isolated real API/database, and camera capture is replaced with marked illustrations on iOS Simulator. The developer has also manually tested the app on a physical device. See [verification evidence](docs/verification.md) for recorded checks and their scope.
 
 ## Assumptions
 

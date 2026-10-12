@@ -1,0 +1,116 @@
+{
+  "syntheticOnly": true,
+  "sourceVideo": "../full-flow.mp4",
+  "sourceChapters": "../full-flow.chapters.json",
+  "sourceVideoCommit": "4e52ac6a940d7a45c0c59ed220c32322f2a99bb7",
+  "screenshots": [
+    {
+      "file": "01-register.png",
+      "chapter": "registration",
+      "timestampSeconds": 17.998,
+      "label": "Register a fictional applicant"
+    },
+    {
+      "file": "02-verify-email.png",
+      "chapter": "email-otp",
+      "timestampSeconds": 26.945,
+      "label": "Verify the applicant email with an OTP"
+    },
+    {
+      "file": "03-personal-details.png",
+      "chapter": "personal-details",
+      "timestampSeconds": 91.68,
+      "label": "Save fictional personal details"
+    },
+    {
+      "file": "04-document-upload.png",
+      "chapter": "document-uploaded",
+      "timestampSeconds": 119.185,
+      "label": "Upload the synthetic identity document"
+    },
+    {
+      "file": "05-selfie-upload.png",
+      "chapter": "selfie-uploaded",
+      "timestampSeconds": 134.196,
+      "label": "Upload the illustrated selfie"
+    },
+    {
+      "file": "06-review-profile.png",
+      "chapter": "review-profile",
+      "timestampSeconds": 142.745,
+      "label": "Review the profile before submitting"
+    },
+    {
+      "file": "07-pending-review.png",
+      "chapter": "pending-review",
+      "timestampSeconds": 193.779,
+      "label": "Applicant submission is pending review"
+    },
+    {
+      "file": "08-request-reviewer-access.png",
+      "chapter": "reviewer-access-request",
+      "timestampSeconds": 233.416,
+      "label": "A separate User requests Reviewer access"
+    },
+    {
+      "file": "09-admin-grants-reviewer.png",
+      "chapter": "admin-access-approved",
+      "timestampSeconds": 282.014,
+      "label": "Super admin grants Reviewer access"
+    },
+    {
+      "file": "10-reviewer-home.png",
+      "chapter": "reviewer-home-entry",
+      "timestampSeconds": 324.296,
+      "label": "Reviewer opens Review profiles from Home"
+    },
+    {
+      "file": "11-reviewer-queue.png",
+      "chapter": "review-queue",
+      "timestampSeconds": 365.295,
+      "label": "Reviewer sees the applicant in the pending queue"
+    },
+    {
+      "file": "12-request-selfie-update.png",
+      "chapter": "request-selfie-update",
+      "timestampSeconds": 396.519,
+      "label": "Reviewer requests a replacement selfie with a reason"
+    },
+    {
+      "file": "13-applicant-changes-requested.png",
+      "chapter": "applicant-rejected",
+      "timestampSeconds": 445.286,
+      "label": "Applicant sees the rejection reason and requested step"
+    },
+    {
+      "file": "14-replace-selfie.png",
+      "chapter": "replacement-selfie",
+      "timestampSeconds": 462.196,
+      "label": "Applicant replaces only the requested selfie"
+    },
+    {
+      "file": "15-resubmitted.png",
+      "chapter": "resubmitted",
+      "timestampSeconds": 479.211,
+      "label": "Applicant resubmits the preserved profile"
+    },
+    {
+      "file": "16-reviewer-approval.png",
+      "chapter": "approve-confirmation",
+      "timestampSeconds": 549.194,
+      "label": "Reviewer confirms approval of the new submission"
+    },
+    {
+      "file": "17-verified.png",
+      "chapter": "verified",
+      "timestampSeconds": 600.213,
+      "label": "Applicant sees the Verified result"
+    },
+    {
+      "file": "18-submission-history.png",
+      "chapter": "submission-history",
+      "timestampSeconds": 610.598,
+      "label": "Applicant sees both immutable submissions"
+    }
+  ]
+}
